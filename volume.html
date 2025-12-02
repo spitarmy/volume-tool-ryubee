@@ -4,207 +4,406 @@
   <meta charset="UTF-8" />
   <title>立米AI｜Ryu兵衛</title>
   <style>
-    body { font-family: Arial, sans-serif; padding: 20px; }
-    .box { border: 1px solid #ccc; padding: 20px; margin-bottom: 20px; }
-    #result { white-space: pre-wrap; background: #f7f7f7; padding: 20px; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, "ヒラギノ角ゴ ProN W3", "YuGothic", "メイリオ", sans-serif;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    h1 {
+      margin-top: 0;
+    }
+    .box {
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      background: #fff;
+      padding: 20px;
+      margin-bottom: 20px;
+    }
+    #result {
+      white-space: normal;
+    }
+    table {
+      border-collapse: collapse;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 4px 8px;
+      font-size: 14px;
+    }
+    th {
+      background: #fafafa;
+    }
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+    input[type="text"],
+    input[type="date"],
+    input[type="time"],
+    input[type="number"],
+    textarea {
+      width: 100%;
+      max-width: 400px;
+      padding: 4px 6px;
+      font-size: 14px;
+      box-sizing: border-box;
+    }
+    textarea {
+      height: 80px;
+      resize: vertical;
+    }
+    button {
+      padding: 6px 12px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    .small-text {
+      font-size: 12px;
+      color: #666;
+    }
   </style>
 </head>
 <body>
 
   <h1>📦 立米AI（Ryu兵衛）</h1>
 
+  <!-- 画像アップロード -->
   <div class="box">
     <h3>画像アップロード</h3>
     <input type="file" id="images" multiple accept="image/*">
-    <br><br>
+    <p class="small-text">※ 最大20枚まで。アップロード前に自動で圧縮されます。</p>
+    <br>
     <button onclick="sendImages()">立米を計算する</button>
   </div>
 
+  <!-- 結果表示 -->
   <div class="box">
     <h3>結果</h3>
     <div id="result">まだ計算されていません。</div>
   </div>
 
+  <!-- 案件情報 編集フォーム -->
+  <div class="box" id="job-box" style="display:none;">
+    <h3>案件情報（編集可）</h3>
+    <p id="job-id-label" class="small-text">案件ID: -</p>
+
+    <label>
+      現場名（案件名）：
+      <input type="text" id="job_name" placeholder="例）伏見区○○様 不用品回収">
+    </label>
+
+    <label>
+      お客様名：
+      <input type="text" id="customer_name" placeholder="例）山田 太郎">
+    </label>
+
+    <label>
+      住所：
+      <input type="text" id="address" placeholder="例）京都市○○区…">
+    </label>
+
+    <label>
+      作業日：
+      <input type="date" id="work_date">
+    </label>
+
+    <label>
+      作業時間帯：
+      <input type="text" id="work_time" placeholder="例）10:00〜12:00">
+    </label>
+
+    <label>
+      見積金額（税込）：
+      <input type="number" id="price_total" placeholder="例）45000">
+    </label>
+
+    <label>
+      トラック種別：
+      <input type="text" id="truck_type" placeholder="例）2tロング">
+    </label>
+
+    <label>
+      作業員人数：
+      <input type="number" id="workers" placeholder="例）2">
+    </label>
+
+    <label>
+      備考：
+      <textarea id="notes" placeholder="例）2階・エレベーターなし、要養生 など"></textarea>
+    </label>
+
+    <button onclick="saveJob()">案件情報を保存する</button>
+    <p id="job-save-status" class="small-text"></p>
+  </div>
+
   <script>
-  // ===== 設定値 =====
-  const MAX_FILES = 20;        // 画像の最大枚数
-  const MAX_WIDTH = 1600;      // リサイズ後の最大幅
-  const MAX_HEIGHT = 1600;     // リサイズ後の最大高さ
-  const JPEG_QUALITY = 0.7;    // JPEG圧縮品質（0〜1）
-  const API_URL = "https://ryubee-api.onrender.com/v1/volume-estimate";
+    // ===== 設定値 =====
+    const MAX_FILES = 20;        // 画像の最大枚数
+    const MAX_WIDTH = 1600;      // リサイズ後の最大幅
+    const MAX_HEIGHT = 1600;     // リサイズ後の最大高さ
+    const JPEG_QUALITY = 0.7;    // JPEG圧縮品質（0〜1）
 
-  // 画像送信メイン処理
-  async function sendImages() {
-    const input = document.getElementById("images");
-    const files = input.files;
+    const API_URL = "https://ryubee-api.onrender.com/v1/volume-estimate";
+    const JOB_API_BASE = "https://ryubee-api.onrender.com/v1/jobs";
 
-    if (files.length === 0) {
-      alert("画像を選択してください");
-      return;
-    }
+    let currentJobId = null;     // 直近で計算した案件のID
 
-    // ★ 枚数制限チェック
-    if (files.length > MAX_FILES) {
-      alert(`画像は最大 ${MAX_FILES} 枚までにしてください。\n現在: ${files.length} 枚`);
-      return;
-    }
+    // 画像送信メイン処理
+    async function sendImages() {
+      const input = document.getElementById("images");
+      const files = input.files;
 
-    const formData = new FormData();
-
-    // ★ ここで1枚ずつ圧縮してから FormData に入れる
-    for (const file of files) {
-      try {
-        const compressed = await compressImage(file, MAX_WIDTH, MAX_HEIGHT, JPEG_QUALITY);
-        formData.append("images", compressed, compressed.name);
-        console.log(`compressed: ${file.name} -> ${compressed.size} bytes`);
-      } catch (err) {
-        console.error(err);
-        alert("画像の圧縮中にエラーが発生しました: " + err.message);
+      if (files.length === 0) {
+        alert("画像を選択してください");
         return;
       }
+
+      // 枚数制限チェック
+      if (files.length > MAX_FILES) {
+        alert(`画像は最大 ${MAX_FILES} 枚までにしてください。\n現在: ${files.length} 枚`);
+        return;
+      }
+
+      const formData = new FormData();
+
+      // 1枚ずつ圧縮してから FormData に入れる
+      for (const file of files) {
+        try {
+          const compressed = await compressImage(file, MAX_WIDTH, MAX_HEIGHT, JPEG_QUALITY);
+          formData.append("images", compressed, compressed.name);
+          console.log(`compressed: ${file.name} -> ${compressed.size} bytes`);
+        } catch (err) {
+          console.error(err);
+          alert("画像の圧縮中にエラーが発生しました: " + err.message);
+          return;
+        }
+      }
+
+      document.getElementById("result").innerHTML = "計算中...";
+
+      try {
+        const res = await fetch(API_URL, { method: "POST", body: formData });
+        const data = await res.json();
+        renderResult(data);
+        setupJobBox(data);
+      } catch (e) {
+        console.error(e);
+        document.getElementById("result").innerHTML = "エラーが発生しました：" + e;
+      }
     }
 
-    document.getElementById("result").innerHTML = "計算中...";
+    // 画像をリサイズ＋JPEG圧縮する関数
+    function compressImage(file, maxWidth, maxHeight, quality) {
+      return new Promise((resolve, reject) => {
+        const reader = new FileReader();
 
-    try {
-      const res = await fetch(API_URL, { method: "POST", body: formData });
-      const data = await res.json();
-      renderResult(data);
-    } catch (e) {
-      console.error(e);
-      document.getElementById("result").innerHTML = "エラーが発生しました：" + e;
-    }
-  }
+        reader.onload = (e) => {
+          const img = new Image();
+          img.onload = () => {
+            let width = img.width;
+            let height = img.height;
 
-  // ★ 画像をリサイズ＋JPEG圧縮する関数
-  function compressImage(file, maxWidth, maxHeight, quality) {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
+            // 縮小倍率（1より小さくする、1より大きくはしない＝アップスケールしない）
+            const scale = Math.min(maxWidth / width, maxHeight / height, 1);
 
-      reader.onload = (e) => {
-        const img = new Image();
-        img.onload = () => {
-          let width = img.width;
-          let height = img.height;
+            const canvas = document.createElement("canvas");
+            canvas.width = Math.round(width * scale);
+            canvas.height = Math.round(height * scale);
 
-          // 縮小倍率（1より小さくする、1より大きくはしない＝アップスケールしない）
-          const scale = Math.min(maxWidth / width, maxHeight / height, 1);
+            const ctx = canvas.getContext("2d");
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
 
-          const canvas = document.createElement("canvas");
-          canvas.width = Math.round(width * scale);
-          canvas.height = Math.round(height * scale);
-
-          const ctx = canvas.getContext("2d");
-          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-
-          canvas.toBlob(
-            (blob) => {
-              if (!blob) {
-                reject(new Error("画像圧縮に失敗しました"));
-                return;
-              }
-              // 元の拡張子に関わらず jpeg に統一
-              const newName =
-                file.name.replace(/\.(png|jpg|jpeg|webp|heic)$/i, "") + ".jpg";
-              const compressedFile = new File([blob], newName, {
-                type: "image/jpeg",
-              });
-              resolve(compressedFile);
-            },
-            "image/jpeg",
-            quality
-          );
+            canvas.toBlob(
+              (blob) => {
+                if (!blob) {
+                  reject(new Error("画像圧縮に失敗しました"));
+                  return;
+                }
+                // 元の拡張子に関わらず jpeg に統一
+                const newName =
+                  file.name.replace(/\.(png|jpg|jpeg|webp|heic)$/i, "") + ".jpg";
+                const compressedFile = new File([blob], newName, {
+                  type: "image/jpeg",
+                });
+                resolve(compressedFile);
+              },
+              "image/jpeg",
+              quality
+            );
+          };
+          img.onerror = () => reject(new Error("画像の読み込みに失敗しました"));
+          img.src = e.target.result;
         };
-        img.onerror = () => reject(new Error("画像の読み込みに失敗しました"));
-        img.src = e.target.result;
-      };
 
-      reader.onerror = () => reject(new Error("ファイルの読み込みに失敗しました"));
-      reader.readAsDataURL(file);
-    });
-  }
+        reader.onerror = () => reject(new Error("ファイルの読み込みに失敗しました"));
+        reader.readAsDataURL(file);
+      });
+    }
 
-  // ===== 以下は前と同じ「結果表示」まわり =====
+    // 立米結果の表示
+    function renderResult(data) {
+      let html = "";
 
-  function renderResult(data) {
-    let html = "";
+      // 立米
+      html += `<h2>立米</h2>`;
+      html += `<p style="font-size: 1.8rem; font-weight: bold; margin-top: 0;">${data.total_volume_m3 ?? "-"} ㎥</p>`;
 
-    // 立米
-    html += `<h2>立米</h2>`;
-    html += `<p style="font-size: 1.8rem; font-weight: bold; margin-top: 0;">${data.total_volume_m3 ?? "-"} ㎥</p>`;
-
-    // 品目一覧
-    if (Array.isArray(data.items) && data.items.length > 0) {
-      html += `<h2>品目一覧</h2>`;
-      html += `<table border="1" cellspacing="0" cellpadding="6" style="border-collapse: collapse; width: 100%; max-width: 800px;">`;
-      html += `<tr>
-        <th>品目</th>
-        <th>サブタイプ</th>
-        <th>サイズ</th>
-        <th>数量</th>
-        <th>立米/個</th>
-        <th>立米小計</th>
-        <th>区分</th>
-      </tr>`;
-
-      for (const item of data.items) {
-        const flags = (item.flags || []).join(" / ");
+      // 品目一覧
+      if (Array.isArray(data.items) && data.items.length > 0) {
+        html += `<h2>品目一覧</h2>`;
+        html += `<table style="width: 100%; max-width: 800px;">`;
         html += `<tr>
-          <td>${item.category ?? ""}</td>
-          <td>${item.subtype ?? ""}</td>
-          <td>${item.size_class ?? ""}</td>
-          <td style="text-align:right;">${item.quantity ?? ""}</td>
-          <td style="text-align:right;">${item.volume_per_item_m3 ?? ""}</td>
-          <td style="text-align:right;">${item.volume_total_m3 ?? ""}</td>
-          <td>${flags}</td>
+          <th>品目</th>
+          <th>サブタイプ</th>
+          <th>サイズ</th>
+          <th>数量</th>
+          <th>立米/個</th>
+          <th>立米小計</th>
+          <th>区分</th>
         </tr>`;
+
+        for (const item of data.items) {
+          const flags = (item.flags || []).join(" / ");
+          html += `<tr>
+            <td>${item.category ?? ""}</td>
+            <td>${item.subtype ?? ""}</td>
+            <td>${item.size_class ?? ""}</td>
+            <td style="text-align:right;">${item.quantity ?? ""}</td>
+            <td style="text-align:right;">${item.volume_per_item_m3 ?? ""}</td>
+            <td style="text-align:right;">${item.volume_total_m3 ?? ""}</td>
+            <td>${flags}</td>
+          </tr>`;
+        }
+        html += `</table>`;
       }
-      html += `</table>`;
+
+      // 特処分まとめ
+      if (data.special_disposal) {
+        html += `<h2>特処分・リサイクル</h2><ul>`;
+        if (Array.isArray(data.special_disposal.recycle_items) && data.special_disposal.recycle_items.length) {
+          html += `<li>家電リサイクル：${data.special_disposal.recycle_items.join("、")}</li>`;
+        }
+        if (Array.isArray(data.special_disposal.hard_disposal_items) && data.special_disposal.hard_disposal_items.length) {
+          html += `<li>特処分品：${data.special_disposal.hard_disposal_items.join("、")}</li>`;
+        }
+        if (Array.isArray(data.special_disposal.dangerous_items) && data.special_disposal.dangerous_items.length) {
+          html += `<li>危険物：${data.special_disposal.dangerous_items.join("、")}</li>`;
+        }
+        html += `</ul>`;
+      }
+
+      // 注意事項
+      if (Array.isArray(data.warnings) && data.warnings.length > 0) {
+        html += `<h2>注意事項</h2><ul>`;
+        for (const w of data.warnings) {
+          html += `<li>${w}</li>`;
+        }
+        html += `</ul>`;
+      }
+
+      // デバッグ用RAW JSON
+      html += `<details style="margin-top:20px;">
+        <summary>RAW JSON（デバッグ用）</summary>
+        <pre style="background:#f5f5f5; padding:10px; overflow:auto;">${escapeHtml(JSON.stringify(data, null, 2))}</pre>
+      </details>`;
+
+      document.getElementById("result").innerHTML = html;
     }
 
-    // 特処分まとめ
-    if (data.special_disposal) {
-      html += `<h2>特処分・リサイクル</h2><ul>`;
-      if (Array.isArray(data.special_disposal.recycle_items) && data.special_disposal.recycle_items.length) {
-        html += `<li>家電リサイクル：${data.special_disposal.recycle_items.join("、")}</li>`;
+    // 案件フォームのセットアップ
+    function setupJobBox(data) {
+      currentJobId = data.job_id || null;
+
+      const jobBox = document.getElementById("job-box");
+      const jobIdLabel = document.getElementById("job-id-label");
+      const status = document.getElementById("job-save-status");
+
+      if (!currentJobId) {
+        jobBox.style.display = "none";
+        status.textContent = "";
+        return;
       }
-      if (Array.isArray(data.special_disposal.hard_disposal_items) && data.special_disposal.hard_disposal_items.length) {
-        html += `<li>特処分品：${data.special_disposal.hard_disposal_items.join("、")}</li>`;
-      }
-      if (Array.isArray(data.special_disposal.dangerous_items) && data.special_disposal.dangerous_items.length) {
-        html += `<li>危険物：${data.special_disposal.dangerous_items.join("、")}</li>`;
-      }
-      html += `</ul>`;
+
+      jobBox.style.display = "block";
+      jobIdLabel.textContent = `案件ID: ${currentJobId}`;
+      status.textContent = "※ この案件の情報を編集して保存できます。";
+
+      // 新規作成直後なのでフォームは空でOK（必要ならここで初期値を入れる）
+      document.getElementById("job_name").value = "";
+      document.getElementById("customer_name").value = "";
+      document.getElementById("address").value = "";
+      document.getElementById("work_date").value = "";
+      document.getElementById("work_time").value = "";
+      document.getElementById("price_total").value = "";
+      document.getElementById("truck_type").value = "";
+      document.getElementById("workers").value = "";
+      document.getElementById("notes").value = "";
     }
 
-    // 注意事項
-    if (Array.isArray(data.warnings) && data.warnings.length > 0) {
-      html += `<h2>注意事項</h2><ul>`;
-      for (const w of data.warnings) {
-        html += `<li>${w}</li>`;
+    // 案件情報を保存（POST /v1/jobs/{job_id}）
+    async function saveJob() {
+      if (!currentJobId) {
+        alert("案件IDが取得できていません。先に立米計算を行ってください。");
+        return;
       }
-      html += `</ul>`;
+
+      const payload = {};
+      const jobName = document.getElementById("job_name").value.trim();
+      const customerName = document.getElementById("customer_name").value.trim();
+      const address = document.getElementById("address").value.trim();
+      const workDate = document.getElementById("work_date").value.trim();
+      const workTime = document.getElementById("work_time").value.trim();
+      const priceTotal = document.getElementById("price_total").value.trim();
+      const truckType = document.getElementById("truck_type").value.trim();
+      const workers = document.getElementById("workers").value.trim();
+      const notes = document.getElementById("notes").value.trim();
+
+      if (jobName) payload.job_name = jobName;
+      if (customerName) payload.customer_name = customerName;
+      if (address) payload.address = address;
+      if (workDate) payload.work_date = workDate;
+      if (workTime) payload.work_time = workTime;
+      if (priceTotal) payload.price_total = Number(priceTotal);
+      if (truckType) payload.truck_type = truckType;
+      if (workers) payload.workers = Number(workers);
+      if (notes) payload.notes = notes;
+
+      const status = document.getElementById("job-save-status");
+      status.textContent = "保存中...";
+
+      try {
+        const res = await fetch(`${JOB_API_BASE}/${currentJobId}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+
+        if (!res.ok) {
+          throw new Error(`HTTP ${res.status}`);
+        }
+
+        const data = await res.json();
+        status.textContent = "保存しました。";
+
+        if (data.job_name) {
+          document.getElementById("job-id-label").textContent =
+            `案件ID: ${currentJobId} ／ 現場名: ${data.job_name}`;
+        }
+      } catch (e) {
+        console.error(e);
+        status.textContent = "保存中にエラーが発生しました：" + e;
+      }
     }
 
-    // デバッグ用RAW JSON
-    html += `<details style="margin-top:20px;">
-      <summary>RAW JSON（デバッグ用）</summary>
-      <pre style="background:#f5f5f5; padding:10px; overflow:auto;">${escapeHtml(JSON.stringify(data, null, 2))}</pre>
-    </details>`;
-
-    document.getElementById("result").innerHTML = html;
-  }
-
-  // XSS防止用：pre内のJSONをエスケープ
-  function escapeHtml(str) {
-    return str
-      .replace(/&/g, "&amp;")
-      .replace(/</g, "&lt;")
-      .replace(/>/g, "&gt;");
-  }
-</script>
-
-
+    // XSS防止用：pre内のJSONをエスケープ
+    function escapeHtml(str) {
+      return str
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+    }
+  </script>
 
 </body>
 </html>
