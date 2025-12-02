@@ -26,29 +26,108 @@
   </div>
 
   <script>
-    async function sendImages() {
-      const files = document.getElementById("images").files;
-      if (files.length === 0) {
-        alert("画像を選択してください");
-        return;
-      }
-
-      const formData = new FormData();
-      for (const f of files) formData.append("images", f);
-
-     const API_URL = "https://ryubee-api.onrender.com/v1/volume-estimate";
-
-      document.getElementById("result").innerHTML = "計算中...";
-
-      try {
-        const res = await fetch(API_URL, { method: "POST", body: formData });
-        const data = await res.json();
-        document.getElementById("result").innerHTML = JSON.stringify(data, null, 2);
-      } catch (e) {
-        document.getElementById("result").innerHTML = "エラー: " + e;
-      }
+  async function sendImages() {
+    const files = document.getElementById("images").files;
+    if (files.length === 0) {
+      alert("画像を選択してください");
+      return;
     }
-  </script>
+
+    const formData = new FormData();
+    for (const f of files) formData.append("images", f);
+
+    const API_URL = "https://ryubee-api.onrender.com/v1/volume-estimate";
+
+    document.getElementById("result").innerHTML = "計算中...";
+
+    try {
+      const res = await fetch(API_URL, { method: "POST", body: formData });
+      const data = await res.json();
+      renderResult(data);
+    } catch (e) {
+      console.error(e);
+      document.getElementById("result").innerHTML = "エラーが発生しました：" + e;
+    }
+  }
+
+  function renderResult(data) {
+    let html = "";
+
+    // 立米
+    html += `<h2>立米</h2>`;
+    html += `<p style="font-size: 1.8rem; font-weight: bold; margin-top: 0;">${data.total_volume_m3 ?? "-"} ㎥</p>`;
+
+    // 品目一覧
+    if (Array.isArray(data.items) && data.items.length > 0) {
+      html += `<h2>品目一覧</h2>`;
+      html += `<table border="1" cellspacing="0" cellpadding="6" style="border-collapse: collapse; width: 100%; max-width: 800px;">`;
+      html += `<tr>
+        <th>品目</th>
+        <th>サブタイプ</th>
+        <th>サイズ</th>
+        <th>数量</th>
+        <th>立米/個</th>
+        <th>立米小計</th>
+        <th>区分</th>
+      </tr>`;
+
+      for (const item of data.items) {
+        const flags = (item.flags || []).join(" / ");
+        html += `<tr>
+          <td>${item.category ?? ""}</td>
+          <td>${item.subtype ?? ""}</td>
+          <td>${item.size_class ?? ""}</td>
+          <td style="text-align:right;">${item.quantity ?? ""}</td>
+          <td style="text-align:right;">${item.volume_per_item_m3 ?? ""}</td>
+          <td style="text-align:right;">${item.volume_total_m3 ?? ""}</td>
+          <td>${flags}</td>
+        </tr>`;
+      }
+      html += `</table>`;
+    }
+
+    // 特処分まとめ
+    if (data.special_disposal) {
+      html += `<h2>特処分・リサイクル</h2><ul>`;
+      if (Array.isArray(data.special_disposal.recycle_items) && data.special_disposal.recycle_items.length) {
+        html += `<li>家電リサイクル：${data.special_disposal.recycle_items.join("、")}</li>`;
+      }
+      if (Array.isArray(data.special_disposal.hard_disposal_items) && data.special_disposal.hard_disposal_items.length) {
+        html += `<li>特処分品：${data.special_disposal.hard_disposal_items.join("、")}</li>`;
+      }
+      if (Array.isArray(data.special_disposal.dangerous_items) && data.special_disposal.dangerous_items.length) {
+        html += `<li>危険物：${data.special_disposal.dangerous_items.join("、")}</li>`;
+      }
+      html += `</ul>`;
+    }
+
+    // 注意事項
+    if (Array.isArray(data.warnings) && data.warnings.length > 0) {
+      html += `<h2>注意事項</h2><ul>`;
+      for (const w of data.warnings) {
+        html += `<li>${w}</li>`;
+      }
+      html += `</ul>`;
+    }
+
+    // デバッグ用RAW JSON
+    html += `<details style="margin-top:20px;">
+      <summary>RAW JSON（デバッグ用）</summary>
+      <pre style="background:#f5f5f5; padding:10px; overflow:auto;">${escapeHtml(JSON.stringify(data, null, 2))}</pre>
+    </details>`;
+
+    document.getElementById("result").innerHTML = html;
+  }
+
+  // XSS防止用：pre内のJSONをエスケープ
+  function escapeHtml(str) {
+    return str
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;");
+  }
+</script>
+
 
 </body>
 </html>
