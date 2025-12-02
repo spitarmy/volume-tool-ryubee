@@ -36,8 +36,7 @@
       const formData = new FormData();
       for (const f of files) formData.append("images", f);
 
-      // ※後でここをAPI URLに変える
-      const API_URL = "https://api.example.com/v1/volume-estimate";
+     const API_URL = "https://ryubee-api.onrender.com/v1/volume-estimate";
 
       document.getElementById("result").innerHTML = "計算中...";
 
