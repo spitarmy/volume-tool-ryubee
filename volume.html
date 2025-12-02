@@ -26,17 +26,43 @@
   </div>
 
   <script>
+  // ===== 設定値 =====
+  const MAX_FILES = 20;        // 画像の最大枚数
+  const MAX_WIDTH = 1600;      // リサイズ後の最大幅
+  const MAX_HEIGHT = 1600;     // リサイズ後の最大高さ
+  const JPEG_QUALITY = 0.7;    // JPEG圧縮品質（0〜1）
+  const API_URL = "https://ryubee-api.onrender.com/v1/volume-estimate";
+
+  // 画像送信メイン処理
   async function sendImages() {
-    const files = document.getElementById("images").files;
+    const input = document.getElementById("images");
+    const files = input.files;
+
     if (files.length === 0) {
       alert("画像を選択してください");
       return;
     }
 
-    const formData = new FormData();
-    for (const f of files) formData.append("images", f);
+    // ★ 枚数制限チェック
+    if (files.length > MAX_FILES) {
+      alert(`画像は最大 ${MAX_FILES} 枚までにしてください。\n現在: ${files.length} 枚`);
+      return;
+    }
 
-    const API_URL = "https://ryubee-api.onrender.com/v1/volume-estimate";
+    const formData = new FormData();
+
+    // ★ ここで1枚ずつ圧縮してから FormData に入れる
+    for (const file of files) {
+      try {
+        const compressed = await compressImage(file, MAX_WIDTH, MAX_HEIGHT, JPEG_QUALITY);
+        formData.append("images", compressed, compressed.name);
+        console.log(`compressed: ${file.name} -> ${compressed.size} bytes`);
+      } catch (err) {
+        console.error(err);
+        alert("画像の圧縮中にエラーが発生しました: " + err.message);
+        return;
+      }
+    }
 
     document.getElementById("result").innerHTML = "計算中...";
 
@@ -49,6 +75,56 @@
       document.getElementById("result").innerHTML = "エラーが発生しました：" + e;
     }
   }
+
+  // ★ 画像をリサイズ＋JPEG圧縮する関数
+  function compressImage(file, maxWidth, maxHeight, quality) {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          let width = img.width;
+          let height = img.height;
+
+          // 縮小倍率（1より小さくする、1より大きくはしない＝アップスケールしない）
+          const scale = Math.min(maxWidth / width, maxHeight / height, 1);
+
+          const canvas = document.createElement("canvas");
+          canvas.width = Math.round(width * scale);
+          canvas.height = Math.round(height * scale);
+
+          const ctx = canvas.getContext("2d");
+          ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+          canvas.toBlob(
+            (blob) => {
+              if (!blob) {
+                reject(new Error("画像圧縮に失敗しました"));
+                return;
+              }
+              // 元の拡張子に関わらず jpeg に統一
+              const newName =
+                file.name.replace(/\.(png|jpg|jpeg|webp|heic)$/i, "") + ".jpg";
+              const compressedFile = new File([blob], newName, {
+                type: "image/jpeg",
+              });
+              resolve(compressedFile);
+            },
+            "image/jpeg",
+            quality
+          );
+        };
+        img.onerror = () => reject(new Error("画像の読み込みに失敗しました"));
+        img.src = e.target.result;
+      };
+
+      reader.onerror = () => reject(new Error("ファイルの読み込みに失敗しました"));
+      reader.readAsDataURL(file);
+    });
+  }
+
+  // ===== 以下は前と同じ「結果表示」まわり =====
 
   function renderResult(data) {
     let html = "";
@@ -127,6 +203,7 @@
       .replace(/>/g, "&gt;");
   }
 </script>
+
 
 
 </body>
