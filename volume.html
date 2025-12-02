@@ -1,11 +1,55 @@
 <!DOCTYPE html>
-<html>
-  <head>
-    <meta charset="UTF-8" />
-    <title>Volume Tool</title>
-  </head>
-  <body>
-    <h1>立米AIツール テストページ</h1>
-    <p>ここに後で機能を追加します。</p>
-  </body>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>立米AI｜Ryu兵衛</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    .box { border: 1px solid #ccc; padding: 20px; margin-bottom: 20px; }
+    #result { white-space: pre-wrap; background: #f7f7f7; padding: 20px; }
+  </style>
+</head>
+<body>
+
+  <h1>📦 立米AI（Ryu兵衛）</h1>
+
+  <div class="box">
+    <h3>画像アップロード</h3>
+    <input type="file" id="images" multiple accept="image/*">
+    <br><br>
+    <button onclick="sendImages()">立米を計算する</button>
+  </div>
+
+  <div class="box">
+    <h3>結果</h3>
+    <div id="result">まだ計算されていません。</div>
+  </div>
+
+  <script>
+    async function sendImages() {
+      const files = document.getElementById("images").files;
+      if (files.length === 0) {
+        alert("画像を選択してください");
+        return;
+      }
+
+      const formData = new FormData();
+      for (const f of files) formData.append("images", f);
+
+      // ※後でここをAPI URLに変える
+      const API_URL = "https://api.example.com/v1/volume-estimate";
+
+      document.getElementById("result").innerHTML = "計算中...";
+
+      try {
+        const res = await fetch(API_URL, { method: "POST", body: formData });
+        const data = await res.json();
+        document.getElementById("result").innerHTML = JSON.stringify(data, null, 2);
+      } catch (e) {
+        document.getElementById("result").innerHTML = "エラー: " + e;
+      }
+    }
+  </script>
+
+</body>
 </html>
