@@ -158,6 +158,7 @@
       </label>
 
       <button onclick="saveJob()">案件情報を保存する</button>
+      <button onclick="openWorksheet()" id="worksheet-btn" disabled>作業書PDFを開く</button>
       <p id="job-save-status" class="small-text"></p>
     </div>
 
@@ -236,11 +237,9 @@
         currentJobId = jobId;
         currentJobData = job;
 
-        // ラベル更新
         document.getElementById("job-id-label").textContent =
           `案件ID: ${jobId}`;
 
-        // フォームに反映
         document.getElementById("job_name").value = job.job_name || "";
         document.getElementById("customer_name").value = job.customer_name || "";
         document.getElementById("address").value = job.address || "";
@@ -253,9 +252,12 @@
           job.workers != null ? job.workers : "";
         document.getElementById("notes").value = job.notes || "";
 
-        document.getElementById("job-save-status").textContent = "※ 編集後は「案件情報を保存する」を押してください。";
+        document.getElementById("job-save-status").textContent =
+          "※ 編集後は「案件情報を保存する」を押してください。";
 
-        // 立米AI結果の概要表示
+        // 作業書ボタンを有効化
+        document.getElementById("worksheet-btn").disabled = false;
+
         renderAiSummary(job.ai_result);
 
       } catch (e) {
@@ -296,7 +298,6 @@
         html += `</table>`;
       }
 
-      // デバッグ用 JSON を折りたたみで
       html += `<details style="margin-top:12px;">
         <summary class="small-text">RAW JSON（AI結果・デバッグ用）</summary>
         <pre>${escapeHtml(JSON.stringify(ai, null, 2))}</pre>
@@ -305,7 +306,7 @@
       container.innerHTML = html;
     }
 
-    // 案件情報を保存（POST /v1/jobs/{job_id}）
+    // 案件情報を保存
     async function saveJob() {
       if (!currentJobId) {
         alert("まず一覧から案件を選択してください。");
@@ -353,7 +354,6 @@
             `案件ID: ${currentJobId} ／ 現場名: ${data.job_name}`;
         }
 
-        // 一覧も最新の状態に更新
         loadJobs();
 
       } catch (e) {
@@ -362,10 +362,19 @@
       }
     }
 
+    // 作業書PDFを開く
+    function openWorksheet() {
+      if (!currentJobId) {
+        alert("まず一覧から案件を選択してください。");
+        return;
+      }
+      const url = `${JOB_API_BASE}/${currentJobId}/worksheet`;
+      window.open(url, "_blank");
+    }
+
     // 日時文字列を見やすくする（超簡易）
     function formatDateTime(str) {
       if (!str) return "";
-      // 2025-12-03T01:43:08.101750 → 2025-12-03 01:43
       return str.replace("T", " ").slice(0, 16);
     }
 
