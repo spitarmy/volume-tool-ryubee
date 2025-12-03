@@ -1,0 +1,383 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+  <meta charset="UTF-8" />
+  <title>案件一覧｜立米AI Ryu兵衛</title>
+  <style>
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, "ヒラギノ角ゴ ProN W3", "YuGothic", "メイリオ", sans-serif;
+      padding: 20px;
+      background: #f5f5f5;
+    }
+    h1 {
+      margin-top: 0;
+    }
+    .box {
+      border: 1px solid #ccc;
+      border-radius: 8px;
+      background: #fff;
+      padding: 16px;
+      margin-bottom: 20px;
+    }
+    table {
+      border-collapse: collapse;
+      width: 100%;
+    }
+    th, td {
+      border: 1px solid #ccc;
+      padding: 6px 8px;
+      font-size: 13px;
+    }
+    th {
+      background: #fafafa;
+    }
+    tr.clickable:hover {
+      background: #f0f8ff;
+      cursor: pointer;
+    }
+    label {
+      display: block;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+    input[type="text"],
+    input[type="date"],
+    input[type="time"],
+    input[type="number"],
+    textarea {
+      width: 100%;
+      max-width: 400px;
+      padding: 4px 6px;
+      font-size: 14px;
+      box-sizing: border-box;
+    }
+    textarea {
+      height: 80px;
+      resize: vertical;
+    }
+    button {
+      padding: 6px 12px;
+      font-size: 14px;
+      cursor: pointer;
+    }
+    .small-text {
+      font-size: 12px;
+      color: #666;
+    }
+    .two-column {
+      display: flex;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    .two-column > .box {
+      flex: 1;
+      min-width: 320px;
+    }
+    pre {
+      font-size: 11px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>📂 案件一覧（Ryu兵衛）</h1>
+  <p class="small-text">
+    👉 <a href="volume.html">画像から新しい案件を作成する（立米計算へ）</a>
+  </p>
+
+  <!-- 案件一覧 -->
+  <div class="box">
+    <h3>案件一覧</h3>
+    <p class="small-text" id="jobs-status">読み込み中...</p>
+    <table id="jobs-table">
+      <thead>
+        <tr>
+          <th>作成日時</th>
+          <th>現場名</th>
+          <th>お客様名</th>
+          <th>住所</th>
+          <th>立米</th>
+          <th>見積金額</th>
+        </tr>
+      </thead>
+      <tbody>
+        <!-- JSで埋める -->
+      </tbody>
+    </table>
+  </div>
+
+  <div class="two-column">
+    <!-- 案件編集フォーム -->
+    <div class="box" style="flex: 1;">
+      <h3>案件情報（編集）</h3>
+      <p id="job-id-label" class="small-text">案件を一覧から選択してください。</p>
+
+      <label>
+        現場名（案件名）：
+        <input type="text" id="job_name" placeholder="例）伏見区○○様 不用品回収">
+      </label>
+
+      <label>
+        お客様名：
+        <input type="text" id="customer_name" placeholder="例）山田 太郎">
+      </label>
+
+      <label>
+        住所：
+        <input type="text" id="address" placeholder="例）京都市○○区…">
+      </label>
+
+      <label>
+        作業日：
+        <input type="date" id="work_date">
+      </label>
+
+      <label>
+        作業時間帯：
+        <input type="text" id="work_time" placeholder="例）10:00〜12:00">
+      </label>
+
+      <label>
+        見積金額（税込）：
+        <input type="number" id="price_total" placeholder="例）45000">
+      </label>
+
+      <label>
+        トラック種別：
+        <input type="text" id="truck_type" placeholder="例）2tロング">
+      </label>
+
+      <label>
+        作業員人数：
+        <input type="number" id="workers" placeholder="例）2">
+      </label>
+
+      <label>
+        備考：
+        <textarea id="notes" placeholder="例）2階・エレベーターなし、要養生 など"></textarea>
+      </label>
+
+      <button onclick="saveJob()">案件情報を保存する</button>
+      <p id="job-save-status" class="small-text"></p>
+    </div>
+
+    <!-- 立米AI結果の概要 -->
+    <div class="box" style="flex: 1;">
+      <h3>立米AI結果（概要）</h3>
+      <div id="ai-summary">
+        <p class="small-text">案件を選択すると、ここに立米や品目の概要が表示されます。</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const JOB_API_BASE = "https://ryubee-api.onrender.com/v1/jobs";
+    let currentJobId = null;
+    let currentJobData = null;
+
+    // ページ読み込み時に案件一覧を取得
+    window.addEventListener("DOMContentLoaded", () => {
+      loadJobs();
+    });
+
+    async function loadJobs() {
+      const status = document.getElementById("jobs-status");
+      const tbody = document.querySelector("#jobs-table tbody");
+
+      status.textContent = "読み込み中...";
+
+      try {
+        const res = await fetch(JOB_API_BASE);
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        const jobs = await res.json();
+
+        tbody.innerHTML = "";
+
+        if (!Array.isArray(jobs) || jobs.length === 0) {
+          status.textContent = "案件はまだありません。";
+          return;
+        }
+
+        status.textContent = `案件数：${jobs.length}`;
+
+        for (const j of jobs) {
+          const tr = document.createElement("tr");
+          tr.classList.add("clickable");
+          tr.addEventListener("click", () => selectJob(j.job_id));
+
+          const created = formatDateTime(j.created_at);
+          const volume = j.total_volume_m3 != null ? j.total_volume_m3 + " ㎥" : "-";
+          const price = j.price_total != null ? j.price_total.toLocaleString() + " 円" : "-";
+
+          tr.innerHTML = `
+            <td>${created}</td>
+            <td>${escapeHtml(j.job_name || "")}</td>
+            <td>${escapeHtml(j.customer_name || "")}</td>
+            <td>${escapeHtml(j.address || "")}</td>
+            <td style="text-align:right;">${volume}</td>
+            <td style="text-align:right;">${price}</td>
+          `;
+          tbody.appendChild(tr);
+        }
+
+      } catch (e) {
+        console.error(e);
+        status.textContent = "案件一覧の取得中にエラーが発生しました：" + e;
+      }
+    }
+
+    // 一件選択して詳細取得
+    async function selectJob(jobId) {
+      try {
+        const res = await fetch(`${JOB_API_BASE}/${jobId}`);
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        const job = await res.json();
+
+        currentJobId = jobId;
+        currentJobData = job;
+
+        // ラベル更新
+        document.getElementById("job-id-label").textContent =
+          `案件ID: ${jobId}`;
+
+        // フォームに反映
+        document.getElementById("job_name").value = job.job_name || "";
+        document.getElementById("customer_name").value = job.customer_name || "";
+        document.getElementById("address").value = job.address || "";
+        document.getElementById("work_date").value = job.work_date || "";
+        document.getElementById("work_time").value = job.work_time || "";
+        document.getElementById("price_total").value =
+          job.price_total != null ? job.price_total : "";
+        document.getElementById("truck_type").value = job.truck_type || "";
+        document.getElementById("workers").value =
+          job.workers != null ? job.workers : "";
+        document.getElementById("notes").value = job.notes || "";
+
+        document.getElementById("job-save-status").textContent = "※ 編集後は「案件情報を保存する」を押してください。";
+
+        // 立米AI結果の概要表示
+        renderAiSummary(job.ai_result);
+
+      } catch (e) {
+        console.error(e);
+        alert("案件詳細の取得中にエラーが発生しました：" + e);
+      }
+    }
+
+    // 立米AI結果の概要を表示
+    function renderAiSummary(ai) {
+      const container = document.getElementById("ai-summary");
+      if (!ai) {
+        container.innerHTML = "<p class=\"small-text\">AI結果が登録されていません。</p>";
+        return;
+      }
+
+      let html = "";
+
+      html += `<p><strong>立米：</strong> ${ai.total_volume_m3 ?? "-"} ㎥</p>`;
+
+      if (Array.isArray(ai.items) && ai.items.length > 0) {
+        html += `<p><strong>品目一覧：</strong></p>`;
+        html += `<table>`;
+        html += `<tr>
+          <th>品目</th>
+          <th>サブタイプ</th>
+          <th>数量</th>
+          <th>立米小計</th>
+        </tr>`;
+        for (const item of ai.items) {
+          html += `<tr>
+            <td>${item.category ?? ""}</td>
+            <td>${item.subtype ?? ""}</td>
+            <td style="text-align:right;">${item.quantity ?? ""}</td>
+            <td style="text-align:right;">${item.volume_total_m3 ?? ""}</td>
+          </tr>`;
+        }
+        html += `</table>`;
+      }
+
+      // デバッグ用 JSON を折りたたみで
+      html += `<details style="margin-top:12px;">
+        <summary class="small-text">RAW JSON（AI結果・デバッグ用）</summary>
+        <pre>${escapeHtml(JSON.stringify(ai, null, 2))}</pre>
+      </details>`;
+
+      container.innerHTML = html;
+    }
+
+    // 案件情報を保存（POST /v1/jobs/{job_id}）
+    async function saveJob() {
+      if (!currentJobId) {
+        alert("まず一覧から案件を選択してください。");
+        return;
+      }
+
+      const payload = {};
+      const jobName = document.getElementById("job_name").value.trim();
+      const customerName = document.getElementById("customer_name").value.trim();
+      const address = document.getElementById("address").value.trim();
+      const workDate = document.getElementById("work_date").value.trim();
+      const workTime = document.getElementById("work_time").value.trim();
+      const priceTotal = document.getElementById("price_total").value.trim();
+      const truckType = document.getElementById("truck_type").value.trim();
+      const workers = document.getElementById("workers").value.trim();
+      const notes = document.getElementById("notes").value.trim();
+
+      if (jobName) payload.job_name = jobName;
+      if (customerName) payload.customer_name = customerName;
+      if (address) payload.address = address;
+      if (workDate) payload.work_date = workDate;
+      if (workTime) payload.work_time = workTime;
+      if (priceTotal) payload.price_total = Number(priceTotal);
+      if (truckType) payload.truck_type = truckType;
+      if (workers) payload.workers = Number(workers);
+      if (notes) payload.notes = notes;
+
+      const status = document.getElementById("job-save-status");
+      status.textContent = "保存中...";
+
+      try {
+        const res = await fetch(`${JOB_API_BASE}/${currentJobId}`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+        const data = await res.json();
+        status.textContent = "保存しました。";
+
+        if (data.job_name) {
+          document.getElementById("job-id-label").textContent =
+            `案件ID: ${currentJobId} ／ 現場名: ${data.job_name}`;
+        }
+
+        // 一覧も最新の状態に更新
+        loadJobs();
+
+      } catch (e) {
+        console.error(e);
+        status.textContent = "保存中にエラーが発生しました：" + e;
+      }
+    }
+
+    // 日時文字列を見やすくする（超簡易）
+    function formatDateTime(str) {
+      if (!str) return "";
+      // 2025-12-03T01:43:08.101750 → 2025-12-03 01:43
+      return str.replace("T", " ").slice(0, 16);
+    }
+
+    // XSS防止用
+    function escapeHtml(str) {
+      if (str == null) return "";
+      return String(str)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;");
+    }
+  </script>
+
+</body>
+</html>
