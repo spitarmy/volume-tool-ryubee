@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>ホーム｜立米AI Ryu兵衛</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+    <style>
+        /* トップページ固有のスタイル */
+        .header {
+            background: var(--primary);
+            color: white;
+            padding: 30px 20px 40px;
+            border-radius: 0 0 24px 24px;
+            margin-bottom: -20px;
+            position: relative;
+            z-index: 10;
+            box-shadow: var(--shadow-md);
+        }
+
+        .header h1 {
+            color: white;
+            font-size: 1.5rem;
+            margin: 0 0 5px 0;
+        }
+
+        .header p {
+            margin: 0;
+            opacity: 0.9;
+            font-size: 0.9rem;
+        }
+
+        .dashboard-stats {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 24px;
+            position: relative;
+            z-index: 20;
+        }
+
+        .stat-card {
+            flex: 1;
+            background: var(--surface-color);
+            border-radius: var(--border-radius-lg);
+            padding: 16px;
+            box-shadow: var(--shadow-sm);
+            text-align: center;
+        }
+
+        .stat-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+        }
+
+        .stat-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--primary);
+        }
+
+        .action-card {
+            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
+            color: white;
+            border-radius: var(--border-radius-lg);
+            padding: 24px;
+            text-align: center;
+            margin-bottom: 24px;
+            box-shadow: var(--shadow-md);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            text-decoration: none;
+            transition: transform 0.2s;
+        }
+
+        .action-card:active {
+            transform: scale(0.98);
+        }
+
+        .action-icon {
+            font-size: 40px;
+            margin-bottom: 12px;
+        }
+
+        .action-title {
+            font-size: 1.2rem;
+            font-weight: bold;
+            margin-bottom: 4px;
+        }
+
+        .action-desc {
+            font-size: 0.85rem;
+            opacity: 0.9;
+        }
+
+        .recent-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+        }
+
+        .recent-header h2 {
+            font-size: 1.2rem;
+            margin: 0;
+        }
+
+        .view-all {
+            font-size: 0.9rem;
+            color: var(--primary);
+            text-decoration: none;
+            font-weight: 500;
+        }
+
+        .job-list-simple {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .job-item-simple {
+            background: var(--surface-color);
+            border-radius: var(--border-radius-md);
+            padding: 16px;
+            margin-bottom: 12px;
+            box-shadow: var(--shadow-sm);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .job-item-simple:active {
+            background-color: #f9f9f9;
+        }
+
+        .job-info h3 {
+            font-size: 1rem;
+            margin: 0 0 4px 0;
+            color: var(--text-main);
+        }
+
+        .job-meta {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+
+        .job-volume {
+            font-size: 1.2rem;
+            font-weight: bold;
+            color: var(--primary);
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- トップ用ヘッダー -->
+    <div class="header">
+        <div class="container" style="padding: 0;">
+            <h1>立米AI Ryu兵衛</h1>
+            <p>現場の見積もりを、もっとスマートに。</p>
+        </div>
+    </div>
+
+    <div class="container">
+        <!-- ダッシュボードのサマリー（API連動できるまで静的または仮表示） -->
+        <div class="dashboard-stats">
+            <div class="stat-card">
+                <div class="stat-label">今月の案件</div>
+                <div class="stat-value" id="stat-count">-</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-label">見積合計 (立米)</div>
+                <div class="stat-value" id="stat-volume">-</div>
+            </div>
+        </div>
+
+        <!-- メインアクション -->
+        <a href="volume.html" class="action-card">
+            <div class="action-icon">📸</div>
+            <div class="action-title">カメラで見積もり作成</div>
+            <div class="action-desc">写真を撮るだけでAIが立米を即座に計算します</div>
+        </a>
+
+        <!-- 最近の案件 -->
+        <div class="recent-header mt-2">
+            <h2>最近の案件</h2>
+            <a href="jobs.html" class="view-all">すべて見る ›</a>
+        </div>
+
+        <div id="recent-jobs-container">
+            <p class="text-center small-text mt-2" id="loading-msg">読み込み中...</p>
+            <ul class="job-list-simple" id="recent-jobs-list">
+                <!-- JSで挿入 -->
+            </ul>
+        </div>
+    </div>
+
+    <!-- ボトムナビゲーション -->
+    <div class="bottom-nav">
+        <a href="index.html" class="nav-item active">
+            <div class="nav-icon">🏠</div>
+            <span>ホーム</span>
+        </a>
+        <a href="volume.html" class="nav-item">
+            <div class="nav-icon">📸</div>
+            <span>カメラ見積</span>
+        </a>
+        <a href="jobs.html" class="nav-item">
+            <div class="nav-icon">📁</div>
+            <span>案件一覧</span>
+        </a>
+    </div>
+
+    <script src="assets/js/api.js"></script>
+    <script src="assets/js/utils.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            await loadRecentJobs();
+        });
+
+        async function loadRecentJobs() {
+            const listEl = document.getElementById('recent-jobs-list');
+            const msgEl = document.getElementById('loading-msg');
+
+            try {
+                const jobs = await api.getJobs();
+
+                if (!Array.isArray(jobs) || jobs.length === 0) {
+                    msgEl.textContent = "まだ案件がありません。";
+
+                    // サマリーの更新
+                    document.getElementById('stat-count').textContent = "0";
+                    document.getElementById('stat-volume').textContent = "0.0";
+                    return;
+                }
+
+                msgEl.style.display = 'none';
+
+                // サマリーの計算（雑な例: 最新月などに絞ると良いが、とりあえず全体）
+                document.getElementById('stat-count').textContent = jobs.length;
+                const totalVol = jobs.reduce((sum, j) => sum + (Number(j.total_volume_m3) || 0), 0);
+                document.getElementById('stat-volume').textContent = totalVol.toFixed(1);
+
+                // 最新の3件だけ表示
+                const recentJobs = jobs.slice(0, 3);
+                listEl.innerHTML = '';
+
+                for (const j of recentJobs) {
+                    const dateStr = utils.formatDateTime(j.created_at).split(' ')[0]; // 日付部分のみ
+                    const name = j.job_name || "名称未設定の案件";
+                    const vol = j.total_volume_m3 != null ? `${j.total_volume_m3} ㎥` : "-";
+
+                    const li = document.createElement('li');
+                    // 案件一覧ページに飛んで該当案件を開くようにしたい場合はURLパラメーターを付けるなど工夫が必要。
+                    // ここではシンプルにjobs.htmlへ遷移させる
+                    li.innerHTML = `
+            <a href="jobs.html?id=${j.job_id}" class="job-item-simple">
+              <div class="job-info">
+                <h3>${utils.escapeHtml(name)}</h3>
+                <div class="job-meta">作成: ${dateStr}</div>
+              </div>
+              <div class="job-volume">${vol}</div>
+            </a>
+          `;
+                    listEl.appendChild(li);
+                }
+            } catch (e) {
+                msgEl.textContent = "データの取得に失敗しました。";
+                console.error(e);
+            }
+        }
+    </script>
+</body>
+
+</html>
