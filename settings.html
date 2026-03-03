@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>料金設定マスタ｜立米AI Ryu兵衛</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+    <style>
+        .settings-header {
+            background: var(--surface-color);
+            padding: 16px 20px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: var(--shadow-sm);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .settings-header h1 {
+            font-size: 1.25rem;
+            margin: 0;
+        }
+
+        .back-btn {
+            color: var(--primary);
+            font-weight: 600;
+            background: none;
+            border: none;
+            font-size: 1rem;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .price-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .price-row:last-child {
+            border-bottom: none;
+        }
+
+        .price-label {
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .price-desc {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-top: 2px;
+        }
+
+        .price-input-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .price-input-group input {
+            width: 100px;
+            text-align: right;
+            padding: 8px 12px;
+            font-size: 1rem;
+            font-weight: bold;
+            color: var(--primary);
+            margin-bottom: 0;
+        }
+
+        .unit {
+            font-size: 0.9rem;
+            color: var(--text-muted);
+            font-weight: 600;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="settings-header header-glass">
+        <a href="index.html" class="back-btn">‹ ホーム</a>
+        <h1>💸 料金マスタ設定</h1>
+        <div style="width: 60px;"></div> <!-- バランス用 -->
+    </div>
+
+    <div class="container pb-2">
+        <div class="alert alert-info">
+            <strong>自社専用の料金テーブル</strong><br>
+            ここで設定した単価が、カメラ見積もり時に自動で掛け合わされ、初期見積金額として算出されます。
+        </div>
+
+        <!-- 基本料金 -->
+        <div class="card">
+            <h3 class="card-title text-primary"><span style="font-size:1.4rem;">📦</span> 基本立米単価</h3>
+            <p class="small-text mb-2">AIが算出した「総立米（㎥）」に掛け算される基本料金です。</p>
+
+            <div class="price-row">
+                <div>
+                    <div class="price-label">1立米 (1.0 ㎥) あたりの単価</div>
+                </div>
+                <div class="price-input-group">
+                    <input type="number" id="base_price_m3" placeholder="10000">
+                    <span class="unit">円</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 階段・搬出オプション -->
+        <div class="card">
+            <h3 class="card-title text-primary"><span style="font-size:1.4rem;">🪜</span> 搬出・環境オプション</h3>
+            <p class="small-text mb-2">選択した階段の階数に応じて加算される料金</p>
+
+            <div class="price-row">
+                <div>
+                    <div class="price-label">階段 2F</div>
+                </div>
+                <div class="price-input-group">
+                    <input type="number" id="stairs_2f_price" placeholder="2000">
+                    <span class="unit">円</span>
+                </div>
+            </div>
+
+            <div class="price-row">
+                <div>
+                    <div class="price-label">階段 3F以上</div>
+                </div>
+                <div class="price-input-group">
+                    <input type="number" id="stairs_3f_price" placeholder="4000">
+                    <span class="unit">円</span>
+                </div>
+            </div>
+
+            <div class="price-row">
+                <div>
+                    <div class="price-label">横付け不可 (持ち出し)</div>
+                </div>
+                <div class="price-input-group">
+                    <input type="number" id="far_parking_price" placeholder="3000">
+                    <span class="unit">円</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 特処分品目オプション -->
+        <div class="card">
+            <h3 class="card-title text-primary"><span style="font-size:1.4rem;">⚠️</span> 特例品目オプション</h3>
+            <p class="small-text mb-2">カメラ見積もり時に手動追加、またはAIが検知した場合に加算される料金</p>
+
+            <div class="price-row">
+                <div>
+                    <div class="price-label">金庫</div>
+                </div>
+                <div class="price-input-group">
+                    <input type="number" id="safe_price" placeholder="10000">
+                    <span class="unit">円</span>
+                </div>
+            </div>
+
+            <div class="price-row">
+                <div>
+                    <div class="price-label">マットレス</div>
+                </div>
+                <div class="price-input-group">
+                    <input type="number" id="mattress_price" placeholder="5000">
+                    <span class="unit">円</span>
+                </div>
+            </div>
+
+            <div class="price-row">
+                <div>
+                    <div class="price-label">ソファー</div>
+                </div>
+                <div class="price-input-group">
+                    <input type="number" id="sofa_price" placeholder="3000">
+                    <span class="unit">円</span>
+                </div>
+            </div>
+
+            <div class="price-row">
+                <div>
+                    <div class="price-label">リサイクル家電 (1点帯)</div>
+                    <div class="price-desc">※冷蔵庫、洗濯機、テレビ等</div>
+                </div>
+                <div class="price-input-group">
+                    <input type="number" id="recycle_price" placeholder="4000">
+                    <span class="unit">円</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 保存ボタン -->
+        <button class="btn btn-primary" id="save-settings-btn" onclick="saveSettings()"
+            style="margin-top: 16px; margin-bottom: 40px;">
+            <span style="font-size: 1.2rem;">💾</span> 設定を保存する
+        </button>
+    </div>
+
+    <script src="assets/js/utils.js"></script>
+    <script>
+        // デフォルトの料金設定
+        const defaultSettings = {
+            base_price_m3: 15000,
+            stairs_2f_price: 2000,
+            stairs_3f_price: 4000,
+            far_parking_price: 3000,
+            safe_price: 15000,
+            mattress_price: 5000,
+            sofa_price: 3000,
+            recycle_price: 4500
+        };
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadSettings();
+        });
+
+        function loadSettings() {
+            // 本来はAPIから取得するが、モックとしてLocalStorageを使用
+            const savedStr = localStorage.getItem('ryubee_pricing_settings');
+            let currentSettings = defaultSettings;
+
+            if (savedStr) {
+                try {
+                    currentSettings = { ...defaultSettings, ...JSON.parse(savedStr) };
+                } catch (e) {
+                    console.warn("料金設定のパースに失敗しました");
+                }
+            }
+
+            // フォームに反映
+            document.getElementById('base_price_m3').value = currentSettings.base_price_m3;
+            document.getElementById('stairs_2f_price').value = currentSettings.stairs_2f_price;
+            document.getElementById('stairs_3f_price').value = currentSettings.stairs_3f_price;
+            document.getElementById('far_parking_price').value = currentSettings.far_parking_price;
+
+            document.getElementById('safe_price').value = currentSettings.safe_price;
+            document.getElementById('mattress_price').value = currentSettings.mattress_price;
+            document.getElementById('sofa_price').value = currentSettings.sofa_price;
+            document.getElementById('recycle_price').value = currentSettings.recycle_price;
+        }
+
+        function saveSettings() {
+            const btn = document.getElementById('save-settings-btn');
+            btn.disabled = true;
+            btn.textContent = "保存中...";
+
+            const newSettings = {
+                base_price_m3: Number(document.getElementById('base_price_m3').value) || 0,
+                stairs_2f_price: Number(document.getElementById('stairs_2f_price').value) || 0,
+                stairs_3f_price: Number(document.getElementById('stairs_3f_price').value) || 0,
+                far_parking_price: Number(document.getElementById('far_parking_price').value) || 0,
+
+                safe_price: Number(document.getElementById('safe_price').value) || 0,
+                mattress_price: Number(document.getElementById('mattress_price').value) || 0,
+                sofa_price: Number(document.getElementById('sofa_price').value) || 0,
+                recycle_price: Number(document.getElementById('recycle_price').value) || 0
+            };
+
+            // 本来はAPIへPUTリクエスト
+            // api.savePricing(newSettings);
+
+            setTimeout(() => {
+                localStorage.setItem('ryubee_pricing_settings', JSON.stringify(newSettings));
+                alert('料金設定を保存しました！\nカメラ見積もり時の自動計算に反映されます。');
+
+                btn.disabled = false;
+                btn.innerHTML = '<span style="font-size: 1.2rem;">💾</span> 設定を保存する';
+            }, 500);
+        }
+    </script>
+</body>
+
+</html>

@@ -361,6 +361,13 @@
         <h2 class="text-center" style="margin-bottom: 0;">AI 計算結果</h2>
         <div class="volume-huge" id="res-volume">- ㎥</div>
 
+        <!-- 自動計算された見積額 -->
+        <div class="text-center mb-2"
+          style="font-size: 1.15rem; font-weight: 600; background: rgba(52, 199, 89, 0.1); border-radius: 12px; padding: 12px; margin: 0 16px;">
+          自動概算見積（料金マスタ基準）<br>
+          <span style="font-size: 1.8rem; color: var(--secondary-dark);" id="res-price">- 円</span>
+        </div>
+
         <div id="res-warnings"></div>
 
         <div class="d-flex justify-content-between mb-2 gap-2" id="res-actions">
@@ -400,8 +407,8 @@
             <input type="date" id="work_date">
           </div>
           <div class="form-group" style="flex: 1;">
-            <label>見積金額（円）</label>
-            <input type="number" id="price_total" placeholder="0">
+            <label>見積金額（円） <span style="font-size: 14px;">✎微調整可</span></label>
+            <input type="number" id="price_total" placeholder="自動計算が入力されます">
           </div>
         </div>
 
@@ -444,6 +451,7 @@
     let selectedFiles = [];
     let videoStream = null;
     let computedResult = null; // AI計算結果全体を保持
+    let calculatedPrice = 0;   // マスタから算出した初期見積額
 
     // タブ切り替え
     function switchTab(tabId) {
@@ -621,11 +629,53 @@
     }
 
     // -----------------------------------
+    // 料金自動計算ロジック
+    // -----------------------------------
+    function calculateEstimatedPrice(data) {
+      // ローカルストレージ内のマスタ設定をロード
+      const defaultSettings = { base_price_m3: 15000, stairs_2f_price: 2000, stairs_3f_price: 4000, far_parking_price: 3000, safe_price: 15000, mattress_price: 5000, sofa_price: 3000, recycle_price: 4500 };
+      const savedStr = localStorage.getItem('ryubee_pricing_settings');
+      let settings = { ...defaultSettings };
+      if (savedStr) {
+        try { settings = { ...defaultSettings, ...JSON.parse(savedStr) }; } catch (e) { }
+      }
+
+      let total = 0;
+      // 立米単価
+      if (data.total_volume_m3) total += data.total_volume_m3 * settings.base_price_m3;
+
+      // オプション
+      const envStairs = document.querySelector('input[name="env_stairs"]:checked').value;
+      if (envStairs === 'stairs_2f') total += settings.stairs_2f_price;
+      if (envStairs === 'stairs_3f_up') total += settings.stairs_3f_price;
+      if (document.getElementById('env_far_parking').checked) total += settings.far_parking_price;
+
+      // 手動アイテム
+      document.querySelectorAll('.manual-item-chk:checked').forEach(chk => {
+        const val = chk.value;
+        if (val === '金庫') total += settings.safe_price;
+        if (val === 'マットレス') total += settings.mattress_price;
+        if (val === 'ソファー') total += settings.sofa_price;
+        if (val === 'リサイクル家電') total += settings.recycle_price;
+      });
+
+      // AI検知アイテムから特例品が来た場合はAPIレスポンスを参照してプラスするロジックも追加可能
+      // ここでは簡略化のため手動チェックボックスを中心に計算します
+
+      calculatedPrice = Math.floor(total);
+      return calculatedPrice;
+    }
+
+    // -----------------------------------
     // 結果表示
     // -----------------------------------
     function renderResult(data) {
       // 全体立米
       document.getElementById('res-volume').textContent = data.total_volume_m3 != null ? `${data.total_volume_m3} ㎥` : "- ㎥";
+
+      // 自動見積額の計算と表示
+      const price = calculateEstimatedPrice(data);
+      document.getElementById('res-price').textContent = `${price.toLocaleString()} 円`;
 
       // 警告・注意事項
       const warnEl = document.getElementById('res-warnings');
@@ -686,7 +736,9 @@
     // -----------------------------------
     function showJobForm() {
       document.getElementById('job_name').value = ""; // クリア
-      // AI側で抽出されていれば入れる等の工夫も可能
+      // AI結果から事前に入力できる項目
+      document.getElementById('price_total').value = calculatedPrice > 0 ? calculatedPrice : "";
+
       document.getElementById('job-modal').style.display = 'flex';
     }
 

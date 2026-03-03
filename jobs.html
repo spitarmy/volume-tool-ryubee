@@ -35,6 +35,54 @@
       font-size: 0.95rem;
     }
 
+    /* フォルダタブ */
+    .folder-tabs {
+      display: flex;
+      gap: 12px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+      margin-top: 12px;
+    }
+
+    .folder-tabs::-webkit-scrollbar {
+      display: none;
+    }
+
+    .folder-tab {
+      background: rgba(0, 0, 0, 0.05);
+      border: none;
+      border-radius: 20px;
+      padding: 6px 16px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      cursor: pointer;
+      white-space: nowrap;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s;
+    }
+
+    .folder-tab.active {
+      background: var(--primary);
+      color: #fff;
+      box-shadow: 0 4px 12px rgba(10, 132, 255, 0.3);
+    }
+
+    .folder-count {
+      background: rgba(255, 255, 255, 0.8);
+      color: var(--primary);
+      border-radius: 10px;
+      padding: 2px 6px;
+      font-size: 0.7rem;
+      font-weight: bold;
+    }
+
+    .folder-tab.active .folder-count {
+      background: #fff;
+    }
+
     /* 案件カードリスト */
     #jobs-list {
       padding-top: 16px;
@@ -195,9 +243,26 @@
 
   <!-- 固定ヘッダー（一覧画面） -->
   <div class="header-glass" style="flex-direction: column; align-items: stretch; padding-bottom: 8px;">
-    <h1>📁 案件一覧</h1>
+    <h1>📁 案件フォルダ</h1>
     <div class="search-box">
-      <input type="text" id="search-input" class="search-input" placeholder="現場名・お客様名で検索..." oninput="filterJobs()">
+      <input type="text" id="search-input" class="search-input" placeholder="🔍 現場名・お客様名・住所で検索..."
+        oninput="filterJobs()">
+    </div>
+
+    <!-- フォルダタブ -->
+    <div class="folder-tabs">
+      <button class="folder-tab active" onclick="setFolder('all', this)">
+        すべて <span class="folder-count" id="count-all">0</span>
+      </button>
+      <button class="folder-tab" onclick="setFolder('estimated', this)">
+        見積済 <span class="folder-count" id="count-est">0</span>
+      </button>
+      <button class="folder-tab" onclick="setFolder('scheduled', this)">
+        作業予定 <span class="folder-count" id="count-sch">0</span>
+      </button>
+      <button class="folder-tab" onclick="setFolder('completed', this)">
+        完了 <span class="folder-count" id="count-comp">0</span>
+      </button>
     </div>
   </div>
 
@@ -241,6 +306,15 @@
 
       <div class="card">
         <h3 class="card-title">基本情報編集</h3>
+
+        <div class="form-group">
+          <label>ステータス（フォルダ）</label>
+          <select id="status">
+            <option value="estimated">見積済</option>
+            <option value="scheduled">作業予定</option>
+            <option value="completed">作業完了</option>
+          </select>
+        </div>
 
         <div class="form-group">
           <label>現場名（案件名）</label>
@@ -300,6 +374,7 @@
   <script>
     let allJobs = [];         // 取得した全案件
     let currentJobId = null;  // 選択中の案件ID
+    let currentFolder = 'all';// 現在選択中のフォルダ
 
     document.addEventListener('DOMContentLoaded', async () => {
       await fetchJobList();
@@ -334,7 +409,13 @@
         // 取得日が新しい順にソートする（API側でソート済みの場合は不要）
         allJobs.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
 
-        renderJobs(allJobs);
+        // モック: ステータスが未設定の場合は適当に割り当てる
+        allJobs.forEach(j => {
+          if (!j.status) j.status = 'estimated'; // default
+        });
+
+        updateFolderCounts();
+        filterJobs();
 
       } catch (e) {
         statusEl.innerHTML = `<div class="alert alert-danger" style="text-align: left;">
@@ -345,14 +426,40 @@
       }
     }
 
-    // 検索フィルター
+    // フォルダ切り替え
+    function setFolder(folderName, btnEl) {
+      currentFolder = folderName;
+      document.querySelectorAll('.folder-tab').forEach(el => el.classList.remove('active'));
+      btnEl.classList.add('active');
+      filterJobs();
+    }
+
+    // 各フォルダの件数を更新
+    function updateFolderCounts() {
+      const counts = { all: allJobs.length, estimated: 0, scheduled: 0, completed: 0 };
+      allJobs.forEach(j => {
+        if (counts[j.status] !== undefined) counts[j.status]++;
+      });
+      document.getElementById('count-all').textContent = counts.all;
+      document.getElementById('count-est').textContent = counts.estimated;
+      document.getElementById('count-sch').textContent = counts.scheduled;
+      document.getElementById('count-comp').textContent = counts.completed;
+    }
+
+    // 検索・フォルダフィルター
     function filterJobs() {
       const query = document.getElementById('search-input').value.toLowerCase();
       const filtered = allJobs.filter(j => {
+        // テキスト検索
         const name = (j.job_name || "").toLowerCase();
         const cust = (j.customer_name || "").toLowerCase();
         const addr = (j.address || "").toLowerCase();
-        return name.includes(query) || cust.includes(query) || addr.includes(query);
+        const matchesQuery = name.includes(query) || cust.includes(query) || addr.includes(query);
+
+        // フォルダ検索
+        const matchesFolder = (currentFolder === 'all') || (j.status === currentFolder);
+
+        return matchesQuery && matchesFolder;
       });
       renderJobs(filtered);
     }
@@ -452,6 +559,9 @@
       document.getElementById("price_total").value = job.price_total != null ? job.price_total : "";
       document.getElementById("workers").value = job.workers != null ? job.workers : "";
       document.getElementById("notes").value = job.notes || "";
+
+      // ステータス（フロント側で持たせている想定）
+      document.getElementById("status").value = job.status || "estimated";
     }
 
     function renderAiSummary(ai) {
@@ -497,6 +607,7 @@
       const priceTotal = document.getElementById("price_total").value.trim();
       const workers = document.getElementById("workers").value.trim();
       const notes = document.getElementById("notes").value.trim();
+      const status = document.getElementById("status").value;
 
       if (jobName) payload.job_name = jobName;
       if (customerName) payload.customer_name = customerName;
@@ -506,6 +617,7 @@
       if (priceTotal) payload.price_total = Number(priceTotal);
       if (workers) payload.workers = Number(workers);
       if (notes) payload.notes = notes;
+      if (status) payload.status = status;
 
       try {
         await api.saveJob(currentJobId, payload);
