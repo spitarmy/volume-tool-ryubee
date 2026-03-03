@@ -7,18 +7,16 @@
   <title>案件一覧｜立米AI Ryu兵衛</title>
   <link rel="stylesheet" href="assets/css/style.css">
   <style>
-    .header-fixed {
+    .header-glass {
       position: sticky;
       top: 0;
-      background: var(--surface-color);
       z-index: 100;
-      box-shadow: var(--shadow-sm);
-      padding: 16px 20px 8px;
     }
 
-    .header-fixed h1 {
-      font-size: 1.2rem;
+    .header-glass h1 {
+      font-size: 1.25rem;
       margin: 0 0 12px 0;
+      padding-top: 4px;
     }
 
     /* 検索・絞り込み */
@@ -43,18 +41,21 @@
     }
 
     .job-card {
-      background: var(--surface-color);
-      border-radius: var(--border-radius-lg);
-      padding: 16px;
-      margin-bottom: 12px;
+      background: var(--surface-solid);
+      border-radius: var(--border-radius-xl);
+      padding: 20px;
+      margin-bottom: 16px;
       box-shadow: var(--shadow-sm);
       position: relative;
       cursor: pointer;
+      border: 1px solid rgba(255, 255, 255, 0.8);
       -webkit-tap-highlight-color: transparent;
+      transition: transform 0.2s, box-shadow 0.2s;
     }
 
     .job-card:active {
-      background-color: #f5f5f5;
+      transform: scale(0.97);
+      background: #FAFAFA;
     }
 
     .job-card-header {
@@ -193,7 +194,7 @@
 <body>
 
   <!-- 固定ヘッダー（一覧画面） -->
-  <div class="header-fixed">
+  <div class="header-glass" style="flex-direction: column; align-items: stretch; padding-bottom: 8px;">
     <h1>📁 案件一覧</h1>
     <div class="search-box">
       <input type="text" id="search-input" class="search-input" placeholder="現場名・お客様名で検索..." oninput="filterJobs()">
@@ -336,7 +337,10 @@
         renderJobs(allJobs);
 
       } catch (e) {
-        statusEl.textContent = "取得に失敗しました。再読み込みしてください。";
+        statusEl.innerHTML = `<div class="alert alert-danger" style="text-align: left;">
+          <strong>API取得エラー</strong><br>
+          <span style="font-size: 0.85rem;">案件の取得に失敗しました。<br>詳細: ${e.message}</span>
+        </div>`;
         console.error(e);
       }
     }
