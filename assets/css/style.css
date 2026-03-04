@@ -30,7 +30,7 @@
   --border-color: rgba(60, 60, 67, 0.12);
 
   /* Layout */
-  --bottom-nav-height: 80px;
+  --bottom-nav-height: calc(75px + env(safe-area-inset-bottom));
   --header-height: 60px;
 
   /* Radii */
