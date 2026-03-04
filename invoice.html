@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>お見積書｜立米AI Ryu兵衛</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js"></script>
+
+    <style>
+        body {
+            background-color: #f5f5f7;
+            margin: 0;
+            padding: 0;
+        }
+
+        .app-header {
+            background: var(--surface-color);
+            padding: 16px 20px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: var(--shadow-sm);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        /* 印刷/PDF生成用のA4コンテナ */
+        .invoice-container {
+            background: #fff;
+            width: 100%;
+            max-width: 800px;
+            /* A4比率に近い形 */
+            margin: 20px auto;
+            padding: 40px;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+            box-sizing: border-box;
+            color: #333;
+            font-family: 'Noto Sans JP', sans-serif;
+        }
+
+        .inv-header {
+            display: flex;
+            justify-content: space-between;
+            border-bottom: 2px solid #333;
+            padding-bottom: 16px;
+            margin-bottom: 24px;
+        }
+
+        .inv-title {
+            font-size: 24px;
+            font-weight: bold;
+            letter-spacing: 4px;
+        }
+
+        .inv-date {
+            font-size: 14px;
+            text-align: right;
+        }
+
+        .inv-top-wrapper {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 40px;
+        }
+
+        /* 左側：お客様名など */
+        .inv-customer {
+            width: 50%;
+        }
+
+        .inv-customer-name {
+            font-size: 20px;
+            font-weight: bold;
+            border-bottom: 1px solid #ccc;
+            padding-bottom: 4px;
+            margin-bottom: 16px;
+        }
+
+        .inv-total-box {
+            background: #f0f4f8;
+            padding: 16px;
+            text-align: center;
+            border-radius: 8px;
+        }
+
+        .inv-total-label {
+            font-size: 12px;
+            color: #555;
+        }
+
+        .inv-total-price {
+            font-size: 28px;
+            font-weight: bold;
+            color: #000;
+            margin-top: 4px;
+        }
+
+        /* 右側：自社情報（テンプレ） */
+        .inv-company {
+            width: 40%;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .inv-company h3 {
+            font-size: 16px;
+            margin: 0 0 8px 0;
+        }
+
+        /* テーブル */
+        table.inv-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 32px;
+        }
+
+        .inv-table th,
+        .inv-table td {
+            border: 1px solid #ccc;
+            padding: 12px 8px;
+            font-size: 14px;
+        }
+
+        .inv-table th {
+            background: #f8f9fa;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        .inv-table td.qty,
+        .inv-table td.price {
+            text-align: right;
+        }
+
+        /* 備考と振込先 */
+        .inv-footer-info {
+            display: flex;
+            gap: 20px;
+        }
+
+        .inv-info-box {
+            flex: 1;
+            border: 1px solid #ccc;
+            padding: 16px;
+            border-radius: 4px;
+            font-size: 13px;
+            white-space: pre-wrap;
+        }
+
+        .inv-info-title {
+            font-weight: bold;
+            border-bottom: 1px solid #eee;
+            padding-bottom: 4px;
+            margin-bottom: 8px;
+        }
+
+        /* サイン画像エリア */
+        .inv-signature-box {
+            margin-top: 16px;
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+        }
+
+        .inv-sig-label {
+            font-size: 13px;
+            margin-bottom: 8px;
+            margin-right: 40px;
+        }
+
+        .inv-sig-img {
+            max-width: 200px;
+            max-height: 80px;
+            border-bottom: 1px solid #000;
+            padding-bottom: 4px;
+        }
+
+        /* 印刷時の設定 */
+        @media print {
+            body {
+                background: none;
+                margin: 0;
+                padding: 0;
+            }
+
+            .app-header,
+            .action-buttons,
+            .bottom-nav {
+                display: none !important;
+            }
+
+            .invoice-container {
+                box-shadow: none;
+                margin: 0;
+                padding: 20px;
+                max-width: none;
+            }
+        }
+
+        .action-buttons {
+            display: flex;
+            gap: 12px;
+            max-width: 800px;
+            margin: 0 auto 40px auto;
+            padding: 0 20px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="app-header header-glass">
+        <button onclick="history.back()" class="btn btn-secondary"
+            style="margin:0; padding: 6px 12px; font-size: 0.9rem;">‹ 戻る</button>
+        <h1 style="font-size: 1.1rem; margin: 0;">見積書プレビュー</h1>
+        <div style="width: 60px;"></div>
+    </div>
+
+    <div class="action-buttons mt-3">
+        <button class="btn btn-primary" onclick="generatePDF()" style="flex:1;">
+            📄 PDFを生成 / 共有
+        </button>
+    </div>
+
+    <!-- PDF化される領域 -->
+    <div class="invoice-container" id="invoice-doc">
+
+        <div class="inv-header">
+            <div class="inv-title">御見 積 書</div>
+            <div class="inv-date">発行日: <span id="out-date">-</span></div>
+        </div>
+
+        <div class="inv-top-wrapper">
+            <div class="inv-customer">
+                <div class="inv-customer-name"><span id="out-customer-name">〇〇 〇〇</span> 様</div>
+
+                <div class="inv-total-box mt-2">
+                    <div class="inv-total-label">御見積金額 (税込)</div>
+                    <div class="inv-total-price">￥<span id="out-total-price">0</span>-</div>
+                    <div style="font-size: 11px; margin-top: 4px;">下記の通り御見積申し上げます。</div>
+                </div>
+            </div>
+
+            <div class="inv-company">
+                <h3 id="out-company-name">株式会社未設定</h3>
+                <div id="out-company-address">住所未設定</div>
+                <div>TEL: <span id="out-company-phone">-</span></div>
+                <div style="margin-top: 4px;">登録番号: <span id="out-company-invoice">-</span></div>
+            </div>
+        </div>
+
+        <div style="margin-bottom: 8px; font-weight: bold;">■ 御見積内容</div>
+        <div style="margin-bottom: 12px; font-size: 13px;">件名: <span id="out-job-name">-</span></div>
+
+        <table class="inv-table">
+            <thead>
+                <tr>
+                    <th style="width: 50%;">項目・品目</th>
+                    <th style="width: 15%;">数量</th>
+                    <th style="width: 35%;">金額 (円)</th>
+                </tr>
+            </thead>
+            <tbody id="out-table-body">
+                <!-- JSで明細を挿入 -->
+            </tbody>
+        </table>
+
+        <div class="inv-footer-info">
+            <div class="inv-info-box">
+                <div class="inv-info-title">備考・作業環境等</div>
+                <div id="out-notes">特になし</div>
+            </div>
+            <div class="inv-info-box">
+                <div class="inv-info-title">お振込先</div>
+                <div id="out-bank-info">設定画面から振込口座を登録してください。</div>
+            </div>
+        </div>
+
+        <!-- サイン印字エリア -->
+        <div class="inv-signature-box" id="sig-container" style="display: none;">
+            <div class="inv-sig-label">上記内容にて承諾いたしました。ご署名：</div>
+            <img id="out-signature" class="inv-sig-img" src="" alt="お客様サイン">
+        </div>
+
+    </div>
+
+    <script src="assets/js/utils.js"></script>
+    <script src="assets/js/api.js"></script>
+    <script>
+        // URLから案件IDを取得
+        const urlParams = new URLSearchParams(window.location.search);
+        const jobId = urlParams.get('id');
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            // 1. 会社情報の読み込み（settings.htmlで保存したもの）
+            const savedStr = localStorage.getItem('ryubee_pricing_settings');
+            if (savedStr) {
+                try {
+                    const settings = JSON.parse(savedStr);
+                    document.getElementById('out-company-name').textContent = settings.company_name || '会社名未設定';
+                    document.getElementById('out-company-address').textContent = settings.company_address || '';
+                    document.getElementById('out-company-phone').textContent = settings.company_phone || '';
+                    document.getElementById('out-company-invoice').textContent = settings.company_invoice_no || '未設定';
+
+                    if (settings.company_bank_info) {
+                        document.getElementById('out-bank-info').textContent = settings.company_bank_info;
+                    }
+                } catch (e) { }
+            }
+
+            // 2. 案件データの読み込み
+            if (!jobId) {
+                alert("案件IDが指定されていません。");
+                return;
+            }
+
+            try {
+                const job = await api.getJob(jobId);
+
+                // ヘッダー・宛名情報
+                const today = new Date().toLocaleDateString('ja-JP');
+                document.getElementById('out-date').textContent = today;
+                document.getElementById('out-customer-name').textContent = job.customer_name || 'お客様';
+                document.getElementById('out-job-name').textContent = job.job_name || '不用品回収作業';
+                document.getElementById('out-total-price').textContent = (job.price_total || 0).toLocaleString();
+                document.getElementById('out-notes').textContent = job.notes || '-';
+
+                // 明細テーブル作成 (簡易的に1行に合計を入れるか、可能ならAI結果をパースする)
+                const tbody = document.getElementById('out-table-body');
+
+                let tr = document.createElement('tr');
+                tr.innerHTML = `
+          <td>不用品回収・運搬費一式</td>
+          <td class="qty">1 式</td>
+          <td class="price">${(job.price_total || 0).toLocaleString()}</td>
+        `;
+                tbody.appendChild(tr);
+
+                // もしDB側（job_notesやmetadata）にAIの「5.2立米」などが残っていれば詳細行を追加したいが、
+                // 現状は一式として出力する。
+
+                // サインの反映
+                if (job.signature_data) {
+                    const sigImg = document.getElementById('out-signature');
+                    sigImg.src = job.signature_data;
+                    document.getElementById('sig-container').style.display = 'flex';
+                }
+
+            } catch (err) {
+                alert("案件データの取得に失敗しました。");
+                console.error(err);
+            }
+        });
+
+        // html2pdf によるPDF生成機能
+        function generatePDF() {
+            const element = document.getElementById('invoice-doc');
+            const customerName = document.getElementById('out-customer-name').textContent;
+            const fileName = `御見積書_${customerName}_${new Date().getTime()}.pdf`;
+
+            const opt = {
+                margin: 0,
+                filename: fileName,
+                image: { type: 'jpeg', quality: 0.98 },
+                html2canvas: { scale: 2, useCORS: true },
+                jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
+            };
+
+            // スマホ（iOS/Android）の場合は、生成したPDFをWeb Share APIでLINE等へ送れる機能を追加したい
+            // html2pdfはPromiseを返すので、出力データをBlobとして受け取ってShareに渡す
+            html2pdf().set(opt).from(element).outputPdf('blob').then((pdfBlob) => {
+
+                // Web Share APIが使える場合（モバイルOSの大半で利用可能）
+                if (navigator.canShare && navigator.canShare({ files: [new File([pdfBlob], fileName, { type: 'application/pdf' })] })) {
+                    const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
+                    navigator.share({
+                        title: 'お見積書',
+                        text: 'お見積書をPDFでお送りいたします。',
+                        files: [file]
+                    }).catch(console.error);
+                } else {
+                    // PC等、共有APIが使えない場合は普通にダウンロード
+                    html2pdf().set(opt).from(element).save();
+                }
+
+            });
+        }
+    </script>
+</body>
+
+</html>

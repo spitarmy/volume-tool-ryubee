@@ -93,8 +93,35 @@
 
     <div class="container pb-2">
         <div class="alert alert-info">
-            <strong>自社専用の料金テーブル</strong><br>
-            ここで設定した単価が、カメラ見積もり時に自動で掛け合わされ、初期見積金額として算出されます。
+            <strong>自社専用の料金テーブルと会社情報</strong><br>
+            ここで設定した情報が、カメラ見積もり時の自動計算と、PDF見積書の発行に利用されます。
+        </div>
+
+        <!-- 会社情報設定（見積書用） -->
+        <div class="card mb-2">
+            <h3 class="card-title text-primary"><span style="font-size:1.4rem;">🏢</span> 会社情報（見積書テンプレ用）</h3>
+            <p class="small-text mb-2">PDF見積書に印字される貴社の情報です。</p>
+
+            <div class="form-group">
+                <label>会社名・屋号</label>
+                <input type="text" id="company_name" placeholder="株式会社〇〇">
+            </div>
+            <div class="form-group">
+                <label>郵便番号・住所</label>
+                <input type="text" id="company_address" placeholder="〒123-4567 東京都...">
+            </div>
+            <div class="form-group">
+                <label>電話番号</label>
+                <input type="text" id="company_phone" placeholder="03-1234-5678">
+            </div>
+            <div class="form-group">
+                <label>適格請求書発行事業者登録番号 (任意)</label>
+                <input type="text" id="company_invoice_no" placeholder="T1234567890123">
+            </div>
+            <div class="form-group mb-0">
+                <label>振込先口座情報 (任意)</label>
+                <textarea id="company_bank_info" placeholder="〇〇銀行 〇〇支店&#13;&#10;普通 1234567&#13;&#10;カ）マルマル"></textarea>
+            </div>
         </div>
 
         <!-- 基本料金 -->
@@ -207,6 +234,7 @@
     <script>
         // デフォルトの料金設定
         const defaultSettings = {
+            // 料金
             base_price_m3: 15000,
             stairs_2f_price: 2000,
             stairs_3f_price: 4000,
@@ -214,7 +242,14 @@
             safe_price: 15000,
             mattress_price: 5000,
             sofa_price: 3000,
-            recycle_price: 4500
+            recycle_price: 4500,
+            
+            // 会社情報
+            company_name: "",
+            company_address: "",
+            company_phone: "",
+            company_invoice_no: "",
+            company_bank_info: ""
         };
 
         document.addEventListener('DOMContentLoaded', () => {
@@ -244,6 +279,13 @@
             document.getElementById('mattress_price').value = currentSettings.mattress_price;
             document.getElementById('sofa_price').value = currentSettings.sofa_price;
             document.getElementById('recycle_price').value = currentSettings.recycle_price;
+
+            // 会社情報反映
+            document.getElementById('company_name').value = currentSettings.company_name || "";
+            document.getElementById('company_address').value = currentSettings.company_address || "";
+            document.getElementById('company_phone').value = currentSettings.company_phone || "";
+            document.getElementById('company_invoice_no').value = currentSettings.company_invoice_no || "";
+            document.getElementById('company_bank_info').value = currentSettings.company_bank_info || "";
         }
 
         function saveSettings() {
@@ -252,6 +294,7 @@
             btn.textContent = "保存中...";
 
             const newSettings = {
+                // 料金
                 base_price_m3: Number(document.getElementById('base_price_m3').value) || 0,
                 stairs_2f_price: Number(document.getElementById('stairs_2f_price').value) || 0,
                 stairs_3f_price: Number(document.getElementById('stairs_3f_price').value) || 0,
@@ -260,7 +303,14 @@
                 safe_price: Number(document.getElementById('safe_price').value) || 0,
                 mattress_price: Number(document.getElementById('mattress_price').value) || 0,
                 sofa_price: Number(document.getElementById('sofa_price').value) || 0,
-                recycle_price: Number(document.getElementById('recycle_price').value) || 0
+                recycle_price: Number(document.getElementById('recycle_price').value) || 0,
+
+                // 会社情報
+                company_name: document.getElementById('company_name').value.trim(),
+                company_address: document.getElementById('company_address').value.trim(),
+                company_phone: document.getElementById('company_phone').value.trim(),
+                company_invoice_no: document.getElementById('company_invoice_no').value.trim(),
+                company_bank_info: document.getElementById('company_bank_info').value.trim()
             };
 
             // 本来はAPIへPUTリクエスト

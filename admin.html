@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>管理者ダッシュボード｜立米AI Ryu兵衛</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <style>
+        /* 管理者ダッシュボード専用スタイル */
+        .dashboard-header {
+            background: var(--surface-color);
+            padding: 16px 20px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: var(--shadow-sm);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .kpi-card {
+            background: var(--surface-solid);
+            border-radius: var(--border-radius-xl);
+            padding: 16px;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+
+        .kpi-label {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+        }
+
+        .kpi-value {
+            font-size: 1.5rem;
+            font-weight: bold;
+            color: var(--primary);
+        }
+
+        .kpi-value.secondary {
+            color: #34C759;
+            /* iOS Green */
+        }
+
+        .chart-container {
+            background: var(--surface-solid);
+            border-radius: var(--border-radius-xl);
+            padding: 16px;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid rgba(255, 255, 255, 0.8);
+            margin-bottom: 24px;
+        }
+
+        .list-item-staff {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 0;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        .list-item-staff:last-child {
+            border-bottom: none;
+        }
+
+        .staff-name {
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .staff-sales {
+            font-weight: bold;
+            color: var(--text-main);
+        }
+
+        .staff-count {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="dashboard-header">
+        <button onclick="window.location.href='index.html'" class="btn btn-secondary"
+            style="margin:0; padding: 6px 12px; font-size: 0.9rem;">‹ ホーム</button>
+        <h1 style="font-size: 1.1rem; margin: 0;">📊 管理者ボード</h1>
+        <div style="width: 60px;"></div>
+    </div>
+
+    <div class="container pb-5">
+
+        <!-- KPI Cards -->
+        <div class="kpi-grid mt-3">
+            <div class="kpi-card">
+                <div class="kpi-label">今月の売上見込</div>
+                <div class="kpi-value" id="kpi-sales">¥0</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label">今月の案件数</div>
+                <div class="kpi-value secondary" id="kpi-jobs">0 件</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label">成約率 (見積→完了)</div>
+                <div class="kpi-value" id="kpi-conversion" style="color: #FF9500;">0%</div>
+            </div>
+            <div class="kpi-card">
+                <div class="kpi-label">平均単価</div>
+                <div class="kpi-value" id="kpi-average">¥0</div>
+            </div>
+        </div>
+
+        <!-- Chart: 売上推移 -->
+        <h3 class="card-title text-primary mb-2">📈 直近7日間の売上推移</h3>
+        <div class="chart-container">
+            <canvas id="salesChart" height="200"></canvas>
+        </div>
+
+        <!-- Staff Ranking -->
+        <div class="card mb-3">
+            <h3 class="card-title text-primary"><span style="font-size:1.4rem;">🏆</span> 担当者別 成績</h3>
+            <div id="staff-ranking-list">
+                <!-- JSで挿入 -->
+            </div>
+        </div>
+
+    </div>
+
+    <script src="assets/js/utils.js"></script>
+    <script src="assets/js/api.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            // 本来は管理者権限チェックを入れる
+            const role = localStorage.getItem('ryubee_user_role');
+            if (role !== 'admin') {
+                alert("このページにアクセスする権限がありません。");
+                window.location.href = 'index.html';
+                return;
+            }
+
+            await loadDashboardData();
+        });
+
+        async function loadDashboardData() {
+            try {
+                // 全案件を取得 (実運用ではバックエンド側で集計したAPIを叩くのが推奨)
+                const allJobs = await api.getJobs();
+
+                if (!allJobs || allJobs.length === 0) {
+                    document.getElementById('kpi-sales').textContent = "¥0";
+                    return;
+                }
+
+                // --- KPIの計算 ---
+                const now = new Date();
+                const currentMonth = now.getMonth();
+                const currentYear = now.getFullYear();
+
+                let monthSales = 0;
+                let monthJobsCount = 0;
+                let completedJobsCount = 0;
+
+                // 簡単な担当者別集計用マップ
+                const staffStats = {};
+
+                allJobs.forEach(job => {
+                    const jobDate = new Date(job.created_at);
+                    const price = Number(job.price_total) || 0;
+
+                    // 今月のデータ
+                    if (jobDate.getMonth() === currentMonth && jobDate.getFullYear() === currentYear) {
+                        monthJobsCount++;
+                        monthSales += price;
+
+                        if (job.status === 'completed') {
+                            completedJobsCount++;
+                        }
+                    }
+
+                    // 担当者別集計 (フロントエンドではログインユーザー名を無理やり入れる等しているためモック)
+                    // DBにuser_nameなどがあればそれを使う
+                    const staffName = job.user_name || "未割り当て";
+                    if (!staffStats[staffName]) {
+                        staffStats[staffName] = { sales: 0, count: 0 };
+                    }
+                    staffStats[staffName].sales += price;
+                    staffStats[staffName].count++;
+                });
+
+                // KPI描画
+                document.getElementById('kpi-sales').textContent = `¥${monthSales.toLocaleString()}`;
+                document.getElementById('kpi-jobs').textContent = `${monthJobsCount} 件`;
+
+                const conversionRate = monthJobsCount > 0 ? Math.round((completedJobsCount / monthJobsCount) * 100) : 0;
+                document.getElementById('kpi-conversion').textContent = `${conversionRate}%`;
+
+                const averagePrice = monthJobsCount > 0 ? Math.round(monthSales / monthJobsCount) : 0;
+                document.getElementById('kpi-average').textContent = `¥${averagePrice.toLocaleString()}`;
+
+
+                // --- チャート描画 (直近7日間) ---
+                drawSalesChart(allJobs);
+
+
+                // --- 担当者ランキング描画 ---
+                const staffArr = Object.keys(staffStats).map(key => ({
+                    name: key,
+                    sales: staffStats[key].sales,
+                    count: staffStats[key].count
+                })).sort((a, b) => b.sales - a.sales); // 売上順
+
+                const staffListEl = document.getElementById('staff-ranking-list');
+                staffListEl.innerHTML = '';
+
+                staffArr.forEach((staff, index) => {
+                    let rankMedal = `${index + 1}位`;
+                    if (index === 0) rankMedal = '🥇';
+                    if (index === 1) rankMedal = '🥈';
+                    if (index === 2) rankMedal = '🥉';
+
+                    staffListEl.innerHTML += `
+            <div class="list-item-staff">
+              <div>
+                <span style="display:inline-block; width:24px; text-align:center; font-weight:bold; margin-right:8px;">${rankMedal}</span>
+                <span class="staff-name">${utils.escapeHtml(staff.name)}</span>
+              </div>
+              <div style="text-align:right;">
+                <div class="staff-sales">¥${staff.sales.toLocaleString()}</div>
+                <div class="staff-count">${staff.count}件</div>
+              </div>
+            </div>
+          `;
+                });
+
+            } catch (err) {
+                console.error("Dashboard Error:", err);
+            }
+        }
+
+        function drawSalesChart(allJobs) {
+            const ctx = document.getElementById('salesChart').getContext('2d');
+
+            // 過去7日間の日付配列を作成
+            const labels = [];
+            const dataPoints = [];
+            const today = new Date();
+
+            for (let i = 6; i >= 0; i--) {
+                const d = new Date();
+                d.setDate(today.getDate() - i);
+                const dateStr = `${d.getMonth() + 1}/${d.getDate()}`; // M/D形式
+                labels.push(dateStr);
+
+                // その日の売上を計算
+                const dailySales = allJobs.filter(j => {
+                    const jd = new Date(j.created_at);
+                    return jd.getDate() === d.getDate() && jd.getMonth() === d.getMonth() && jd.getFullYear() === d.getFullYear();
+                }).reduce((sum, j) => sum + (Number(j.price_total) || 0), 0);
+
+                dataPoints.push(dailySales);
+            }
+
+            new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: '売上 (円)',
+                        data: dataPoints,
+                        borderColor: '#0A84FF',
+                        backgroundColor: 'rgba(10, 132, 255, 0.1)',
+                        borderWidth: 3,
+                        tension: 0.4,
+                        fill: true,
+                        pointBackgroundColor: '#fff',
+                        pointBorderColor: '#0A84FF',
+                        pointRadius: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                callback: function (value) { return '¥' + value.toLocaleString(); }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+    </script>
+</body>
+
+</html>

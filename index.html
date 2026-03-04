@@ -4,7 +4,10 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ホーム｜立米AI Ryu兵衛</title>
+    <title>立米AI Ryu兵衛</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="default">
     <link rel="stylesheet" href="assets/css/style.css">
     <style>
         /* トップページ固有のスタイル */
@@ -159,9 +162,16 @@
 <body>
 
     <!-- トップ用ヘッダー -->
-    <div class="header-glass">
-        <h1>立米AI Ryu兵衛</h1>
-        <span class="badge badge-primary">見積プロ</span>
+    <div class="header-glass" style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+            <h1 style="display: inline-block; margin-right: 8px;">立米AI Ryu兵衛</h1>
+            <span class="badge badge-primary">見積プロ</span>
+        </div>
+        <div id="admin-menu" style="display: none;">
+            <a href="admin.html" style="font-size: 1.2rem; text-decoration: none; margin-right: 12px;"
+                title="管理者ダッシュボード">📊</a>
+            <a href="settings.html" style="font-size: 1.2rem; text-decoration: none;" title="料金・会社情報設定">⚙️</a>
+        </div>
     </div>
 
     <!-- ヒーローセクションのような挨拶 -->
@@ -236,6 +246,12 @@
     <script src="assets/js/utils.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
+            // 権限チェックによるメニュー表示切り替え
+            const role = localStorage.getItem('ryubee_user_role');
+            if (role === 'admin') {
+                document.getElementById('admin-menu').style.display = 'block';
+            }
+
             await loadRecentJobs();
         });
 
@@ -293,6 +309,15 @@
                 console.error(e);
             }
         }
+        // Service Worker Registration for Offline Support
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then(reg => console.log('SW registered:', reg.scope))
+                    .catch(err => console.log('SW reg failed:', err));
+            });
+        }
+
     </script>
 </body>
 

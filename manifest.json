@@ -1,0 +1,21 @@
+{
+  "name": "立米AI Ryu兵衛",
+  "short_name": "Ryu兵衛",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#F2F2F7",
+  "theme_color": "#0A84FF",
+  "description": "不用品回収・現場見積もりAIアシスタント",
+  "icons": [
+    {
+      "src": "assets/icons/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "assets/icons/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

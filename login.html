@@ -108,6 +108,14 @@
                     <input type="password" id="password" required placeholder="••••••••">
                 </div>
 
+                <div class="form-group" style="margin-top: 16px;">
+                    <label>ログイン権限（デモ用）</label>
+                    <select id="user-role" style="width:100%; padding:8px; border-radius:8px; border:1px solid #ccc;">
+                        <option value="staff">現場スタッフ</option>
+                        <option value="admin">管理者 (本部)</option>
+                    </select>
+                </div>
+
                 <button type="submit" class="btn btn-primary" id="login-btn">
                     ログインして始める
                 </button>
@@ -133,6 +141,7 @@
             e.preventDefault();
             const email = document.getElementById('email').value;
             const pwd = document.getElementById('password').value;
+            const role = document.getElementById('user-role').value;
             const btn = document.getElementById('login-btn');
 
             if (!email || !pwd) return;
@@ -141,17 +150,14 @@
             btn.textContent = '認証中...';
 
             try {
-                // --- 実際のAPIがある場合の処理 ---
-                // const res = await api.login(email, pwd);
-                // localStorage.setItem('ryubee_token', res.token);
-                // localStorage.setItem('ryubee_company', res.company_name);
-
                 // --- 仮：何が入力されても成功とし、モックトークンを入れてホーム画面へ ---
                 setTimeout(() => {
                     localStorage.setItem('ryubee_token', 'mock_token_12345');
                     localStorage.setItem('ryubee_user_email', email);
+                    localStorage.setItem('ryubee_user_role', role);
 
-                    alert(`ようこそ、${email} さん\n（※現在はマルチテナントUIの実装デモです）`);
+                    let roleStr = role === 'admin' ? "管理者" : "現場スタッフ";
+                    alert(`ようこそ、${email} さん\n権限: ${roleStr}\n（※現在はデモ実装です）`);
                     window.location.href = 'index.html';
                 }, 1000);
 
