@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>ログイン｜立米AI Ryu兵衛</title>
+    <title>ログイン — Ryu兵衛</title>
     <link rel="stylesheet" href="assets/css/style.css">
     <style>
         body {
@@ -13,159 +13,205 @@
             justify-content: center;
             align-items: center;
             min-height: 100vh;
-            background: linear-gradient(135deg, #F2F2F7 0%, #E5E5EA 100%);
-            padding: 0;
+            padding: 24px;
+            padding-bottom: 24px;
+            background: linear-gradient(155deg, #0A84FF 0%, #0055CC 50%, #0A3B8C 100%);
         }
 
-        .login-container {
+        .login-wrap {
             width: 100%;
             max-width: 400px;
-            padding: 24px;
         }
 
         .logo-area {
             text-align: center;
-            margin-bottom: 32px;
+            margin-bottom: 36px;
+        }
+
+        .logo-icon {
+            width: 76px;
+            height: 76px;
+            background: rgba(255, 255, 255, 0.15);
+            border: 1.5px solid rgba(255, 255, 255, 0.3);
+            backdrop-filter: blur(12px);
+            border-radius: 22px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 36px;
+            margin: 0 auto 18px;
         }
 
         .logo-area h1 {
-            font-size: 1.8rem;
-            margin-bottom: 8px;
-            background: linear-gradient(135deg, var(--primary) 0%, var(--secondary) 100%);
-            background-clip: text;
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            font-size: 1.9rem;
             font-weight: 800;
+            letter-spacing: -0.04em;
+            color: #ffffff;
+            margin-bottom: 6px;
         }
 
         .logo-area p {
-            color: var(--text-muted);
-            font-size: 0.95rem;
+            font-size: 0.9rem;
+            color: rgba(255, 255, 255, 0.72);
             font-weight: 500;
         }
 
         .login-card {
-            background: rgba(255, 255, 255, 0.9);
-            backdrop-filter: blur(20px);
-            -webkit-backdrop-filter: blur(20px);
-            border-radius: var(--border-radius-xl);
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(28px);
+            -webkit-backdrop-filter: blur(28px);
+            border-radius: 28px;
             padding: 32px 24px;
-            box-shadow: var(--shadow-lg);
-            border: 1px solid rgba(255, 255, 255, 0.5);
+            box-shadow: 0 24px 60px rgba(0, 0, 0, 0.25), 0 8px 24px rgba(0, 0, 0, 0.12);
+            border: 1px solid rgba(255, 255, 255, 0.6);
         }
 
-        .login-card label {
-            font-size: 0.8rem;
+        .login-card h2 {
+            font-size: 1.05rem;
             font-weight: 700;
-            color: #6E6E73;
-        }
-
-        .login-card input {
-            background: rgba(0, 0, 0, 0.03);
-            border: 1px solid rgba(0, 0, 0, 0.05);
             margin-bottom: 24px;
+            color: var(--text-primary);
+            letter-spacing: -0.025em;
         }
 
-        .login-card input:focus {
-            background: #FFF;
-            border-color: var(--primary);
+        .login-card input,
+        .login-card select {
+            background: #F5F5F7;
+            border-color: rgba(0, 0, 0, 0.07);
         }
 
         .forgot-link {
             display: block;
             text-align: center;
-            margin-top: 24px;
-            font-size: 0.85rem;
-            color: var(--primary);
+            margin-top: 20px;
+            font-size: 0.88rem;
+            color: var(--blue);
             font-weight: 600;
         }
 
-        /* ボトムナビはログイン画面では非表示 */
         .bottom-nav {
             display: none;
+        }
+
+        .demo-note {
+            text-align: center;
+            margin-top: 20px;
+            padding: 14px;
+            background: rgba(255, 255, 255, 0.12);
+            border-radius: 14px;
+            border: 1px solid rgba(255, 255, 255, 0.2);
+        }
+
+        .demo-note p {
+            font-size: 0.8rem;
+            color: rgba(255, 255, 255, 0.7);
+            font-weight: 500;
+            line-height: 1.5;
+        }
+
+        .role-selector {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+        }
+
+        .role-option {
+            flex: 1;
+            padding: 10px 8px;
+            border-radius: 12px;
+            border: 2px solid rgba(0, 0, 0, 0.07);
+            background: #F5F5F7;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.18s;
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        .role-option.selected {
+            border-color: var(--blue);
+            background: var(--blue-light);
+            color: var(--blue-dark);
+        }
+
+        .role-option .role-icon {
+            font-size: 1.5rem;
+            display: block;
+            margin-bottom: 4px;
         }
     </style>
 </head>
 
 <body>
-
-    <div class="login-container">
+    <div class="login-wrap">
         <div class="logo-area">
-            <div style="font-size: 48px; margin-bottom: 8px;">📦</div>
+            <div class="logo-icon">📦</div>
             <h1>Ryu兵衛</h1>
-            <p>現場見積もりAIアシスタント</p>
+            <p>現場見積もり AIアシスタント</p>
         </div>
 
         <div class="login-card">
+            <h2>ログイン</h2>
             <form id="login-form" onsubmit="handleLogin(event)">
-                <div class="form-group mb-0">
-                    <label>メールアドレス (会社名・ID)</label>
-                    <input type="email" id="email" required placeholder="example@company.com">
+                <div class="form-group">
+                    <label>メールアドレス</label>
+                    <input type="email" id="email" required placeholder="example@company.com" autocomplete="email">
                 </div>
-
-                <div class="form-group mb-0">
+                <div class="form-group">
                     <label>パスワード</label>
-                    <input type="password" id="password" required placeholder="••••••••">
+                    <input type="password" id="password" required placeholder="••••••••"
+                        autocomplete="current-password">
                 </div>
 
-                <div class="form-group" style="margin-top: 16px;">
-                    <label>ログイン権限（デモ用）</label>
-                    <select id="user-role" style="width:100%; padding:8px; border-radius:8px; border:1px solid #ccc;">
-                        <option value="staff">現場スタッフ</option>
-                        <option value="admin">管理者 (本部)</option>
-                    </select>
+                <div class="form-group mb-0">
+                    <label>権限 (デモ用)</label>
+                    <div class="role-selector">
+                        <div class="role-option selected" id="role-staff" onclick="selectRole('staff')">
+                            <span class="role-icon">👷</span>現場スタッフ
+                        </div>
+                        <div class="role-option" id="role-admin" onclick="selectRole('admin')">
+                            <span class="role-icon">👔</span>管理者
+                        </div>
+                    </div>
                 </div>
 
-                <button type="submit" class="btn btn-primary" id="login-btn">
-                    ログインして始める
-                </button>
+                <input type="hidden" id="user-role" value="staff">
+                <button type="submit" class="btn btn-primary" id="login-btn">ログイン</button>
             </form>
 
-            <a href="#" class="forgot-link" onclick="alert('パスワードのリセット機能は準備中です。')">パスワードをお忘れですか？</a>
+            <a href="#" class="forgot-link" onclick="alert('準備中です。')">パスワードをお忘れですか？</a>
+        </div>
 
-            <!-- テスト用：設定画面への仮リンク -->
-            <div class="text-center mt-2" style="border-top: 1px solid #eee; padding-top: 16px;">
-                <span class="small-text">【デモ用】</span><br>
-                <a href="index.html" class="forgot-link mt-1"
-                    style="display:inline-block; margin-right: 12px; color: var(--text-muted);">ホームへスキップ</a>
-                <a href="settings.html" class="forgot-link mt-1"
-                    style="display:inline-block; color: var(--secondary);">料金設定（マスタ）へ</a>
-            </div>
+        <div class="demo-note">
+            <p>※ デモ版のため、メールアドレスとパスワードは<br>何でも入力できます。権限を選んでログイン。</p>
         </div>
     </div>
 
-    <script src="assets/js/api.js"></script>
-    <script src="assets/js/utils.js"></script>
     <script>
+        let selectedRole = 'staff';
+
+        function selectRole(role) {
+            selectedRole = role;
+            document.getElementById('user-role').value = role;
+            document.getElementById('role-staff').classList.toggle('selected', role === 'staff');
+            document.getElementById('role-admin').classList.toggle('selected', role === 'admin');
+        }
+
         async function handleLogin(e) {
             e.preventDefault();
             const email = document.getElementById('email').value;
-            const pwd = document.getElementById('password').value;
-            const role = document.getElementById('user-role').value;
             const btn = document.getElementById('login-btn');
 
-            if (!email || !pwd) return;
-
             btn.disabled = true;
-            btn.textContent = '認証中...';
+            btn.textContent = '認証中…';
 
-            try {
-                // --- 仮：何が入力されても成功とし、モックトークンを入れてホーム画面へ ---
-                setTimeout(() => {
-                    localStorage.setItem('ryubee_token', 'mock_token_12345');
-                    localStorage.setItem('ryubee_user_email', email);
-                    localStorage.setItem('ryubee_user_role', role);
-
-                    let roleStr = role === 'admin' ? "管理者" : "現場スタッフ";
-                    alert(`ようこそ、${email} さん\n権限: ${roleStr}\n（※現在はデモ実装です）`);
-                    window.location.href = 'index.html';
-                }, 1000);
-
-            } catch (err) {
-                alert('ログインに失敗しました: ' + err.message);
-                btn.disabled = false;
-                btn.textContent = 'ログインして始める';
-            }
+            setTimeout(() => {
+                localStorage.setItem('ryubee_token', 'mock_token_' + Date.now());
+                localStorage.setItem('ryubee_user_email', email);
+                localStorage.setItem('ryubee_user_role', selectedRole);
+                window.location.href = 'index.html';
+            }, 800);
         }
     </script>
 </body>

@@ -4,234 +4,394 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>立米AI Ryu兵衛</title>
+    <title>Ryu兵衛 — 立米AI見積</title>
     <link rel="manifest" href="manifest.json">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="default">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <link rel="stylesheet" href="assets/css/style.css">
+
     <style>
-        /* トップページ固有のスタイル */
-        .header {
-            background: var(--primary);
-            color: white;
-            padding: 30px 20px 40px;
-            border-radius: 0 0 24px 24px;
-            margin-bottom: -20px;
+        /* ── Hero Header ─────────────────────────── */
+        .home-hero {
+            position: relative;
+            background: linear-gradient(155deg, #0A84FF 0%, #0055CC 55%, #0A3B8C 100%);
+            padding: 52px 24px 80px;
+            overflow: hidden;
+        }
+
+        .home-hero::before {
+            content: '';
+            position: absolute;
+            top: -60px;
+            right: -60px;
+            width: 260px;
+            height: 260px;
+            background: rgba(255, 255, 255, 0.08);
+            border-radius: 50%;
+        }
+
+        .home-hero::after {
+            content: '';
+            position: absolute;
+            bottom: -80px;
+            left: -40px;
+            width: 200px;
+            height: 200px;
+            background: rgba(52, 199, 89, 0.15);
+            border-radius: 50%;
+        }
+
+        .home-hero .hero-inner {
             position: relative;
             z-index: 10;
-            box-shadow: var(--shadow-md);
         }
 
-        .header h1 {
-            color: white;
-            font-size: 1.5rem;
-            margin: 0 0 5px 0;
+        .home-hero .hero-label {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: rgba(255, 255, 255, 0.15);
+            border: 1px solid rgba(255, 255, 255, 0.25);
+            backdrop-filter: blur(8px);
+            -webkit-backdrop-filter: blur(8px);
+            border-radius: 50px;
+            padding: 4px 12px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: rgba(255, 255, 255, 0.92);
+            letter-spacing: 0.04em;
+            margin-bottom: 18px;
         }
 
-        .header p {
-            margin: 0;
-            opacity: 0.9;
-            font-size: 0.9rem;
+        .home-hero h1 {
+            font-size: 2rem;
+            font-weight: 800;
+            color: #ffffff;
+            letter-spacing: -0.04em;
+            line-height: 1.15;
+            margin-bottom: 10px;
         }
 
-        .dashboard-stats {
+        .home-hero .hero-sub {
+            font-size: 0.92rem;
+            color: rgba(255, 255, 255, 0.75);
+            font-weight: 500;
+            line-height: 1.5;
+        }
+
+        /* ── Stat Bar ─────────────────────────── */
+        .stat-bar {
             display: flex;
             gap: 12px;
-            margin-bottom: 24px;
+            padding: 0 20px;
+            margin-top: -36px;
             position: relative;
             z-index: 20;
+            margin-bottom: 24px;
         }
 
         .stat-card {
             flex: 1;
-            background: var(--surface-color);
-            border-radius: var(--border-radius-lg);
-            padding: 16px;
-            box-shadow: var(--shadow-sm);
-            text-align: center;
+            background: #ffffff;
+            border-radius: 18px;
+            padding: 16px 14px;
+            box-shadow: 0 8px 28px rgba(0, 0, 0, 0.09), 0 2px 8px rgba(0, 0, 0, 0.05);
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
         }
 
         .stat-label {
-            font-size: 0.8rem;
-            color: var(--text-muted);
-            margin-bottom: 4px;
+            font-size: 0.72rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            letter-spacing: 0.02em;
         }
 
         .stat-value {
-            font-size: 1.5rem;
-            font-weight: bold;
-            color: var(--primary);
+            font-size: 1.6rem;
+            font-weight: 800;
+            color: var(--blue);
+            letter-spacing: -0.04em;
+            line-height: 1;
         }
 
-        .action-card {
-            background: linear-gradient(135deg, var(--primary), var(--primary-dark));
-            color: white;
-            border-radius: var(--border-radius-lg);
-            padding: 24px;
-            text-align: center;
-            margin-bottom: 24px;
-            box-shadow: var(--shadow-md);
-            display: flex;
-            flex-direction: column;
-            align-items: center;
+        /* ── Main CTA ─────────────────────────── */
+        .main-cta {
+            display: block;
+            position: relative;
+            overflow: hidden;
+            background: linear-gradient(155deg, #34C759 0%, #1E8040 100%);
+            border-radius: 24px;
+            padding: 28px 24px;
             text-decoration: none;
-            transition: transform 0.2s;
+            box-shadow: 0 12px 32px rgba(52, 199, 89, 0.30), 0 4px 12px rgba(52, 199, 89, 0.18);
+            transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s;
+            margin-bottom: 28px;
         }
 
-        .action-card:active {
-            transform: scale(0.98);
+        .main-cta:active {
+            transform: scale(0.97);
+            box-shadow: 0 4px 12px rgba(52, 199, 89, 0.20);
         }
 
-        .action-icon {
-            font-size: 40px;
-            margin-bottom: 12px;
+        .main-cta::before {
+            content: '';
+            position: absolute;
+            right: -30px;
+            top: -30px;
+            width: 150px;
+            height: 150px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 50%;
         }
 
-        .action-title {
-            font-size: 1.2rem;
-            font-weight: bold;
+        .main-cta::after {
+            content: '';
+            position: absolute;
+            left: -10px;
+            bottom: -40px;
+            width: 100px;
+            height: 100px;
+            background: rgba(0, 0, 0, 0.06);
+            border-radius: 50%;
+        }
+
+        .main-cta .cta-inner {
+            position: relative;
+            z-index: 2;
+        }
+
+        .main-cta .cta-icon {
+            font-size: 44px;
+            margin-bottom: 14px;
+            display: block;
+            filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.2));
+        }
+
+        .main-cta .cta-title {
+            font-size: 1.35rem;
+            font-weight: 800;
+            color: #fff;
+            letter-spacing: -0.03em;
             margin-bottom: 4px;
         }
 
-        .action-desc {
-            font-size: 0.85rem;
-            opacity: 0.9;
-        }
-
-        .recent-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 12px;
-        }
-
-        .recent-header h2 {
-            font-size: 1.2rem;
-            margin: 0;
-        }
-
-        .view-all {
-            font-size: 0.9rem;
-            color: var(--primary);
-            text-decoration: none;
+        .main-cta .cta-desc {
+            font-size: 0.88rem;
+            color: rgba(255, 255, 255, 0.8);
             font-weight: 500;
         }
 
-        .job-list-simple {
-            list-style: none;
-            padding: 0;
-            margin: 0;
+        /* ── Recent Jobs List ─────────────────── */
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: baseline;
+            margin-bottom: 12px;
+        }
+
+        .section-header h2 {
+            font-size: 1.1rem;
+            font-weight: 700;
+            letter-spacing: -0.025em;
+        }
+
+        .view-all {
+            font-size: 0.85rem;
+            color: var(--blue);
+            font-weight: 600;
         }
 
         .job-item-simple {
-            background: var(--surface-color);
-            border-radius: var(--border-radius-md);
-            padding: 16px;
-            margin-bottom: 12px;
-            box-shadow: var(--shadow-sm);
             display: flex;
             justify-content: space-between;
             align-items: center;
+            background: var(--surface-solid);
+            border-radius: 16px;
+            padding: 15px 16px;
+            margin-bottom: 10px;
+            box-shadow: var(--shadow-sm);
             text-decoration: none;
             color: inherit;
+            border: 0.5px solid rgba(0, 0, 0, 0.05);
+            transition: transform 0.18s cubic-bezier(0.34, 1.56, 0.64, 1);
         }
 
         .job-item-simple:active {
-            background-color: #f9f9f9;
+            transform: scale(0.975);
         }
 
-        .job-info h3 {
-            font-size: 1rem;
-            margin: 0 0 4px 0;
-            color: var(--text-main);
+        .job-info .job-name {
+            font-size: 0.95rem;
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: 3px;
         }
 
         .job-meta {
-            font-size: 0.8rem;
-            color: var(--text-muted);
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+            font-weight: 500;
         }
 
-        .job-volume {
-            font-size: 1.2rem;
+        .job-volume-badge {
+            background: var(--blue-light);
+            color: var(--blue-dark);
+            font-size: 0.85rem;
+            font-weight: 700;
+            padding: 5px 11px;
+            border-radius: 50px;
+            white-space: nowrap;
+        }
+
+        /* ── Bottom Nav ───────────────────────── */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            height: var(--bottom-nav-height);
+            background: var(--glass-bg);
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur);
+            border-top: 0.5px solid rgba(0, 0, 0, 0.06);
+            display: flex;
+            justify-content: space-around;
+            align-items: flex-start;
+            padding-top: 10px;
+            padding-bottom: env(safe-area-inset-bottom);
+            z-index: 1000;
+        }
+
+        /* ── Header ───────────────────────────── */
+        .top-header {
+            position: sticky;
+            top: 0;
+            z-index: 200;
+            background: var(--glass-bg);
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur);
+            border-bottom: 0.5px solid rgba(0, 0, 0, 0.06);
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .top-header .brand {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .top-header .brand h1 {
+            font-size: 1.15rem;
             font-weight: 800;
-            color: var(--primary);
+            letter-spacing: -0.04em;
+            background: linear-gradient(135deg, #0A84FF 0%, #34C759 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .top-header .header-actions {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+
+        .top-header .header-actions a {
+            font-size: 1.15rem;
+            text-decoration: none;
+            line-height: 1;
+        }
+
+        /* ── Empty State ──────────────────────── */
+        .empty-state {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-secondary);
+        }
+
+        .empty-state .empty-icon {
+            font-size: 48px;
+            margin-bottom: 12px;
+            opacity: 0.5;
+        }
+
+        .empty-state p {
+            font-size: 0.9rem;
+            font-weight: 500;
         }
     </style>
 </head>
 
 <body>
 
-    <!-- トップ用ヘッダー -->
-    <div class="header-glass" style="display: flex; justify-content: space-between; align-items: center;">
-        <div>
-            <h1 style="display: inline-block; margin-right: 8px;">立米AI Ryu兵衛</h1>
-            <span class="badge badge-primary">見積プロ</span>
+    <!-- ── Top Header ─────────────── -->
+    <header class="top-header">
+        <div class="brand">
+            <h1>Ryu兵衛</h1>
+            <span class="badge badge-primary solid" style="font-size:0.65rem; padding: 3px 8px;">Pro</span>
         </div>
-        <div>
-            <span id="admin-menu" style="display: none;">
-                <a href="admin.html" style="font-size: 1.2rem; text-decoration: none; margin-right: 12px;"
-                    title="管理者ダッシュボード">📊</a>
-                <a href="settings.html" style="font-size: 1.2rem; text-decoration: none; margin-right: 12px;"
-                    title="料金・会社情報設定">⚙️</a>
+        <div class="header-actions">
+            <span id="admin-menu" style="display:none; display: flex; align-items:center; gap:14px;">
+                <a href="admin.html" title="管理ダッシュボード">📊</a>
+                <a href="settings.html" title="設定">⚙️</a>
             </span>
-            <a href="login.html" style="font-size: 1.2rem; text-decoration: none;" title="ログイン (権限の切り替え)">👤</a>
+            <a href="login.html" id="login-btn" title="ログイン">👤</a>
+        </div>
+    </header>
+
+    <!-- ── Hero ───────────────────── -->
+    <div class="home-hero">
+        <div class="hero-inner">
+            <div class="hero-label">✨ AIが立米を自動計算</div>
+            <h1>現場の見積もり<br>もっとスマートに。</h1>
+            <p class="hero-sub">写真を撮るだけで、荷物の量と<br>お見積り金額を瞬時に算出します。</p>
         </div>
     </div>
 
-    <!-- ヒーローセクションのような挨拶 -->
-    <div class="container" style="padding-top: 10px; padding-bottom: 0;">
-        <h2 style="font-size: 1.5rem; margin-bottom: 8px;">こんにちは、<br>現場の見積もりをスマートに。</h2>
-        <p class="small-text" style="margin-bottom: 24px;">写真を撮るだけでAIが立米を即座に計算します。</p>
+    <!-- ── Stats ──────────────────── -->
+    <div class="stat-bar">
+        <div class="stat-card">
+            <div class="stat-label">📦 今月の案件</div>
+            <div class="stat-value" id="stat-count">–</div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-label">📐 見積合計 ㎥</div>
+            <div class="stat-value" id="stat-volume" style="color: var(--green);">–</div>
+        </div>
     </div>
 
-    <div class="container">
-        <!-- ダッシュボードのサマリー（API連動できるまで静的または仮表示） -->
-        <div class="dashboard-stats">
-            <div class="stat-card">
-                <div class="stat-label">今月の案件</div>
-                <div class="stat-value" id="stat-count">-</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-label">見積合計 (立米)</div>
-                <div class="stat-value" id="stat-volume">-</div>
-            </div>
-        </div>
+    <!-- ── Main Content ────────────── -->
+    <div class="container" style="padding-top: 0;">
 
-        <!-- メインアクション -->
-        <a href="volume.html" class="action-card"
-            style="display: block; text-decoration: none; position: relative; overflow: hidden; background: linear-gradient(135deg, #0A84FF 0%, #0066CC 100%); color: white; border-radius: var(--border-radius-xl); padding: 32px 24px; text-align: left; margin-bottom: 32px; box-shadow: var(--shadow-float); transition: transform 0.2s;">
-            <!-- 背景の装飾円 -->
-            <div
-                style="position: absolute; right: -20px; top: -20px; width: 120px; height: 120px; background: rgba(255,255,255,0.1); border-radius: 50%;">
-            </div>
-            <div
-                style="position: absolute; right: 40px; bottom: -40px; width: 80px; height: 80px; background: rgba(255,255,255,0.1); border-radius: 50%;">
-            </div>
-
-            <div style="position: relative; z-index: 10;">
-                <div style="font-size: 48px; margin-bottom: 16px;">📸</div>
-                <div style="font-size: 1.4rem; font-weight: 800; margin-bottom: 6px; letter-spacing: -0.02em;">
-                    カメラで見積もり作成</div>
-                <div style="font-size: 0.9rem; opacity: 0.9; font-weight: 500;">現場の写真を撮るだけでAIが自動計算</div>
+        <!-- Main CTA -->
+        <a href="volume.html" class="main-cta">
+            <div class="cta-inner">
+                <span class="cta-icon">📸</span>
+                <div class="cta-title">カメラで見積り作成</div>
+                <div class="cta-desc">AIが写真から荷物量・料金を自動計算</div>
             </div>
         </a>
 
-        <!-- 最近の案件 -->
-        <div class="recent-header mt-2">
+        <!-- Recent Jobs -->
+        <div class="section-header">
             <h2>最近の案件</h2>
-            <a href="jobs.html" class="view-all">すべて見る ›</a>
+            <a href="jobs.html" class="view-all">すべて見る →</a>
         </div>
 
-        <div id="recent-jobs-container">
-            <p class="text-center small-text mt-2" id="loading-msg">読み込み中...</p>
-            <ul class="job-list-simple" id="recent-jobs-list">
-                <!-- JSで挿入 -->
-            </ul>
+        <div id="jobs-container">
+            <p class="small-text text-center mt-1" id="loading-msg">読み込み中…</p>
+            <div id="recent-jobs-list"></div>
         </div>
+
     </div>
 
-    <!-- ボトムナビゲーション -->
-    <div class="bottom-nav">
+    <!-- ── Bottom Nav ──────────────── -->
+    <nav class="bottom-nav">
         <a href="index.html" class="nav-item active">
             <div class="nav-icon">🏠</div>
             <span>ホーム</span>
@@ -244,16 +404,17 @@
             <div class="nav-icon">📁</div>
             <span>案件一覧</span>
         </a>
-    </div>
+    </nav>
 
     <script src="assets/js/api.js"></script>
     <script src="assets/js/utils.js"></script>
     <script>
         document.addEventListener('DOMContentLoaded', async () => {
-            // 権限チェックによるメニュー表示切り替え
+            // Role-based header
             const role = localStorage.getItem('ryubee_user_role');
-            if (role === 'admin') {
-                document.getElementById('admin-menu').style.display = 'block';
+            const adminMenu = document.getElementById('admin-menu');
+            if (role === 'admin' && adminMenu) {
+                adminMenu.style.display = 'flex';
             }
 
             await loadRecentJobs();
@@ -267,61 +428,56 @@
                 const jobs = await api.getJobs();
 
                 if (!Array.isArray(jobs) || jobs.length === 0) {
-                    msgEl.textContent = "まだ案件がありません。";
-
-                    // サマリーの更新
-                    document.getElementById('stat-count').textContent = "0";
-                    document.getElementById('stat-volume').textContent = "0.0";
+                    msgEl.innerHTML = '';
+                    listEl.innerHTML = `
+            <div class="empty-state">
+              <div class="empty-icon">📭</div>
+              <p>まだ案件がありません。<br>カメラで最初の見積りを作成しましょう！</p>
+            </div>`;
+                    document.getElementById('stat-count').textContent = '0';
+                    document.getElementById('stat-volume').textContent = '0.0';
                     return;
                 }
 
                 msgEl.style.display = 'none';
 
-                // サマリーの計算（雑な例: 最新月などに絞ると良いが、とりあえず全体）
                 document.getElementById('stat-count').textContent = jobs.length;
-                const totalVol = jobs.reduce((sum, j) => sum + (Number(j.total_volume_m3) || 0), 0);
+                const totalVol = jobs.reduce((s, j) => s + (Number(j.total_volume_m3) || 0), 0);
                 document.getElementById('stat-volume').textContent = totalVol.toFixed(1);
 
-                // 最新の3件だけ表示
-                const recentJobs = jobs.slice(0, 3);
+                const recent = jobs.slice(0, 5);
                 listEl.innerHTML = '';
 
-                for (const j of recentJobs) {
-                    const dateStr = utils.formatDateTime(j.created_at).split(' ')[0]; // 日付部分のみ
-                    const name = j.job_name || "名称未設定の案件";
-                    const vol = j.total_volume_m3 != null ? `${j.total_volume_m3} ㎥` : "-";
+                for (const j of recent) {
+                    const dateStr = utils.formatDateTime(j.created_at).split(' ')[0];
+                    const name = j.job_name || '名称未設定';
+                    const vol = j.total_volume_m3 != null ? `${j.total_volume_m3} ㎥` : '–';
 
-                    const li = document.createElement('li');
-                    // 案件一覧ページに飛んで該当案件を開くようにしたい場合はURLパラメーターを付けるなど工夫が必要。
-                    // ここではシンプルにjobs.htmlへ遷移させる
-                    li.innerHTML = `
+                    listEl.innerHTML += `
             <a href="jobs.html?id=${j.job_id}" class="job-item-simple">
               <div class="job-info">
-                <h3>${utils.escapeHtml(name)}</h3>
-                <div class="job-meta">作成: ${dateStr}</div>
+                <div class="job-name">${utils.escapeHtml(name)}</div>
+                <div class="job-meta">作成日 ${dateStr}</div>
               </div>
-              <div class="job-volume">${vol}</div>
-            </a>
-          `;
-                    listEl.appendChild(li);
+              <div class="job-volume-badge">${vol}</div>
+            </a>`;
                 }
+
             } catch (e) {
-                msgEl.innerHTML = `<div class="alert alert-danger" style="text-align: left;">
-                    <strong>API通信エラー</strong><br>
-                    <span style="font-size: 0.85rem;">データの取得に失敗しました。<br>詳細: ${e.message}</span>
-                </div>`;
+                msgEl.innerHTML = `
+          <div class="alert alert-danger" style="text-align:left; margin-top:8px;">
+            <strong>読み込みエラー</strong><br>
+            <span style="font-size:0.83rem;">詳細: ${e.message}</span>
+          </div>`;
                 console.error(e);
             }
         }
-        // Service Worker Registration for Offline Support
+
         if ('serviceWorker' in navigator) {
             window.addEventListener('load', () => {
-                navigator.serviceWorker.register('./sw.js')
-                    .then(reg => console.log('SW registered:', reg.scope))
-                    .catch(err => console.log('SW reg failed:', err));
+                navigator.serviceWorker.register('./sw.js').catch(() => { });
             });
         }
-
     </script>
 </body>
 
