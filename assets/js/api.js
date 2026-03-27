@@ -37,7 +37,7 @@ async function apiFetch(path, options = {}) {
     // トークン期限切れ → 強制ログアウト
     localStorage.removeItem("ryubee_token");
     localStorage.removeItem("ryubee_user");
-    window.location.href = "/login.html";
+    window.location.href = "login.html";
     throw new Error("セッションが切れました。再ログインしてください。");
   }
 
@@ -86,14 +86,14 @@ const RyubeeAPI = {
   authLogout() {
     localStorage.removeItem("ryubee_token");
     localStorage.removeItem("ryubee_user");
-    window.location.href = "/login.html";
+    window.location.href = "login.html";
   },
 
   /** ログイン済みかチェック。未ログインなら login.html へ飛ばす */
   requireAuth() {
     const token = localStorage.getItem("ryubee_token");
     if (!token) {
-      window.location.href = "/login.html";
+      window.location.href = "login.html";
       return false;
     }
     return true;
