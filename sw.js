@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ryubee-cache-v4';
+const CACHE_NAME = 'ryubee-cache-v5';
 const urlsToCache = [
     './',
     './index.html',
@@ -14,6 +14,8 @@ const urlsToCache = [
 ];
 
 self.addEventListener('install', event => {
+    // インストール時に即座に新しいバージョンをアクティブにする
+    self.skipWaiting();
     event.waitUntil(
         caches.open(CACHE_NAME)
             .then(cache => {
@@ -41,6 +43,8 @@ self.addEventListener('fetch', event => {
 });
 
 self.addEventListener('activate', event => {
+    // 新しいService Workerが即座にページの制御を奪う
+    event.waitUntil(self.clients.claim());
     const cacheWhitelist = [CACHE_NAME];
     event.waitUntil(
         caches.keys().then(cacheNames => {
