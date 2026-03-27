@@ -1,60 +1,29 @@
-const CACHE_NAME = 'ryubee-cache-v5';
-const urlsToCache = [
-    './',
-    './index.html',
-    './volume.html',
-    './jobs.html',
-    './login.html',
-    './settings.html',
-    './invoice.html',
-    './assets/css/style.css',
-    './assets/js/api.js',
-    './assets/js/utils.js',
-    'https://cdnjs.cloudflare.com/ajax/libs/html2pdf.js/0.10.1/html2pdf.bundle.min.js'
-];
+const CACHE_NAME = 'ryubee-cache-v6-killswitch';
 
 self.addEventListener('install', event => {
-    // インストール時に即座に新しいバージョンをアクティブにする
+    // 即座にインストールして待機をスキップ
     self.skipWaiting();
-    event.waitUntil(
-        caches.open(CACHE_NAME)
-            .then(cache => {
-                return cache.addAll(urlsToCache);
-            })
-    );
-});
-
-self.addEventListener('fetch', event => {
-    // APIリクエストやPOSTリクエストはキャッシュフックを通過させる
-    if (event.request.method !== 'GET' || event.request.url.includes('/v1/')) {
-        return;
-    }
-
-    event.respondWith(
-        caches.match(event.request)
-            .then(response => {
-                // キャッシュがあればそれを返す
-                if (response) {
-                    return response;
-                }
-                return fetch(event.request);
-            })
-    );
 });
 
 self.addEventListener('activate', event => {
-    // 新しいService Workerが即座にページの制御を奪う
+    // 直ちに全クライアントの制御を奪う
     event.waitUntil(self.clients.claim());
-    const cacheWhitelist = [CACHE_NAME];
+
+    // 既存のすべてのキャッシュを強制削除する
     event.waitUntil(
         caches.keys().then(cacheNames => {
             return Promise.all(
                 cacheNames.map(cacheName => {
-                    if (cacheWhitelist.indexOf(cacheName) === -1) {
-                        return caches.delete(cacheName);
-                    }
+                    console.log('Deleting cache:', cacheName);
+                    return caches.delete(cacheName);
                 })
             );
         })
     );
+});
+
+self.addEventListener('fetch', event => {
+    // 何もインターセプトせず、完全にブラウザの標準ネットワーク通信に任せる
+    // (FetchEvent.respondWithエラーを根本から絶つ)
+    return;
 });

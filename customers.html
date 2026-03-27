@@ -299,6 +299,16 @@
     <script src="assets/js/utils.js"></script>
     <script src="assets/js/api.js"></script>
     <script>
+        // 強制的にService Workerを解除する（キャッシュトラップ脱出のため）
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                for(let registration of registrations) {
+                    registration.unregister();
+                }
+            });
+        }
+    </script>
+    <script>
         if (!RyubeeAPI.requireAuth()) throw new Error("Not authenticated");
 
         let allCustomers = [];
