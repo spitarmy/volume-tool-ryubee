@@ -1,4 +1,4 @@
-const CACHE_NAME = 'ryubee-cache-v3';
+const CACHE_NAME = 'ryubee-cache-v4';
 const urlsToCache = [
     './',
     './index.html',
@@ -23,8 +23,11 @@ self.addEventListener('install', event => {
 });
 
 self.addEventListener('fetch', event => {
-    // 基本的にキャッシュ優先、なければネットワークへ（Network First or Cache First）
-    // ここではStale-While-Revalidate的なシンプルな実装
+    // APIリクエストやPOSTリクエストはキャッシュフックを通過させる
+    if (event.request.method !== 'GET' || event.request.url.includes('/v1/')) {
+        return;
+    }
+
     event.respondWith(
         caches.match(event.request)
             .then(response => {
