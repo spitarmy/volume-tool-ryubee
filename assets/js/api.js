@@ -8,13 +8,13 @@
 
 // ── 環境切り替え ─────────────────────────────────────────────
 // ローカル開発: http://localhost:8000
-// 本番Render:   https://ryubee-api.onrender.com
+// 本番Render:   https://ryubee-api-new.onrender.com
 const API_BASE = (() => {
   const host = location.hostname;
   if (host === "localhost" || host === "127.0.0.1") {
     return "http://localhost:8000";
   }
-  return "https://ryubee-api.onrender.com";
+  return "https://ryubee-api-new.onrender.com";
 })();
 
 // ── 共通フェッチラッパー ──────────────────────────────────────
