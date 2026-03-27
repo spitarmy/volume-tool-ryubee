@@ -299,10 +299,10 @@
     <script src="assets/js/utils.js"></script>
     <script src="assets/js/api.js"></script>
     <script>
-        // 強制的にService Workerを解除する（キャッシュトラップ脱出のため）
+        // 強制的にService Workerを解除する（一度だけ）
         if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.getRegistrations().then(function(registrations) {
-                for(let registration of registrations) {
+            navigator.serviceWorker.getRegistrations().then(function (registrations) {
+                for (let registration of registrations) {
                     registration.unregister();
                 }
             });
