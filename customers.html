@@ -124,17 +124,91 @@
     <!-- 顧客編集モーダル -->
     <div class="cust-modal-overlay" id="custOverlay">
         <div class="cust-modal">
+            <style>
+                .section-title {
+                    font-size: 1.05rem;
+                    margin: 24px 0 12px;
+                    font-weight: 800;
+                    color: var(--primary);
+                    border-bottom: 2px solid var(--border);
+                    padding-bottom: 6px;
+                }
+
+                .pricing-row {
+                    display: flex;
+                    gap: 8px;
+                    margin-bottom: 8px;
+                }
+
+                .pricing-row input {
+                    flex: 1;
+                }
+
+                .pricing-row .del-btn {
+                    background: var(--danger);
+                    color: white;
+                    border: none;
+                    border-radius: 8px;
+                    width: 40px;
+                    cursor: pointer;
+                }
+            </style>
             <div class="modal-drag-handle"></div>
             <h3 class="card-title" id="modalTitle">顧客を登録</h3>
             <input type="hidden" id="editId">
-            <div class="form-group"><label>顧客名 / 会社名 *</label><input type="text" id="custName" placeholder="株式会社○○">
+
+            <h4 class="section-title">🏢 基本情報</h4>
+            <div class="form-group"><label>法人名 / 会社名 *</label><input type="text" id="custName" placeholder="株式会社○○">
             </div>
+            <div class="form-group"><label>ご住所</label><input type="text" id="custAddress" placeholder="京都市..."></div>
             <div class="form-group"><label>担当者名</label><input type="text" id="custContact" placeholder="山田太郎"></div>
-            <div class="form-group"><label>住所</label><input type="text" id="custAddress" placeholder="京都市..."></div>
-            <div class="form-group"><label>電話番号</label><input type="text" id="custPhone" placeholder="075-XXX-XXXX">
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                <div class="form-group"><label>電話番号</label><input type="text" id="custPhone" placeholder="075-XXX-XXXX">
+                </div>
+                <div class="form-group"><label>携帯番号</label><input type="text" id="custMobile"
+                        placeholder="090-XXXX-XXXX"></div>
             </div>
             <div class="form-group"><label>メールアドレス</label><input type="text" id="custEmail"
                     placeholder="info@example.com"></div>
+
+            <h4 class="section-title">📍 事業所・回収情報</h4>
+            <div class="form-group"><label>事業所名（店舗名・マンション名）</label><input type="text" id="custBranchName"></div>
+            <div class="form-group"><label>事業所住所</label><input type="text" id="custBranchAddress"></div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                <div class="form-group"><label>業種形態</label>
+                    <select id="custIndustryType">
+                        <option value="">選択してください</option>
+                        <option value="マンション">マンション</option>
+                        <option value="飲食店">飲食店</option>
+                        <option value="オフィス">オフィス</option>
+                        <option value="ファミリー・単身">ファミリー・単身</option>
+                        <option value="その他">その他</option>
+                    </select>
+                </div>
+                <div class="form-group"><label>平均回収量</label><input type="text" id="custAvgVolume"
+                        placeholder="例: 2m3/回"></div>
+            </div>
+            <div style="background:var(--bg-secondary);padding:12px;border-radius:var(--r-md);margin-bottom:12px;">
+                <label style="font-size:0.85rem;font-weight:700;">回収頻度・内容</label>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;">
+                    <div class="form-group" style="margin:0;"><label style="font-size:0.75rem;">一般ごみ（可燃）</label><input
+                            type="text" id="custFreqGeneral" placeholder="例: 毎日"></div>
+                    <div class="form-group" style="margin:0;"><label style="font-size:0.75rem;">資源（缶ビンペット）</label><input
+                            type="text" id="custFreqRecycle" placeholder="例: 週2回"></div>
+                    <div class="form-group" style="margin:0;"><label style="font-size:0.75rem;">プラ産廃（包装）</label><input
+                            type="text" id="custFreqPlastic" placeholder="例: 月1回"></div>
+                    <div class="form-group" style="margin:0;"><label style="font-size:0.75rem;">ダンボール・雑紙</label><input
+                            type="text" id="custFreqPaper" placeholder="例: 週1回"></div>
+                </div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                <div class="form-group"><label>営業時間</label><input type="text" id="custBusinessHours"
+                        placeholder="9:00 - 18:00"></div>
+                <div class="form-group"><label>定休日</label><input type="text" id="custHoliday" placeholder="土日祝"></div>
+            </div>
+            <div class="form-group"><label>回収開始予定日</label><input type="date" id="custStartDate"></div>
+
+            <h4 class="section-title">💰 請求・契約情報</h4>
             <div class="form-group">
                 <label>契約タイプ</label>
                 <select id="custType">
@@ -143,17 +217,25 @@
                 </select>
             </div>
             <div class="form-group"><label>委託契約書 期限</label><input type="date" id="custExpiry"></div>
+
             <div style="background:var(--bg-secondary);padding:14px;border-radius:var(--r-md);margin:8px 0;">
-                <label style="font-weight:700;font-size:0.85rem;">📅 締め払い設定</label>
-                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:8px;">
+                <label style="font-weight:700;font-size:0.85rem;">📅 締め・支払サイクル</label>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;">
+                    <div class="form-group" style="margin:0;">
+                        <label style="font-size:0.78rem;">支払方法</label>
+                        <select id="custPaymentMethod">
+                            <option value="振込">振込</option>
+                            <option value="自動引落し">自動引落し</option>
+                        </select>
+                    </div>
                     <div class="form-group" style="margin:0;">
                         <label style="font-size:0.78rem;">締め日</label>
                         <select id="custClosingDay">
                             <option value="31">月末</option>
+                            <option value="25">25日</option>
                             <option value="20">20日</option>
                             <option value="15">15日</option>
                             <option value="10">10日</option>
-                            <option value="25">25日</option>
                         </select>
                     </div>
                     <div class="form-group" style="margin:0;">
@@ -168,19 +250,37 @@
                         <label style="font-size:0.78rem;">支払日</label>
                         <select id="custPayDay">
                             <option value="31">月末</option>
+                            <option value="25">25日</option>
                             <option value="20">20日</option>
                             <option value="15">15日</option>
                             <option value="10">10日</option>
-                            <option value="25">25日</option>
                         </select>
                     </div>
                 </div>
             </div>
-            <div class="form-group"><label>メモ</label><textarea id="custNotes" placeholder="備考..."></textarea></div>
-            <button class="btn btn-primary" id="saveBtn" onclick="saveCustomer()">登録する</button>
-            <button class="btn btn-secondary mt-1" onclick="closeModal()">キャンセル</button>
-            <button class="btn btn-danger mt-1" id="deleteBtn" onclick="deleteCustomer()" style="display:none;">🗑
-                削除</button>
+
+            <div class="form-group"><label>ご請求先 宛名 / 住所</label><input type="text" id="custBillingAddress"
+                    placeholder="○○株式会社 京都市..."></div>
+            <div class="form-group"><label>ご請求先 メールアドレス (freee等)</label><input type="email" id="custBillingEmail"
+                    placeholder="billing@example.com"></div>
+            <div class="form-group"><label>ご請求先 ご担当者名</label><input type="text" id="custBillingContact"
+                    placeholder="経理担当者名"></div>
+
+            <h4 class="section-title">📄 単価・契約リスト</h4>
+            <p style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:12px;">顧客固有の品目別単価（例: 一般ごみ / 40 / kg）
+            </p>
+            <div id="pricingListContainer"></div>
+            <button class="btn btn-secondary btn-sm mt-1" style="width:100%;" onclick="addPricingRow()">＋ 品目を追加</button>
+
+            <div class="form-group mt-2"><label>社内用メモ</label><textarea id="custNotes"
+                    placeholder="特記事項など..."></textarea></div>
+
+            <div style="margin-top:24px;">
+                <button class="btn btn-primary" id="saveBtn" onclick="saveCustomer()">登録する</button>
+                <button class="btn btn-secondary mt-1" onclick="closeModal()">キャンセル</button>
+                <button class="btn btn-danger mt-1" id="deleteBtn" onclick="deleteCustomer()" style="display:none;">🗑
+                    削除</button>
+            </div>
         </div>
     </div>
 
@@ -265,7 +365,51 @@
             document.getElementById('custPayMonthOffset').value = cust?.payment_due_month_offset ?? '1';
             document.getElementById('custPayDay').value = cust?.payment_due_day || '31';
             document.getElementById('custNotes').value = cust?.notes || '';
+
+            // 拡張データ(JSON)の展開
+            let fd = {};
+            if (cust && cust.form_data) {
+                try { fd = JSON.parse(cust.form_data); } catch (e) { }
+            }
+            document.getElementById('custMobile').value = fd.mobile || '';
+            document.getElementById('custBranchName').value = fd.branch_name || '';
+            document.getElementById('custBranchAddress').value = fd.branch_address || '';
+            document.getElementById('custIndustryType').value = fd.industry_type || '';
+            document.getElementById('custAvgVolume').value = fd.average_volume || '';
+            document.getElementById('custFreqGeneral').value = fd.collection_general || '';
+            document.getElementById('custFreqRecycle').value = fd.collection_recycle || '';
+            document.getElementById('custFreqPlastic').value = fd.collection_plastic || '';
+            document.getElementById('custFreqPaper').value = fd.collection_paper || '';
+            document.getElementById('custBusinessHours').value = fd.business_hours || '';
+            document.getElementById('custHoliday').value = fd.regular_holiday || '';
+            document.getElementById('custStartDate').value = fd.collection_start_date || '';
+            document.getElementById('custPaymentMethod').value = fd.payment_method || '振込';
+            document.getElementById('custBillingAddress').value = fd.billing_address || '';
+            document.getElementById('custBillingEmail').value = fd.billing_email || '';
+            document.getElementById('custBillingContact').value = fd.billing_contact || '';
+
+            // 単価リストの展開
+            document.getElementById('pricingListContainer').innerHTML = '';
+            if (fd.pricing_list && Array.isArray(fd.pricing_list) && fd.pricing_list.length > 0) {
+                fd.pricing_list.forEach(p => addPricingRow(p.item, p.price, p.unit));
+            } else {
+                if (!cust) addPricingRow('', '', 'kg');
+            }
+
             document.getElementById('custOverlay').classList.add('show');
+        }
+
+        function addPricingRow(item = '', price = '', unit = 'kg') {
+            const container = document.getElementById('pricingListContainer');
+            const row = document.createElement('div');
+            row.className = 'pricing-row';
+            row.innerHTML = `
+                <input type="text" class="pr-item" placeholder="品名(例: 一般ごみ)" value="${utils.escapeHtml(item)}">
+                <input type="number" class="pr-price" placeholder="単価" style="max-width:80px;" value="${price}">
+                <input type="text" class="pr-unit" placeholder="単位(kg等)" style="max-width:70px;" value="${utils.escapeHtml(unit)}">
+                <button class="del-btn" onclick="this.parentElement.remove()">×</button>
+            `;
+            container.appendChild(row);
         }
 
         function closeModal() { document.getElementById('custOverlay').classList.remove('show'); editingId = null; }
@@ -276,6 +420,34 @@
         }
 
         async function saveCustomer() {
+            const pricing_list = [];
+            document.querySelectorAll('.pricing-row').forEach(row => {
+                const item = row.querySelector('.pr-item').value.trim();
+                const price = row.querySelector('.pr-price').value.trim();
+                const unit = row.querySelector('.pr-unit').value.trim();
+                if (item || price) pricing_list.push({ item, price, unit });
+            });
+
+            const formData = {
+                mobile: document.getElementById('custMobile').value.trim(),
+                branch_name: document.getElementById('custBranchName').value.trim(),
+                branch_address: document.getElementById('custBranchAddress').value.trim(),
+                industry_type: document.getElementById('custIndustryType').value,
+                average_volume: document.getElementById('custAvgVolume').value.trim(),
+                collection_general: document.getElementById('custFreqGeneral').value.trim(),
+                collection_recycle: document.getElementById('custFreqRecycle').value.trim(),
+                collection_plastic: document.getElementById('custFreqPlastic').value.trim(),
+                collection_paper: document.getElementById('custFreqPaper').value.trim(),
+                business_hours: document.getElementById('custBusinessHours').value.trim(),
+                regular_holiday: document.getElementById('custHoliday').value.trim(),
+                collection_start_date: document.getElementById('custStartDate').value,
+                payment_method: document.getElementById('custPaymentMethod').value,
+                billing_address: document.getElementById('custBillingAddress').value.trim(),
+                billing_email: document.getElementById('custBillingEmail').value.trim(),
+                billing_contact: document.getElementById('custBillingContact').value.trim(),
+                pricing_list: pricing_list
+            };
+
             const body = {
                 name: document.getElementById('custName').value.trim(),
                 contact_person: document.getElementById('custContact').value.trim(),
@@ -288,6 +460,7 @@
                 payment_due_month_offset: parseInt(document.getElementById('custPayMonthOffset').value) || 1,
                 payment_due_day: parseInt(document.getElementById('custPayDay').value) || 31,
                 notes: document.getElementById('custNotes').value.trim(),
+                form_data: JSON.stringify(formData)
             };
             if (!body.name) { alert('顧客名を入力してください'); return; }
             try {
