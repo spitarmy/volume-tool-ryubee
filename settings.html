@@ -71,9 +71,57 @@
             color: var(--text-secondary);
             letter-spacing: 0.06em;
             text-transform: uppercase;
-            padding: 10px 0 6px;
             border-bottom: 0.5px solid var(--border);
             margin-bottom: 0;
+        }
+
+        /* ── Tabs ── */
+        .tabs {
+            display: flex;
+            gap: 16px;
+            padding: 0 20px;
+            border-bottom: 1px solid var(--border);
+            margin-top: 10px;
+            overflow-x: auto;
+            white-space: nowrap;
+        }
+
+        .tab {
+            padding: 10px 4px;
+            color: var(--text-secondary);
+            font-weight: 600;
+            font-size: 0.95rem;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+        }
+
+        .tab.active {
+            color: var(--primary);
+            border-bottom-color: var(--primary);
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .template-list {
+            display: grid;
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        .template-card {
+            background: #fff;
+            border: 1px solid var(--border);
+            border-radius: var(--r-md);
+            padding: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
     </style>
 </head>
@@ -83,254 +131,340 @@
     <!-- ── Header ───────────────── -->
     <header class="header-glass">
         <a href="index.html" class="btn btn-secondary btn-sm" style="width:auto; padding: 7px 14px;">‹ ホーム</a>
-        <h1 style="font-size:1.1rem; font-weight:800; letter-spacing:-0.025em; margin:0;">💸 料金マスタ</h1>
+        <h1 style="font-size:1.1rem; font-weight:800; letter-spacing:-0.025em; margin:0;">⚙️ 設定・マスタ</h1>
         <div style="width:72px;"></div>
     </header>
 
+    <div class="tabs">
+        <div class="tab active" onclick="switchTab('ai')">💴 AI立米・料金マスタ</div>
+        <div class="tab" onclick="switchTab('items')">📋 手動明細・単価マスタ</div>
+        <div class="tab" onclick="switchTab('email')">✉️ メール・リマインド</div>
+    </div>
+
     <div class="container pb-5" style="padding-top:16px;">
 
-        <div class="alert alert-info" style="font-size:0.88rem;">
-            ここで設定した料金は<strong>カメラ見積もり時の自動計算</strong>とPDF見積書に利用されます。
+        <!-- ── TAB 1: AI立米・料金マスタ ── -->
+        <div id="tab-ai" class="tab-content active">
+            <div class="alert alert-info" style="font-size:0.88rem;">
+                ここで設定した料金は<strong>カメラ見積もり時の自動計算</strong>とPDF見積書に利用されます。
+            </div>
+
+            <!-- ── 会社情報 ─────────────────── -->
+            <div class="card mb-2">
+                <div class="card-title">🏢 会社情報（見積書テンプレ用）</div>
+
+                <div class="form-group">
+                    <label>会社名・屋号</label>
+                    <input type="text" id="company_name" placeholder="株式会社〇〇">
+                </div>
+                <div class="form-group">
+                    <label>郵便番号・住所</label>
+                    <input type="text" id="company_address" placeholder="〒123-4567 東京都…">
+                </div>
+                <div class="form-group">
+                    <label>電話番号</label>
+                    <input type="text" id="company_phone" placeholder="03-1234-5678">
+                </div>
+                <div class="form-group">
+                    <label>適格請求書発行事業者登録番号（任意）</label>
+                    <input type="text" id="company_invoice_no" placeholder="T1234567890123">
+                </div>
+                <div class="form-group mb-0">
+                    <label>振込先口座情報（任意）</label>
+                    <textarea id="company_bank_info"
+                        placeholder="〇〇銀行 〇〇支店&#13;&#10;普通 1234567&#13;&#10;カ）マルマル"></textarea>
+                </div>
+            </div>
+
+            <!-- ── 基本立米単価 ──────────────── -->
+            <div class="card">
+                <div class="card-title">📦 基本立米単価</div>
+                <p class="small-text mb-2">AIが算出した「総立米（㎥）」に掛け算される基本料金。</p>
+
+                <div class="price-row">
+                    <div>
+                        <div class="price-label">1 ㎥ あたり</div>
+                    </div>
+                    <div class="price-input-wrap">
+                        <input type="number" id="base_price_m3" placeholder="15000">
+                        <span class="unit">円</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── 搬出・環境オプション ─────────── -->
+            <div class="card">
+                <div class="card-title">🪜 搬出・環境オプション</div>
+
+                <div class="price-row">
+                    <div class="price-label">階段 2F</div>
+                    <div class="price-input-wrap">
+                        <input type="number" id="stairs_2f_price" placeholder="2000">
+                        <span class="unit">円</span>
+                    </div>
+                </div>
+                <div class="price-row">
+                    <div class="price-label">階段 3F以上</div>
+                    <div class="price-input-wrap">
+                        <input type="number" id="stairs_3f_price" placeholder="4000">
+                        <span class="unit">円</span>
+                    </div>
+                </div>
+                <div class="price-row">
+                    <div class="price-label">横付け不可（遠距離持ち出し）</div>
+                    <div class="price-input-wrap">
+                        <input type="number" id="far_parking_price" placeholder="3000">
+                        <span class="unit">円</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── リサイクル4品目 ──────────── -->
+            <div class="card">
+                <div class="card-title">♻️ 家電リサイクル4品目</div>
+                <p class="small-text mb-2">家電リサイクル法対象品目。品目ごとに個別設定できます。</p>
+
+                <div class="price-row">
+                    <div>
+                        <div class="price-label">📺 テレビ（全サイズ）</div>
+                        <div class="price-sub">液晶・プラズマ問わず</div>
+                    </div>
+                    <div class="price-input-wrap">
+                        <input type="number" id="recycle_tv" placeholder="3000">
+                        <span class="unit">円</span>
+                    </div>
+                </div>
+
+                <div class="price-row">
+                    <div>
+                        <div class="price-label">❄️ 冷蔵庫・冷凍庫</div>
+                        <div class="price-sub">サイズ問わず（大型は別途相談）</div>
+                    </div>
+                    <div class="price-input-wrap">
+                        <input type="number" id="recycle_fridge" placeholder="5000">
+                        <span class="unit">円</span>
+                    </div>
+                </div>
+
+                <div class="price-row">
+                    <div>
+                        <div class="price-label">🫧 洗濯機・衣類乾燥機</div>
+                    </div>
+                    <div class="price-input-wrap">
+                        <input type="number" id="recycle_washer" placeholder="4000">
+                        <span class="unit">円</span>
+                    </div>
+                </div>
+
+                <div class="price-row">
+                    <div>
+                        <div class="price-label">🌬️ エアコン（室内機）</div>
+                        <div class="price-sub">室外機は別途相談</div>
+                    </div>
+                    <div class="price-input-wrap">
+                        <input type="number" id="recycle_ac" placeholder="3500">
+                        <span class="unit">円</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── マットレス ──────────────────── -->
+            <div class="card">
+                <div class="card-title">🛏️ マットレス（サイズ別）</div>
+                <p class="small-text mb-2">マットレスのサイズごとに料金を设定できます。</p>
+
+                <div class="price-row">
+                    <div class="price-label">シングル</div>
+                    <div class="price-input-wrap">
+                        <input type="number" id="mattress_single" placeholder="3000">
+                        <span class="unit">円</span>
+                    </div>
+                </div>
+                <div class="price-row">
+                    <div class="price-label">セミダブル</div>
+                    <div class="price-input-wrap">
+                        <input type="number" id="mattress_semi_double" placeholder="4000">
+                        <span class="unit">円</span>
+                    </div>
+                </div>
+                <div class="price-row">
+                    <div class="price-label">ダブル</div>
+                    <div class="price-input-wrap">
+                        <input type="number" id="mattress_double" placeholder="5000">
+                        <span class="unit">円</span>
+                    </div>
+                </div>
+                <div class="price-row">
+                    <div>
+                        <div class="price-label">クイーン・キング</div>
+                        <div class="price-sub">大型サイズ</div>
+                    </div>
+                    <div class="price-input-wrap">
+                        <input type="number" id="mattress_queen_king" placeholder="7000">
+                        <span class="unit">円</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── ソファー ───────────────────── -->
+            <div class="card">
+                <div class="card-title">🛋️ ソファー（人掛け別）</div>
+                <p class="small-text mb-2">何人掛けかによって料金を設定できます。</p>
+
+                <div class="price-row">
+                    <div class="price-label">1人掛け（パーソナルチェア）</div>
+                    <div class="price-input-wrap">
+                        <input type="number" id="sofa_1p" placeholder="2000">
+                        <span class="unit">円</span>
+                    </div>
+                </div>
+                <div class="price-row">
+                    <div class="price-label">2人掛け</div>
+                    <div class="price-input-wrap">
+                        <input type="number" id="sofa_2p" placeholder="3500">
+                        <span class="unit">円</span>
+                    </div>
+                </div>
+                <div class="price-row">
+                    <div class="price-label">3人掛け</div>
+                    <div class="price-input-wrap">
+                        <input type="number" id="sofa_3p" placeholder="5000">
+                        <span class="unit">円</span>
+                    </div>
+                </div>
+                <div class="price-row">
+                    <div>
+                        <div class="price-label">L字型・4人掛け以上</div>
+                        <div class="price-sub">大型ソファー・コーナータイプ</div>
+                    </div>
+                    <div class="price-input-wrap">
+                        <input type="number" id="sofa_large" placeholder="8000">
+                        <span class="unit">円</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── その他の特例品 ─────────────── -->
+            <div class="card">
+                <div class="card-title">⚠️ その他の特例品目</div>
+
+                <div class="price-row">
+                    <div>
+                        <div class="price-label">金庫</div>
+                        <div class="price-sub">重量・大型のため割増</div>
+                    </div>
+                    <div class="price-input-wrap">
+                        <input type="number" id="safe_price" placeholder="15000">
+                        <span class="unit">円</span>
+                    </div>
+                </div>
+                <div class="price-row">
+                    <div>
+                        <div class="price-label">ピアノ・電子ピアノ</div>
+                    </div>
+                    <div class="price-input-wrap">
+                        <input type="number" id="piano_price" placeholder="20000">
+                        <span class="unit">円</span>
+                    </div>
+                </div>
+                <div class="price-row">
+                    <div>
+                        <div class="price-label">バイク・自転車</div>
+                    </div>
+                    <div class="price-input-wrap">
+                        <input type="number" id="bike_price" placeholder="5000">
+                        <span class="unit">円</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ── カスタム追加項目 ─────────────── -->
+            <div class="card">
+                <div class="card-title">➕ 独自の追加料金項目</div>
+                <p class="small-text mb-2">山文様独自の特例品目やオプション項目を追加できます。</p>
+                <div id="custom-ai-items-list" style="display:flex; flex-direction:column; gap:8px;"></div>
+                <button class="btn btn-secondary btn-sm mt-2" onclick="addCustomAiItem()">+ 新しい項目を追加</button>
+            </div>
+
+            <!-- ── Save Button ─────────────── -->
+            <button class="btn btn-primary" id="save-btn" onclick="saveSettings()"
+                style="margin-top: 8px; margin-bottom: 48px;">
+                💾 AI料金設定を保存する
+            </button>
+        </div> <!-- End of tab-ai -->
+
+        <!-- ── TAB 2: 手動明細・単価マスタ ── -->
+        <div id="tab-items" class="tab-content">
+            <div class="card">
+                <div class="card-title">品目・単価マスタの新規登録</div>
+                <p class="small-text mb-2">手動で見積書や請求書を作る際に呼び出せる雛形です。</p>
+                <div class="form-group">
+                    <label>品名 (必須)</label>
+                    <input type="text" id="tmplName" placeholder="例: 2tトラック積み放題">
+                </div>
+                <div style="display:flex; gap:8px;">
+                    <div class="form-group" style="flex:2;">
+                        <label>単価 (円)</label>
+                        <input type="number" id="tmplPrice" placeholder="30000">
+                    </div>
+                    <div class="form-group" style="flex:1;">
+                        <label>単位</label>
+                        <select id="tmplUnit">
+                            <option value="式">式</option>
+                            <option value="kg">kg</option>
+                            <option value="L">L</option>
+                            <option value="個">個</option>
+                            <option value="回">回</option>
+                            <option value="台">台</option>
+                        </select>
+                    </div>
+                </div>
+                <button class="btn btn-success mt-1" onclick="addTemplate()">➕ 雛形に追加</button>
+            </div>
+
+            <h3 style="margin-top:24px; font-size:1rem;">登録済みの雛形一覧</h3>
+            <div class="template-list" id="templateList">
+                <p class="text-center small-text">読み込み中...</p>
+            </div>
         </div>
 
-        <!-- ── 会社情報 ─────────────────── -->
-        <div class="card mb-2">
-            <div class="card-title">🏢 会社情報（見積書テンプレ用）</div>
-
-            <div class="form-group">
-                <label>会社名・屋号</label>
-                <input type="text" id="company_name" placeholder="株式会社〇〇">
-            </div>
-            <div class="form-group">
-                <label>郵便番号・住所</label>
-                <input type="text" id="company_address" placeholder="〒123-4567 東京都…">
-            </div>
-            <div class="form-group">
-                <label>電話番号</label>
-                <input type="text" id="company_phone" placeholder="03-1234-5678">
-            </div>
-            <div class="form-group">
-                <label>適格請求書発行事業者登録番号（任意）</label>
-                <input type="text" id="company_invoice_no" placeholder="T1234567890123">
-            </div>
-            <div class="form-group mb-0">
-                <label>振込先口座情報（任意）</label>
-                <textarea id="company_bank_info" placeholder="〇〇銀行 〇〇支店&#13;&#10;普通 1234567&#13;&#10;カ）マルマル"></textarea>
-            </div>
-        </div>
-
-        <!-- ── 基本立米単価 ──────────────── -->
-        <div class="card">
-            <div class="card-title">📦 基本立米単価</div>
-            <p class="small-text mb-2">AIが算出した「総立米（㎥）」に掛け算される基本料金。</p>
-
-            <div class="price-row">
-                <div>
-                    <div class="price-label">1 ㎥ あたり</div>
+        <!-- ── TAB 3: メール・リマインド ── -->
+        <div id="tab-email" class="tab-content">
+            <div class="card">
+                <div class="card-title">未入金アラート メール自動送信</div>
+                <p class="small-text mb-2">
+                    「一斉送信」時に自動入力される文章のテンプレートです。<br>
+                    <span
+                        style="background:var(--bg-secondary);padding:2px 4px;border-radius:4px;font-family:monospace;font-size:0.8rem;">{{customer_name}}</span>
+                    顧客名<br>
+                    <span
+                        style="background:var(--bg-secondary);padding:2px 4px;border-radius:4px;font-family:monospace;font-size:0.8rem;">{{month}}</span>
+                    請求月<br>
+                    <span
+                        style="background:var(--bg-secondary);padding:2px 4px;border-radius:4px;font-family:monospace;font-size:0.8rem;">{{amount}}</span>
+                    残金額<br>
+                    <span
+                        style="background:var(--bg-secondary);padding:2px 4px;border-radius:4px;font-family:monospace;font-size:0.8rem;">{{due_date}}</span>
+                    支払期限
+                </p>
+                <div class="form-group">
+                    <label>件名</label>
+                    <input type="text" id="emailSubject" placeholder="【重要】未入金のお知らせ">
                 </div>
-                <div class="price-input-wrap">
-                    <input type="number" id="base_price_m3" placeholder="15000">
-                    <span class="unit">円</span>
+                <div class="form-group">
+                    <label>本文</label>
+                    <textarea id="emailBody" rows="10" placeholder="メール本文を入力してください"></textarea>
                 </div>
+                <button class="btn btn-primary mt-1" id="save-email-btn" onclick="saveEmailSettings()">💾
+                    メール設定を保存</button>
             </div>
         </div>
-
-        <!-- ── 搬出・環境オプション ─────────── -->
-        <div class="card">
-            <div class="card-title">🪜 搬出・環境オプション</div>
-
-            <div class="price-row">
-                <div class="price-label">階段 2F</div>
-                <div class="price-input-wrap">
-                    <input type="number" id="stairs_2f_price" placeholder="2000">
-                    <span class="unit">円</span>
-                </div>
-            </div>
-            <div class="price-row">
-                <div class="price-label">階段 3F以上</div>
-                <div class="price-input-wrap">
-                    <input type="number" id="stairs_3f_price" placeholder="4000">
-                    <span class="unit">円</span>
-                </div>
-            </div>
-            <div class="price-row">
-                <div class="price-label">横付け不可（遠距離持ち出し）</div>
-                <div class="price-input-wrap">
-                    <input type="number" id="far_parking_price" placeholder="3000">
-                    <span class="unit">円</span>
-                </div>
-            </div>
-        </div>
-
-        <!-- ── リサイクル4品目 ──────────── -->
-        <div class="card">
-            <div class="card-title">♻️ 家電リサイクル4品目</div>
-            <p class="small-text mb-2">家電リサイクル法対象品目。品目ごとに個別設定できます。</p>
-
-            <div class="price-row">
-                <div>
-                    <div class="price-label">📺 テレビ（全サイズ）</div>
-                    <div class="price-sub">液晶・プラズマ問わず</div>
-                </div>
-                <div class="price-input-wrap">
-                    <input type="number" id="recycle_tv" placeholder="3000">
-                    <span class="unit">円</span>
-                </div>
-            </div>
-
-            <div class="price-row">
-                <div>
-                    <div class="price-label">❄️ 冷蔵庫・冷凍庫</div>
-                    <div class="price-sub">サイズ問わず（大型は別途相談）</div>
-                </div>
-                <div class="price-input-wrap">
-                    <input type="number" id="recycle_fridge" placeholder="5000">
-                    <span class="unit">円</span>
-                </div>
-            </div>
-
-            <div class="price-row">
-                <div>
-                    <div class="price-label">🫧 洗濯機・衣類乾燥機</div>
-                </div>
-                <div class="price-input-wrap">
-                    <input type="number" id="recycle_washer" placeholder="4000">
-                    <span class="unit">円</span>
-                </div>
-            </div>
-
-            <div class="price-row">
-                <div>
-                    <div class="price-label">🌬️ エアコン（室内機）</div>
-                    <div class="price-sub">室外機は別途相談</div>
-                </div>
-                <div class="price-input-wrap">
-                    <input type="number" id="recycle_ac" placeholder="3500">
-                    <span class="unit">円</span>
-                </div>
-            </div>
-        </div>
-
-        <!-- ── マットレス ──────────────────── -->
-        <div class="card">
-            <div class="card-title">🛏️ マットレス（サイズ別）</div>
-            <p class="small-text mb-2">マットレスのサイズごとに料金を设定できます。</p>
-
-            <div class="price-row">
-                <div class="price-label">シングル</div>
-                <div class="price-input-wrap">
-                    <input type="number" id="mattress_single" placeholder="3000">
-                    <span class="unit">円</span>
-                </div>
-            </div>
-            <div class="price-row">
-                <div class="price-label">セミダブル</div>
-                <div class="price-input-wrap">
-                    <input type="number" id="mattress_semi_double" placeholder="4000">
-                    <span class="unit">円</span>
-                </div>
-            </div>
-            <div class="price-row">
-                <div class="price-label">ダブル</div>
-                <div class="price-input-wrap">
-                    <input type="number" id="mattress_double" placeholder="5000">
-                    <span class="unit">円</span>
-                </div>
-            </div>
-            <div class="price-row">
-                <div>
-                    <div class="price-label">クイーン・キング</div>
-                    <div class="price-sub">大型サイズ</div>
-                </div>
-                <div class="price-input-wrap">
-                    <input type="number" id="mattress_queen_king" placeholder="7000">
-                    <span class="unit">円</span>
-                </div>
-            </div>
-        </div>
-
-        <!-- ── ソファー ───────────────────── -->
-        <div class="card">
-            <div class="card-title">🛋️ ソファー（人掛け別）</div>
-            <p class="small-text mb-2">何人掛けかによって料金を設定できます。</p>
-
-            <div class="price-row">
-                <div class="price-label">1人掛け（パーソナルチェア）</div>
-                <div class="price-input-wrap">
-                    <input type="number" id="sofa_1p" placeholder="2000">
-                    <span class="unit">円</span>
-                </div>
-            </div>
-            <div class="price-row">
-                <div class="price-label">2人掛け</div>
-                <div class="price-input-wrap">
-                    <input type="number" id="sofa_2p" placeholder="3500">
-                    <span class="unit">円</span>
-                </div>
-            </div>
-            <div class="price-row">
-                <div class="price-label">3人掛け</div>
-                <div class="price-input-wrap">
-                    <input type="number" id="sofa_3p" placeholder="5000">
-                    <span class="unit">円</span>
-                </div>
-            </div>
-            <div class="price-row">
-                <div>
-                    <div class="price-label">L字型・4人掛け以上</div>
-                    <div class="price-sub">大型ソファー・コーナータイプ</div>
-                </div>
-                <div class="price-input-wrap">
-                    <input type="number" id="sofa_large" placeholder="8000">
-                    <span class="unit">円</span>
-                </div>
-            </div>
-        </div>
-
-        <!-- ── その他の特例品 ─────────────── -->
-        <div class="card">
-            <div class="card-title">⚠️ その他の特例品目</div>
-
-            <div class="price-row">
-                <div>
-                    <div class="price-label">金庫</div>
-                    <div class="price-sub">重量・大型のため割増</div>
-                </div>
-                <div class="price-input-wrap">
-                    <input type="number" id="safe_price" placeholder="15000">
-                    <span class="unit">円</span>
-                </div>
-            </div>
-            <div class="price-row">
-                <div>
-                    <div class="price-label">ピアノ・電子ピアノ</div>
-                </div>
-                <div class="price-input-wrap">
-                    <input type="number" id="piano_price" placeholder="20000">
-                    <span class="unit">円</span>
-                </div>
-            </div>
-            <div class="price-row">
-                <div>
-                    <div class="price-label">バイク・自転車</div>
-                </div>
-                <div class="price-input-wrap">
-                    <input type="number" id="bike_price" placeholder="5000">
-                    <span class="unit">円</span>
-                </div>
-            </div>
-        </div>
-
-        <!-- ── Save Button ─────────────── -->
-        <button class="btn btn-primary" id="save-btn" onclick="saveSettings()"
-            style="margin-top: 8px; margin-bottom: 48px;">
-            💾 設定を保存する
-        </button>
 
     </div>
 
-    <script src="assets/js/utils.js"></script>
+    <script src="assets/js/api.js"></script>
     <script>
+        RyubeeAPI.requireAuth();
         // === 全フィールドの ID とデフォルト値 ===
         const FIELDS = {
             // 会社情報
@@ -372,23 +506,89 @@
             bike_price: { default: 5000 },
         };
 
-        document.addEventListener('DOMContentLoaded', loadSettings);
+        let customAiItems = [];
 
-        function loadSettings() {
-            const saved = (() => {
-                try { return JSON.parse(localStorage.getItem('ryubee_pricing_settings') || '{}'); }
-                catch { return {}; }
-            })();
+        function renderCustomAiItems() {
+            const list = document.getElementById('custom-ai-items-list');
+            if (!list) return;
+            if (customAiItems.length === 0) {
+                list.innerHTML = '<p class="small-text text-center text-muted" style="margin-bottom:0;">追加項目はありません</p>';
+                return;
+            }
+            list.innerHTML = customAiItems.map((item, index) => `
+                <div class="price-row" style="background:var(--bg-secondary); padding:10px 14px; border-radius:var(--r-md); border:none;">
+                    <div style="flex:1;">
+                        <input type="text" value="${utils.escapeHtml(item.name || '')}" placeholder="品名 (例: 金庫 大型)" 
+                               onchange="updateCustomAiItem(${index}, 'name', this.value)" style="width:100%; border:1px solid var(--border); background:#fff; font-weight:600;">
+                    </div>
+                    <div class="price-input-wrap">
+                        <input type="number" value="${item.price || 0}" placeholder="30000" 
+                               onchange="updateCustomAiItem(${index}, 'price', this.value)" style="width:85px; border:1px solid var(--border); background:#fff;">
+                        <span class="unit">円</span>
+                        <button class="btn btn-xs btn-danger" style="padding:6px 12px; margin-left:6px;" onclick="removeCustomAiItem(${index})">✕</button>
+                    </div>
+                </div>
+            `).join('');
+        }
 
+        function addCustomAiItem() {
+            customAiItems.push({ id: 'custom_' + Date.now(), name: '', price: 0 });
+            renderCustomAiItems();
+        }
+
+        function removeCustomAiItem(index) {
+            customAiItems.splice(index, 1);
+            renderCustomAiItems();
+        }
+
+        function updateCustomAiItem(index, key, value) {
+            if (key === 'price') value = parseInt(value, 10) || 0;
+            customAiItems[index][key] = value;
+        }
+
+        function switchTab(tabId) {
+            document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+            document.querySelector(`.tab[onclick="switchTab('${tabId}')"]`).classList.add('active');
+            document.getElementById(`tab-${tabId}`).classList.add('active');
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadSettings();
+            loadTemplates();
+        });
+
+        async function loadSettings() {
+            let saved = {};
+            try {
+                saved = await RyubeeAPI.fetchSettings();
+                localStorage.setItem('ryubee_pricing_settings', JSON.stringify(saved));
+
+                // メール設定の反映
+                if (document.getElementById('emailSubject')) {
+                    document.getElementById('emailSubject').value = saved.unpaid_email_subject || '';
+                    document.getElementById('emailBody').value = saved.unpaid_email_body || '';
+                }
+            } catch (e) {
+                console.warn('設定取得失敗、キャッシュを使用:', e.message);
+                try { saved = JSON.parse(localStorage.getItem('ryubee_pricing_settings') || '{}'); } catch { }
+            }
+            // AI料金の反映
             for (const [id, meta] of Object.entries(FIELDS)) {
                 const el = document.getElementById(id);
                 if (!el) continue;
-                const val = (id in saved) ? saved[id] : meta.default;
-                el.value = val;
+                el.value = (id in saved) ? saved[id] : meta.default;
             }
+
+            if (saved.custom_ai_items && Array.isArray(saved.custom_ai_items)) {
+                customAiItems = saved.custom_ai_items;
+            } else {
+                customAiItems = [];
+            }
+            renderCustomAiItems();
         }
 
-        function saveSettings() {
+        async function saveSettings() {
             const btn = document.getElementById('save-btn');
             btn.disabled = true;
             btn.textContent = '保存中…';
@@ -400,18 +600,89 @@
                 data[id] = meta.type === 'text' ? el.value.trim() : (Number(el.value) || 0);
             }
 
-            // 後方互換: 旧キーにも書いておく (volume.html が参照しているため)
-            data.mattress_price = data.mattress_single;   // 旧キー fallback
-            data.sofa_price = data.sofa_2p;               // 旧キー fallback（2人掛け相当）
-            data.recycle_price = data.recycle_washer;     // 旧キー fallback
+            data.custom_ai_items = customAiItems.filter(item => item.name.trim() !== '');
 
-            setTimeout(() => {
+            try {
+                // RyubeeAPI.updateSettings internally calls RyubeeAPI.saveSettings if aliased, but we made updateSettings
+                await RyubeeAPI.updateSettings(data);
                 localStorage.setItem('ryubee_pricing_settings', JSON.stringify(data));
-
-                btn.disabled = false;
                 btn.textContent = '✅ 保存しました！';
-                setTimeout(() => { btn.textContent = '💾 設定を保存する'; }, 2000);
-            }, 400);
+            } catch (e) {
+                alert('保存に失敗しました：' + e.message);
+                btn.textContent = '⚠️ 保存失敗';
+            } finally {
+                btn.disabled = false;
+                setTimeout(() => { btn.textContent = '💾 AI料金設定を保存する'; }, 2500);
+            }
+        }
+
+        async function saveEmailSettings() {
+            const btn = document.getElementById('save-email-btn');
+            btn.textContent = "保存中...";
+            try {
+                const body = {
+                    unpaid_email_subject: document.getElementById('emailSubject').value.trim(),
+                    unpaid_email_body: document.getElementById('emailBody').value.trim()
+                };
+                await RyubeeAPI.updateSettings(body);
+                alert("✅ メール設定を保存しました");
+            } catch (e) {
+                alert("保存エラー: " + e.message);
+            } finally {
+                btn.textContent = "💾 メール設定を保存";
+            }
+        }
+
+        // ── Item Templates ──
+        async function loadTemplates() {
+            const list = document.getElementById('templateList');
+            if (!list) return;
+            try {
+                const tmpls = await RyubeeAPI.fetchTemplates();
+                if (!tmpls.length) {
+                    list.innerHTML = `<p class="text-center small-text">まだ登録されていません</p>`;
+                    return;
+                }
+                list.innerHTML = tmpls.map(t => `
+                    <div class="template-card">
+                        <div>
+                            <h4 style="margin:0 0 4px;font-size:1rem;color:var(--text-primary);">${utils.escapeHtml(t.name)}</h4>
+                            <span style="font-size:1.1rem;font-weight:700;color:var(--primary);">¥${t.unit_price.toLocaleString()}</span>
+                            <span class="small-text"> / ${utils.escapeHtml(t.unit)}</span>
+                        </div>
+                        <button class="btn btn-xs btn-danger" onclick="deleteTemplate('${t.id}')">削除</button>
+                    </div>
+                `).join('');
+            } catch (e) {
+                list.innerHTML = `<p class="text-center small-text" style="color:var(--red);">取得エラー: ${e.message}</p>`;
+            }
+        }
+
+        async function addTemplate() {
+            const name = document.getElementById('tmplName').value.trim();
+            const price = parseInt(document.getElementById('tmplPrice').value) || 0;
+            const unit = document.getElementById('tmplUnit').value;
+
+            if (!name) return alert("品名を入力してください");
+
+            try {
+                await RyubeeAPI.createTemplate({ name, unit_price: price, unit });
+                document.getElementById('tmplName').value = '';
+                document.getElementById('tmplPrice').value = '';
+                loadTemplates();
+            } catch (e) {
+                alert("追加エラー: " + e.message);
+            }
+        }
+
+        async function deleteTemplate(id) {
+            if (!confirm("削除しますか？")) return;
+            try {
+                await RyubeeAPI.deleteTemplate(id);
+                loadTemplates();
+            } catch (e) {
+                alert("削除エラー: " + e.message);
+            }
         }
     </script>
 </body>

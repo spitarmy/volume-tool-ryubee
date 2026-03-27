@@ -1,22 +1,23 @@
-@import url('https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,300;0,14..32,400;0,14..32,500;0,14..32,600;0,14..32,700;0,14..32,800;1,14..32,400&family=Noto+Sans+JP:wght@400;500;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap');
 
 /* =========================================================================
-   Ryu兵衛 — Enterprise Premium Design System v2
-   "Less is more. Details make the difference."
+   Ryu兵衛 — Clean & Accessible Modernism v3
    ========================================================================= */
 
 :root {
   /* ── Brand Colors ───────────────────────────── */
-  --blue: #0A84FF;
-  --blue-dark: #006EE6;
-  --blue-light: #EBF4FF;
-  --green: #34C759;
-  --green-dark: #1E8040;
-  --green-light: #EAFBF0;
-  --orange: #FF9500;
-  --orange-light: #FFF4E5;
-  --red: #FF3B30;
-  --red-light: #FFF0EF;
+  --blue: #0EA5E9;
+  /* Friendly Sky Blue */
+  --blue-dark: #0284C7;
+  --blue-light: #E0F2FE;
+  --green: #10B981;
+  /* Mint Green */
+  --green-dark: #059669;
+  --green-light: #D1FAE5;
+  --orange: #F59E0B;
+  --orange-light: #FEF3C7;
+  --red: #EF4444;
+  --red-light: #FEE2E2;
 
   /* Aliases for compat */
   --primary: var(--blue);
@@ -26,16 +27,18 @@
   --danger: var(--red);
 
   /* ── Surfaces ───────────────────────────────── */
-  --bg: #F5F5F7;
-  --bg-secondary: #EBEBF0;
-  --surface: rgba(255, 255, 255, 0.80);
+  --bg: #F9FAFB;
+  --bg-secondary: #F3F4F6;
+  --surface: #FFFFFF;
   --surface-solid: #FFFFFF;
   --surface-overlay: rgba(255, 255, 255, 0.95);
 
   /* ── Text ───────────────────────────────────── */
-  --text-primary: #1D1D1F;
-  --text-secondary: #6E6E73;
-  --text-tertiary: #AEAEB2;
+  --text-primary: #111827;
+  /* Near black for high contrast */
+  --text-secondary: #4B5563;
+  /* Accessible gray */
+  --text-tertiary: #9CA3AF;
   --text-on-dark: #FFFFFF;
 
   /* Legacy aliases */
@@ -43,41 +46,41 @@
   --text-muted: var(--text-secondary);
 
   /* ── Border ─────────────────────────────────── */
-  --border: rgba(0, 0, 0, 0.07);
+  --border: #E5E7EB;
   --border-focus: var(--blue);
   --border-color: var(--border);
 
   /* ── Layout ─────────────────────────────────── */
-  --bottom-nav-height: calc(68px + env(safe-area-inset-bottom));
+  --bottom-nav-height: calc(72px + env(safe-area-inset-bottom));
   --container-max: 600px;
 
   /* ── Border Radii ───────────────────────────── */
-  --r-xs: 6px;
-  --r-sm: 10px;
-  --r-md: 14px;
-  --r-lg: 20px;
-  --r-xl: 26px;
-  --r-pill: 50px;
+  --r-xs: 8px;
+  --r-sm: 12px;
+  --r-md: 16px;
+  --r-lg: 24px;
+  --r-xl: 32px;
+  --r-pill: 9999px;
   /* Legacy aliases */
   --border-radius-sm: var(--r-sm);
   --border-radius-md: var(--r-md);
   --border-radius-lg: var(--r-lg);
   --border-radius-xl: var(--r-xl);
 
-  /* ── Shadows (layered, Apple-style) ─────────── */
-  --shadow-xs: 0 1px 3px rgba(0, 0, 0, 0.05), 0 1px 2px rgba(0, 0, 0, 0.04);
-  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.04);
-  --shadow-md: 0 6px 20px rgba(0, 0, 0, 0.07), 0 2px 8px rgba(0, 0, 0, 0.04);
-  --shadow-lg: 0 16px 40px rgba(0, 0, 0, 0.08), 0 4px 12px rgba(0, 0, 0, 0.05);
-  --shadow-float: 0 14px 32px rgba(10, 132, 255, 0.22), 0 4px 12px rgba(10, 132, 255, 0.14);
-  --shadow-green: 0 12px 28px rgba(52, 199, 89, 0.22), 0 4px 12px rgba(52, 199, 89, 0.14);
-  --shadow-red: 0 12px 28px rgba(255, 59, 48, 0.22), 0 4px 12px rgba(255, 59, 48, 0.14);
+  /* ── Shadows (Soft Diffused) ────────────────── */
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-sm: 0 4px 6px -1px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
+  --shadow-lg: 0 20px 25px -5px rgba(0, 0, 0, 0.05);
+  --shadow-float: 0 10px 25px -5px rgba(14, 165, 233, 0.25);
+  --shadow-green: 0 10px 25px -5px rgba(16, 185, 129, 0.25);
+  --shadow-red: 0 10px 25px -5px rgba(239, 68, 68, 0.25);
   /* Legacy aliases */
   --shadow-xs-l: var(--shadow-xs);
 
   /* ── Glass ──────────────────────────────────── */
-  --glass-blur: blur(28px) saturate(180%);
-  --glass-bg: rgba(255, 255, 255, 0.76);
+  --glass-blur: blur(20px) saturate(150%);
+  --glass-bg: rgba(255, 255, 255, 0.85);
 }
 
 /* ==========================================================================
@@ -96,11 +99,11 @@ html {
 }
 
 body {
-  font-family: 'Inter', 'Noto Sans JP', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
+  font-family: 'Plus Jakarta Sans', 'Inter', -apple-system, BlinkMacSystemFont, 'Helvetica Neue', sans-serif;
   background-color: var(--bg);
   color: var(--text-primary);
-  line-height: 1.5;
-  letter-spacing: -0.015em;
+  line-height: 1.6;
+  letter-spacing: -0.01em;
   padding-bottom: calc(var(--bottom-nav-height) + 16px);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -177,46 +180,61 @@ video {
 .card {
   background: var(--surface-solid);
   border-radius: var(--r-xl);
-  padding: 22px 20px;
-  margin-bottom: 16px;
-  box-shadow: var(--shadow-sm);
-  border: 0.5px solid rgba(255, 255, 255, 0.9);
+  padding: 28px 24px;
+  margin-bottom: 20px;
+  box-shadow: var(--shadow-md);
+  border: 1px solid rgba(255, 255, 255, 0.8);
+  position: relative;
   overflow: hidden;
 }
 
+.card::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.6) 0%, rgba(255, 255, 255, 0.1) 100%);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask-composite: xor;
+  mask-composite: exclude;
+  pointer-events: none;
+}
+
 .card.interactive {
-  transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.22s ease;
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.25s ease;
 }
 
 .card.interactive:active {
-  transform: scale(0.965);
+  transform: scale(0.975);
   box-shadow: var(--shadow-xs);
 }
 
 .card-title {
-  font-size: 1.1rem;
+  font-size: 1.15rem;
   font-weight: 700;
-  margin-bottom: 16px;
+  margin-bottom: 20px;
   color: var(--text-primary);
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
+  letter-spacing: -0.02em;
 }
 
 /* ==========================================================================
    Forms
    ========================================================================== */
 .form-group {
-  margin-bottom: 18px;
+  margin-bottom: 24px;
 }
 
 label {
   display: block;
-  font-size: 0.82rem;
+  font-size: 0.85rem;
   font-weight: 600;
   color: var(--text-secondary);
-  margin-bottom: 7px;
-  letter-spacing: 0.005em;
+  margin-bottom: 8px;
+  letter-spacing: 0.01em;
 }
 
 input[type="text"],
@@ -228,17 +246,19 @@ input[type="password"],
 textarea,
 select {
   width: 100%;
-  padding: 13px 15px;
+  padding: 14px 16px;
   font-size: 1rem;
   font-family: inherit;
-  border: 1px solid rgba(0, 0, 0, 0.09);
+  font-weight: 500;
+  border: 1px solid rgba(0, 0, 0, 0.08);
   border-radius: var(--r-md);
-  background-color: #F7F7F8;
+  background-color: var(--bg);
   color: var(--text-primary);
-  transition: border-color 0.18s, box-shadow 0.18s, background-color 0.18s;
+  transition: all 0.2s cubic-bezier(0.25, 0.8, 0.25, 1);
   appearance: none;
   -webkit-appearance: none;
   letter-spacing: -0.01em;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.02);
 }
 
 input:focus,
@@ -247,18 +267,19 @@ select:focus {
   outline: none;
   border-color: var(--blue);
   background-color: #FFFFFF;
-  box-shadow: 0 0 0 3.5px rgba(10, 132, 255, 0.16);
+  box-shadow: 0 0 0 4px rgba(15, 98, 254, 0.15), inset 0 1px 2px rgba(0, 0, 0, 0.01);
 }
 
 input::placeholder,
 textarea::placeholder {
   color: var(--text-tertiary);
+  font-weight: 400;
 }
 
 textarea {
   resize: vertical;
-  min-height: 90px;
-  line-height: 1.5;
+  min-height: 100px;
+  line-height: 1.6;
 }
 
 /* ==========================================================================
@@ -268,17 +289,17 @@ textarea {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
+  gap: 10px;
   width: 100%;
-  padding: 15px 22px;
-  font-size: 1rem;
+  padding: 16px 24px;
+  font-size: 1.05rem;
   font-weight: 700;
   font-family: inherit;
   text-align: center;
   border: none;
   border-radius: var(--r-xl);
   cursor: pointer;
-  transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s ease, opacity 0.2s;
+  transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
   -webkit-tap-highlight-color: transparent;
   user-select: none;
   letter-spacing: -0.01em;
@@ -296,11 +317,11 @@ textarea {
 }
 
 .btn:active::after {
-  background: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.15);
 }
 
 .btn:active {
-  transform: scale(0.96);
+  transform: scale(0.97);
 }
 
 .btn:disabled {
@@ -311,56 +332,61 @@ textarea {
 }
 
 .btn-primary {
-  background: linear-gradient(160deg, #2E9EFF 0%, #0A84FF 60%, #006EE6 100%);
+  background: linear-gradient(160deg, #377CFB 0%, #0F62FE 100%);
   color: #fff;
   box-shadow: var(--shadow-float);
+  border: 1px solid rgba(255, 255, 255, 0.15);
 }
 
 .btn-primary:active {
-  box-shadow: 0 2px 8px rgba(10, 132, 255, 0.2);
+  box-shadow: 0 4px 12px rgba(15, 98, 254, 0.2);
 }
 
 .btn-secondary {
-  background-color: #F2F2F7;
-  color: var(--blue);
-  border: 1px solid rgba(0, 0, 0, 0.06);
-  box-shadow: var(--shadow-xs);
+  background-color: #FFFFFF;
+  color: var(--text-primary);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  box-shadow: var(--shadow-sm);
+  font-weight: 600;
 }
 
 .btn-secondary:active {
-  background-color: #E8E8ED;
+  background-color: #F8F9FA;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.04);
 }
 
 .btn-success {
-  background: linear-gradient(160deg, #34C759 0%, #1E8040 100%);
+  background: linear-gradient(160deg, #24A148 0%, #198038 100%);
   color: #fff;
   box-shadow: var(--shadow-green);
+  border: 1px solid rgba(255, 255, 255, 0.15);
 }
 
 .btn-danger {
-  background: linear-gradient(160deg, #FF6B63 0%, #FF3B30 100%);
+  background: linear-gradient(160deg, #FA4D56 0%, #DA1E28 100%);
   color: #fff;
   box-shadow: var(--shadow-red);
+  border: 1px solid rgba(255, 255, 255, 0.15);
 }
 
 .btn-ghost {
   background: transparent;
   color: var(--blue);
-  border: 1.5px solid rgba(10, 132, 255, 0.25);
+  border: 2px solid rgba(15, 98, 254, 0.2);
   box-shadow: none;
 }
 
 .btn-sm {
-  padding: 9px 16px;
-  font-size: 0.88rem;
+  padding: 10px 18px;
+  font-size: 0.9rem;
   border-radius: var(--r-lg);
   width: auto;
 }
 
 .btn-xs {
-  padding: 6px 12px;
-  font-size: 0.8rem;
-  border-radius: var(--r-sm);
+  padding: 8px 14px;
+  font-size: 0.85rem;
+  border-radius: var(--r-md);
   width: auto;
   font-weight: 600;
 }
@@ -763,4 +789,252 @@ textarea {
   transform: translateY(-50%);
   font-size: 16px;
   pointer-events: none;
+}
+
+/* ==========================================================================
+   Desktop Responsive (768px+)
+   ========================================================================== */
+@media (min-width: 768px) {
+  :root {
+    --container-max: 1100px;
+    --bottom-nav-height: 0px;
+  }
+
+  body {
+    padding-bottom: 24px;
+  }
+
+  /* ── Desktop Side Nav ─────────────────────── */
+  .bottom-nav {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    width: 220px;
+    height: 100vh;
+    flex-direction: column;
+    justify-content: flex-start;
+    align-items: stretch;
+    padding: 24px 12px;
+    gap: 4px;
+    border-top: none;
+    border-right: 0.5px solid rgba(0, 0, 0, 0.06);
+    background: var(--surface-solid);
+    backdrop-filter: none;
+    z-index: 200;
+  }
+
+  .bottom-nav::before {
+    content: '📦 Ryu兵衛';
+    display: block;
+    font-size: 1.2rem;
+    font-weight: 800;
+    padding: 8px 12px 20px;
+    color: var(--text-primary);
+    letter-spacing: -0.03em;
+  }
+
+  .nav-item {
+    flex-direction: row;
+    justify-content: flex-start;
+    padding: 12px 16px;
+    border-radius: var(--r-md);
+    font-size: 0.9rem;
+    gap: 12px;
+    transition: background 0.15s;
+  }
+
+  .nav-item:hover {
+    background: var(--bg-secondary);
+  }
+
+  .nav-item.active {
+    background: var(--blue-light);
+  }
+
+  .nav-item.active .nav-icon {
+    transform: none;
+  }
+
+  .nav-icon {
+    font-size: 20px;
+  }
+
+  /* ── Content Offset ──────────────────────── */
+  .top-header,
+  .home-hero,
+  .stat-bar,
+  .header-glass,
+  .container,
+  .pipeline-header,
+  .pipeline-container,
+  .customers-header,
+  .search-wrap,
+  .customer-list,
+  .manifests-header,
+  .tab-bar,
+  .manifest-list,
+  .overdue-banner,
+  .billing-header,
+  .billing-content,
+  .sheet-header,
+  .sheet,
+  #alert-widgets {
+    margin-left: 220px;
+  }
+
+  .container {
+    max-width: var(--container-max);
+    padding: 24px 32px;
+  }
+
+  /* ── Grid Layouts ────────────────────────── */
+  .stats-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+  }
+
+  .stats-row .stat-card {
+    margin-bottom: 0;
+  }
+
+  /* ── Cards Grid ──────────────────────────── */
+  .desktop-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 16px;
+  }
+
+  .desktop-grid-3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 16px;
+  }
+
+  /* ── Modal centering on desktop ─────────── */
+  .modal-overlay,
+  .cust-modal-overlay,
+  .mf-modal-overlay,
+  .pay-modal-overlay,
+  .billing-modal-overlay {
+    align-items: center;
+  }
+
+  .modal-content,
+  .cust-modal,
+  .mf-modal,
+  .pay-modal,
+  .billing-modal {
+    border-radius: var(--r-xl);
+    max-width: 560px;
+    max-height: 85vh;
+  }
+
+  /* ── FAB position ────────────────────────── */
+  .fab {
+    bottom: 32px;
+    right: 32px;
+  }
+
+  /* ── Form groups inline on desktop ─────── */
+  .form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 16px;
+  }
+
+  .form-row .form-group {
+    margin-bottom: 16px;
+  }
+
+  /* ── Pipeline full width ─────────────────── */
+  .pipeline-container {
+    overflow-x: visible;
+    flex-wrap: nowrap;
+  }
+
+  .pipeline-column {
+    min-width: 0;
+    max-width: none;
+    flex: 1;
+  }
+
+  /* ── Table view for customer / manifest ── */
+  .desktop-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--surface-solid);
+    border-radius: var(--r-xl);
+    overflow: hidden;
+    box-shadow: var(--shadow-sm);
+  }
+
+  .desktop-table th {
+    background: var(--bg-secondary);
+    padding: 12px 16px;
+    text-align: left;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: var(--text-secondary);
+    border-bottom: 1px solid var(--border);
+  }
+
+  .desktop-table td {
+    padding: 14px 16px;
+    font-size: 0.9rem;
+    border-bottom: 1px solid var(--border);
+    vertical-align: middle;
+  }
+
+  .desktop-table tr:hover {
+    background: rgba(14, 165, 233, 0.03);
+  }
+
+  .desktop-table tr:last-child td {
+    border-bottom: none;
+  }
+
+  /* ── Drawer as side panel on desktop ────── */
+  .detail-drawer {
+    width: 480px;
+    right: 0;
+    left: auto;
+    border-radius: var(--r-xl) 0 0 var(--r-xl);
+  }
+}
+
+/* ==========================================================================
+   Large Desktop (1200px+)
+   ========================================================================== */
+@media (min-width: 1200px) {
+  :root {
+    --container-max: 1400px;
+  }
+
+  .bottom-nav {
+    width: 260px;
+  }
+
+  .top-header,
+  .home-hero,
+  .stat-bar,
+  .header-glass,
+  .container,
+  .pipeline-header,
+  .pipeline-container,
+  .customers-header,
+  .search-wrap,
+  .customer-list,
+  .manifests-header,
+  .tab-bar,
+  .manifest-list,
+  .overdue-banner,
+  .billing-header,
+  .billing-content,
+  .sheet-header,
+  .sheet,
+  #alert-widgets {
+    margin-left: 260px;
+  }
 }

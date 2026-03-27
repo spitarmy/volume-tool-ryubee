@@ -1,0 +1,589 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>請求・入金管理 — Ryu兵衛 山文SaaS</title>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <link rel="stylesheet" href="assets/css/style.css">
+    <style>
+        .billing-header {
+            background: #FFFFFF;
+            padding: 30px 24px 20px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .billing-header h1 {
+            font-size: 1.8rem;
+            color: var(--text-primary);
+            margin-bottom: 6px;
+        }
+
+        .month-picker {
+            display: flex;
+            gap: 8px;
+            margin-top: 16px;
+            align-items: center;
+        }
+
+        .month-picker input[type="month"] {
+            flex: 1;
+            padding: 10px 14px;
+            border-radius: var(--r-md);
+            border: 1px solid var(--border);
+            font-size: 1rem;
+        }
+
+        .alert-panel {
+            margin: 16px 20px;
+            padding: 20px;
+            background: var(--red-light);
+            border-radius: var(--r-xl);
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+
+        .alert-panel h3 {
+            color: #B00B06;
+            font-size: 1rem;
+            margin-bottom: 12px;
+        }
+
+        .alert-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 0;
+            border-bottom: 1px solid rgba(239, 68, 68, 0.1);
+        }
+
+        .alert-item:last-child {
+            border-bottom: none;
+        }
+
+        .alert-customer {
+            font-weight: 600;
+            font-size: 0.95rem;
+        }
+
+        .alert-amount {
+            color: var(--red);
+            font-weight: 700;
+            font-size: 1.05rem;
+        }
+
+        .fiscal-badge {
+            display: inline-block;
+            background: #DA1E28;
+            color: #fff;
+            font-size: 0.7rem;
+            font-weight: 700;
+            padding: 2px 6px;
+            border-radius: 4px;
+            margin-left: 6px;
+        }
+
+        .invoice-list {
+            padding: 0 20px 120px;
+        }
+
+        .invoice-card {
+            background: #fff;
+            border-radius: var(--r-xl);
+            padding: 20px;
+            margin-bottom: 12px;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--border);
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+
+        .invoice-card:active {
+            transform: scale(0.98);
+        }
+
+        .inv-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .inv-customer {
+            font-weight: 700;
+            font-size: 1.05rem;
+        }
+
+        .inv-amount {
+            font-weight: 800;
+            font-size: 1.15rem;
+        }
+
+        .inv-meta {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+        }
+
+        .inv-status {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 50px;
+            font-size: 0.75rem;
+            font-weight: 700;
+        }
+
+        .inv-status.draft {
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+        }
+
+        .inv-status.sent {
+            background: var(--blue-light);
+            color: var(--blue-dark);
+        }
+
+        .inv-status.paid {
+            background: var(--green-light);
+            color: var(--green-dark);
+        }
+
+        .inv-status.partial {
+            background: var(--orange-light);
+            color: #C06000;
+        }
+
+        .inv-status.overdue {
+            background: var(--red-light);
+            color: var(--red);
+        }
+
+        .action-bar {
+            display: flex;
+            gap: 8px;
+            padding: 12px 20px;
+            background: var(--glass-bg);
+            backdrop-filter: var(--glass-blur);
+        }
+
+        .action-bar button {
+            flex: 1;
+        }
+
+        /* 入金モーダル */
+        .payment-modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.36);
+            backdrop-filter: blur(10px);
+            display: none;
+            z-index: 3000;
+            align-items: flex-end;
+            justify-content: center;
+        }
+
+        .payment-modal-overlay.show {
+            display: flex;
+        }
+
+        .payment-modal {
+            background: #fff;
+            border-radius: var(--r-xl) var(--r-xl) 0 0;
+            width: 100%;
+            max-width: 600px;
+            padding: 24px 20px 40px;
+            max-height: 85vh;
+            overflow-y: auto;
+            animation: sheetUp 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+
+        .month-grid {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .month-cell {
+            padding: 12px 8px;
+            border-radius: var(--r-md);
+            text-align: center;
+            font-size: 0.85rem;
+            font-weight: 600;
+            border: 1px solid var(--border);
+        }
+
+        .month-cell.paid {
+            background: var(--green-light);
+            color: var(--green-dark);
+            border-color: var(--green);
+        }
+
+        .month-cell.unpaid {
+            background: var(--red-light);
+            color: var(--red);
+            border-color: var(--red);
+        }
+
+        .month-cell.partial {
+            background: var(--orange-light);
+            color: #C06000;
+            border-color: var(--orange);
+        }
+    </style>
+</head>
+
+<body>
+
+    <!-- Header -->
+    <header class="billing-header">
+        <h1>💰 請求・入金管理</h1>
+        <p style="color: var(--text-secondary); font-size: 0.9rem;">請求書の発行・入金消し込み・未入金アラート</p>
+        <div class="month-picker">
+            <input type="month" id="monthFilter" />
+            <button class="btn btn-xs btn-primary" onclick="loadInvoices()">表示</button>
+        </div>
+    </header>
+
+    <!-- 未入金アラートパネル -->
+    <div class="alert-panel" id="alertPanel" style="display:none;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+            <h3 style="margin:0;">🔴 未入金アラート</h3>
+            <button class="btn btn-xs btn-primary" onclick="sendReminders()">✉️ リマインド一斉送信</button>
+        </div>
+        <div id="alertList"></div>
+    </div>
+
+    <!-- アクションバー -->
+    <div class="action-bar" style="flex-wrap:wrap;">
+        <button class="btn btn-xs btn-success" onclick="generateInvoices()">📄 月次一括生成</button>
+        <button class="btn btn-xs btn-secondary" onclick="showPaymentModal()">💳 入金登録</button>
+        <button class="btn btn-xs btn-secondary" onclick="showBankUpload()"
+            style="background:var(--blue-light);color:var(--blue-dark);border-color:var(--blue);">🏦 銀行入金取込</button>
+        <button class="btn btn-xs btn-ghost" onclick="connectFreee()" id="freeeBtn">🔗 freee連携</button>
+    </div>
+
+    <!-- 月別支払状況 -->
+    <div style="padding: 16px 20px;">
+        <h3 style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 4px;">📅 月別入金状況</h3>
+        <div class="month-grid" id="monthGrid"></div>
+    </div>
+
+    <!-- 請求書一覧 -->
+    <div class="invoice-list" id="invoiceList">
+        <p style="text-align:center; color: var(--text-tertiary); margin-top: 20px;">読み込み中...</p>
+    </div>
+
+    <!-- 入金モーダル -->
+    <div class="payment-modal-overlay" id="paymentOverlay">
+        <div class="payment-modal">
+            <div class="modal-drag-handle"></div>
+            <h3 class="card-title">💳 入金を登録（消し込み）</h3>
+            <div class="form-group">
+                <label>請求書を選択</label>
+                <select id="payInvoiceId"></select>
+            </div>
+            <div class="form-group">
+                <label>入金額 (円)</label>
+                <input type="number" id="payAmount" placeholder="30000">
+            </div>
+            <div class="form-group">
+                <label>入金日</label>
+                <input type="date" id="payDate">
+            </div>
+            <div class="form-group">
+                <label>支払方法</label>
+                <select id="payMethod">
+                    <option value="bank_transfer">銀行振込</option>
+                    <option value="cash">現金</option>
+                    <option value="other">その他</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>備考</label>
+                <input type="text" id="payNotes" placeholder="任意">
+            </div>
+            <button class="btn btn-primary" onclick="submitPayment()">入金を登録</button>
+            <button class="btn btn-secondary mt-1" onclick="closePaymentModal()">キャンセル</button>
+        </div>
+    </div>
+
+    <!-- 銀行入金取込モーダル -->
+    <div class="payment-modal-overlay" id="bankOverlay">
+        <div class="payment-modal">
+            <div class="modal-drag-handle"></div>
+            <h3 class="card-title">🏦 京都銀行 入金データ取込</h3>
+            <p class="small-text mb-2">CSVファイルをアップロードして入金データを取り込みます。<br>フォーマット: 日付, 振込人名義, 入金額</p>
+            <div class="form-group">
+                <label>CSVファイル</label>
+                <input type="file" id="bankFile" accept=".csv" style="padding:10px;">
+            </div>
+            <button class="btn btn-primary" onclick="uploadBankCSV()">📤 アップロード</button>
+            <button class="btn btn-success mt-1" onclick="runAutoMatch()">🔍 自動マッチング実行</button>
+            <div id="matchResults" style="margin-top:16px;"></div>
+            <button class="btn btn-secondary mt-1" onclick="closeBankUpload()">閉じる</button>
+        </div>
+    </div>
+
+    <!-- Bottom Nav -->
+    <nav class="bottom-nav">
+        <a href="index.html" class="nav-item"><span class="nav-icon">🏠</span><span>ホーム</span></a>
+        <a href="pipeline.html" class="nav-item"><span class="nav-icon">📊</span><span>パイプライン</span></a>
+        <a href="billing.html" class="nav-item active"><span class="nav-icon">💰</span><span>請求</span></a>
+        <a href="customers.html" class="nav-item"><span class="nav-icon">🏢</span><span>顧客</span></a>
+        <a href="manifests.html" class="nav-item"><span class="nav-icon">📜</span><span>マニフェスト</span></a>
+    </nav>
+
+    <script src="assets/js/utils.js"></script>
+    <script src="assets/js/api.js"></script>
+    <script>
+        if (!RyubeeAPI.requireAuth()) throw new Error("Not authenticated");
+
+        let allInvoices = [];
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const now = new Date();
+            document.getElementById('monthFilter').value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+            document.getElementById('payDate').value = now.toISOString().slice(0, 10);
+            loadAlerts();
+            loadInvoices();
+        });
+
+        async function loadAlerts() {
+            try {
+                const alerts = await RyubeeAPI.fetchUnpaidAlerts();
+                const panel = document.getElementById('alertPanel');
+                const list = document.getElementById('alertList');
+                if (!alerts.length) { panel.style.display = 'none'; return; }
+                panel.style.display = 'block';
+                list.innerHTML = alerts.map(a => `
+                    <div class="alert-item">
+                        <div>
+                            <span class="alert-customer">${utils.escapeHtml(a.customer_name)}</span>
+                            <span class="inv-meta" style="margin-left:8px">${a.month}</span>
+                            ${a.is_fiscal_crossover ? '<span class="fiscal-badge">売掛金</span>' : ''}
+                            ${a.days_overdue > 0 ? `<span style="color:var(--red);font-size:0.8rem;margin-left:6px">${a.days_overdue}日超過</span>` : ''}
+                            ${a.last_reminded_at ? `<br><span style="font-size:0.75rem;color:var(--text-muted);">✉️ 送信済: ${a.last_reminded_at.slice(5, 16).replace('T', ' ')}</span>` : ''}
+                        </div>
+                        <span class="alert-amount">¥${a.remaining.toLocaleString()}</span>
+                    </div>
+                `).join('');
+
+                // 月別グリッド更新
+                updateMonthGrid(alerts);
+            } catch (e) { console.error(e); }
+        }
+
+        async function sendReminders() {
+            if (!confirm("メールアドレスが登録されている未入金顧客へ、一斉にリマインドメールを送信しますか？\n（設定画面のテンプレートが使用されます）")) return;
+            try {
+                const res = await RyubeeAPI.sendUnpaidReminders();
+                alert(`✅ ${res.sent_count}件のメール送信処理が完了しました。\n\n[送信ログ]\n${res.logs.join('\\n')}`);
+                loadAlerts(); // 再読み込みして最終送信日時などを反映
+            } catch (e) {
+                alert("送信エラー: " + e.message);
+            }
+        }
+
+        function updateMonthGrid(alerts) {
+            const grid = document.getElementById('monthGrid');
+            const now = new Date();
+            const months = [];
+            for (let i = 11; i >= 0; i--) {
+                const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+                months.push(`${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`);
+            }
+            // Create status map from alerts
+            const monthStatus = {};
+            alerts.forEach(a => {
+                if (!monthStatus[a.month]) monthStatus[a.month] = 'unpaid';
+                if (a.remaining <= 0) monthStatus[a.month] = 'paid';
+                else if (a.paid_total > 0) monthStatus[a.month] = 'partial';
+            });
+            grid.innerHTML = months.map(m => {
+                const st = monthStatus[m] || 'paid';
+                const label = m.split('-')[1] + '月';
+                return `<div class="month-cell ${st}">${label}<br><small>${st === 'paid' ? '✓' : st === 'partial' ? '一部' : '未'}</small></div>`;
+            }).join('');
+        }
+
+        async function loadInvoices() {
+            const month = document.getElementById('monthFilter').value;
+            try {
+                allInvoices = await RyubeeAPI.fetchInvoices({ month: month || undefined });
+                renderInvoices();
+                updatePaymentSelect();
+            } catch (e) {
+                document.getElementById('invoiceList').innerHTML = `<div class="alert alert-danger">${e.message}</div>`;
+            }
+        }
+
+        function renderInvoices() {
+            const list = document.getElementById('invoiceList');
+            if (!allInvoices.length) {
+                list.innerHTML = '<p style="text-align:center;color:var(--text-tertiary);margin-top:30px;">この月の請求書はありません</p>';
+                return;
+            }
+            const statusLabel = { draft: '下書き', sent: '送付済', paid: '入金済', partial: '一部入金', overdue: '期限超過' };
+            list.innerHTML = allInvoices.map(inv => `
+                <div class="invoice-card" onclick="viewInvoice('${inv.id}')">
+                    <div class="inv-top">
+                        <span class="inv-customer">${utils.escapeHtml(inv.customer_name || '顧客')}</span>
+                        <span class="inv-status ${inv.status}">${statusLabel[inv.status] || inv.status}</span>
+                    </div>
+                    <div class="inv-top">
+                        <span class="inv-amount">¥${inv.total_amount.toLocaleString()}</span>
+                        <span class="inv-meta">${inv.month}</span>
+                    </div>
+                    <div class="inv-meta" style="margin-top:6px;">
+                        入金: ¥${inv.paid_total.toLocaleString()} / 残: ¥${(inv.total_amount - inv.paid_total).toLocaleString()}
+                        ${inv.due_date ? ' | 期限: ' + inv.due_date : ''}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function viewInvoice(id) {
+            const inv = allInvoices.find(i => i.id === id);
+            if (!inv) return;
+            let detail = `請求書: ${inv.customer_name}\n月: ${inv.month}\n金額: ¥${inv.total_amount.toLocaleString()}\n入金済: ¥${inv.paid_total.toLocaleString()}\nステータス: ${inv.status}`;
+            if (inv.items.length) {
+                detail += '\n\n--- 明細 ---';
+                inv.items.forEach(it => {
+                    detail += `\n${it.description}: ${it.quantity}${it.unit} × ¥${it.unit_price} = ¥${it.amount.toLocaleString()}`;
+                });
+            }
+            if (inv.payments && inv.payments.length) {
+                const methodLabels = { bank_transfer: '銀行振込', cash: '現金', other: 'その他' };
+                detail += '\n\n--- 入金履歴 ---';
+                inv.payments.forEach(p => {
+                    detail += `\n${p.payment_date}: ¥${p.amount.toLocaleString()} (${methodLabels[p.payment_method] || p.payment_method}) ${p.notes ? '- ' + p.notes : ''}`;
+                });
+            }
+            alert(detail);
+        }
+
+        async function generateInvoices() {
+            const month = document.getElementById('monthFilter').value;
+            if (!month) { alert('月を選択してください'); return; }
+            if (!confirm(`${month} の請求書を自動生成しますか？\n（産廃マニフェストの重量×単価から自動計算）`)) return;
+            try {
+                const result = await RyubeeAPI.generateMonthlyInvoices(month);
+                alert(`${result.length}件の請求書を生成しました`);
+                loadInvoices();
+                loadAlerts();
+            } catch (e) { alert('エラー: ' + e.message); }
+        }
+
+        function showPaymentModal() { document.getElementById('paymentOverlay').classList.add('show'); }
+        function closePaymentModal() { document.getElementById('paymentOverlay').classList.remove('show'); }
+
+        function updatePaymentSelect() {
+            const sel = document.getElementById('payInvoiceId');
+            const unpaid = allInvoices.filter(i => i.status !== 'paid');
+            sel.innerHTML = unpaid.map(i =>
+                `<option value="${i.id}">${utils.escapeHtml(i.customer_name)} - ${i.month} (残¥${(i.total_amount - i.paid_total).toLocaleString()})</option>`
+            ).join('') || '<option value="">未払い請求書なし</option>';
+        }
+
+        async function submitPayment() {
+            const invoiceId = document.getElementById('payInvoiceId').value;
+            if (!invoiceId) { alert('請求書を選択してください'); return; }
+            const body = {
+                invoice_id: invoiceId,
+                amount: parseInt(document.getElementById('payAmount').value) || 0,
+                payment_date: document.getElementById('payDate').value,
+                payment_method: document.getElementById('payMethod').value,
+                notes: document.getElementById('payNotes').value,
+            };
+            if (!body.amount) { alert('入金額を入力してください'); return; }
+            try {
+                await RyubeeAPI.registerPayment(body);
+                closePaymentModal();
+                showToast('✅ 入金を登録しました');
+                loadInvoices();
+                loadAlerts();
+            } catch (e) { alert('エラー: ' + e.message); }
+        }
+
+        // ── 銀行入金取込 ──────────────────────────────
+        function showBankUpload() { document.getElementById('bankOverlay').classList.add('show'); }
+        function closeBankUpload() { document.getElementById('bankOverlay').classList.remove('show'); }
+
+        async function uploadBankCSV() {
+            const file = document.getElementById('bankFile').files[0];
+            if (!file) { alert('CSVファイルを選択してください'); return; }
+            try {
+                const result = await RyubeeAPI.uploadBankCSV(file);
+                showToast(`✅ ${result.imported}件の入金データを取込みました`);
+            } catch (e) { alert('エラー: ' + e.message); }
+        }
+
+        async function runAutoMatch() {
+            try {
+                const result = await RyubeeAPI.bankAutoMatch();
+                const el = document.getElementById('matchResults');
+                if (result.matched === 0 && result.total === 0) {
+                    el.innerHTML = '<p class="small-text">取込データがありません</p>';
+                    return;
+                }
+                let html = `<div class="alert alert-info">✅ ${result.matched}/${result.total}件 マッチング成功</div>`;
+                if (result.results) {
+                    html += result.results.map(r => `
+                        <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);">
+                            <span>${utils.escapeHtml(r.payer_name)}</span>
+                            <span>¥${r.amount.toLocaleString()}</span>
+                            <span class="badge ${r.status === 'reconciled' ? 'badge-success' : r.status === 'matched' ? 'badge-primary' : 'badge-warning'}">
+                                ${r.status === 'reconciled' ? '消込済' : r.status === 'matched' ? 'マッチ' : '未マッチ'}
+                            </span>
+                        </div>
+                    `).join('');
+                }
+                el.innerHTML = html;
+                loadInvoices();
+                loadAlerts();
+            } catch (e) { alert('エラー: ' + e.message); }
+        }
+
+        // ── freee連携 ─────────────────────────────────
+        async function connectFreee() {
+            try {
+                const status = await RyubeeAPI.freeeStatus();
+                if (status.connected) {
+                    document.getElementById('freeeBtn').textContent = '✅ freee接続済';
+                    document.getElementById('freeeBtn').style.color = 'var(--green)';
+                    return;
+                }
+                const data = await RyubeeAPI.freeeAuthUrl();
+                window.open(data.auth_url, '_blank');
+            } catch (e) {
+                if (e.message.includes('APP_ID')) {
+                    alert('freee APP_IDが未設定です。\n管理者に環境変数の設定をお願いしてください。');
+                } else {
+                    alert('freee接続エラー: ' + e.message);
+                }
+            }
+        }
+
+        // freeeステータスチェック
+        (async () => {
+            try {
+                const s = await RyubeeAPI.freeeStatus();
+                if (s.connected) {
+                    document.getElementById('freeeBtn').textContent = '✅ freee接続済';
+                    document.getElementById('freeeBtn').style.color = 'var(--green)';
+                }
+            } catch (e) { }
+        })();
+
+        function showToast(msg) {
+            const t = document.createElement('div');
+            t.textContent = msg;
+            t.style.cssText = 'position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#34C759;color:#fff;padding:10px 20px;border-radius:20px;font-weight:600;z-index:9999;';
+            document.body.appendChild(t);
+            setTimeout(() => t.remove(), 2500);
+        }
+    </script>
+</body>
+
+</html>

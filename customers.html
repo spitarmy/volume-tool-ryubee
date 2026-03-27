@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>顧客管理CRM — Ryu兵衛 山文SaaS</title>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <link rel="stylesheet" href="assets/css/style.css">
+    <style>
+        .customers-header {
+            background: #FFFFFF;
+            padding: 30px 24px 20px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .customers-header h1 {
+            font-size: 1.8rem;
+            margin-bottom: 6px;
+        }
+
+        .search-wrap {
+            padding: 12px 20px;
+        }
+
+        .search-wrap input {
+            width: 100%;
+            padding: 12px 16px;
+            border-radius: var(--r-pill);
+            border: 1px solid var(--border);
+            font-size: 0.95rem;
+        }
+
+        .customer-list {
+            padding: 0 20px 120px;
+        }
+
+        .customer-card {
+            background: #fff;
+            border-radius: var(--r-xl);
+            padding: 20px;
+            margin-bottom: 12px;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--border);
+            cursor: pointer;
+            transition: transform 0.15s;
+        }
+
+        .customer-card:active {
+            transform: scale(0.98);
+        }
+
+        .cc-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 8px;
+        }
+
+        .cc-name {
+            font-weight: 700;
+            font-size: 1.1rem;
+        }
+
+        .cc-meta {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 3px;
+        }
+
+        .cc-expiry {
+            font-size: 0.8rem;
+            color: var(--orange);
+            font-weight: 600;
+        }
+
+        /* モーダル */
+        .cust-modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.36);
+            backdrop-filter: blur(10px);
+            display: none;
+            z-index: 3000;
+            align-items: flex-end;
+            justify-content: center;
+        }
+
+        .cust-modal-overlay.show {
+            display: flex;
+        }
+
+        .cust-modal {
+            background: #fff;
+            border-radius: var(--r-xl) var(--r-xl) 0 0;
+            width: 100%;
+            max-width: 600px;
+            padding: 24px 20px 40px;
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: sheetUp 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+    </style>
+</head>
+
+<body>
+
+    <header class="customers-header">
+        <h1>🏢 顧客管理</h1>
+        <p style="color: var(--text-secondary); font-size: 0.9rem;">顧客の登録・編集・契約管理</p>
+    </header>
+
+    <div class="search-wrap">
+        <input type="text" id="searchInput" placeholder="🔍 顧客名・住所・電話で検索..." oninput="filterCustomers()">
+    </div>
+
+    <div class="customer-list" id="customerList">
+        <p style="text-align:center; color: var(--text-tertiary); margin-top: 20px;">読み込み中...</p>
+    </div>
+
+    <button class="fab" onclick="openModal()">+</button>
+
+    <!-- 顧客編集モーダル -->
+    <div class="cust-modal-overlay" id="custOverlay">
+        <div class="cust-modal">
+            <div class="modal-drag-handle"></div>
+            <h3 class="card-title" id="modalTitle">顧客を登録</h3>
+            <input type="hidden" id="editId">
+            <div class="form-group"><label>顧客名 / 会社名 *</label><input type="text" id="custName" placeholder="株式会社○○">
+            </div>
+            <div class="form-group"><label>担当者名</label><input type="text" id="custContact" placeholder="山田太郎"></div>
+            <div class="form-group"><label>住所</label><input type="text" id="custAddress" placeholder="京都市..."></div>
+            <div class="form-group"><label>電話番号</label><input type="text" id="custPhone" placeholder="075-XXX-XXXX">
+            </div>
+            <div class="form-group"><label>メールアドレス</label><input type="text" id="custEmail"
+                    placeholder="info@example.com"></div>
+            <div class="form-group">
+                <label>契約タイプ</label>
+                <select id="custType">
+                    <option value="spot">スポット</option>
+                    <option value="subscription">定期契約</option>
+                </select>
+            </div>
+            <div class="form-group"><label>委託契約書 期限</label><input type="date" id="custExpiry"></div>
+            <div style="background:var(--bg-secondary);padding:14px;border-radius:var(--r-md);margin:8px 0;">
+                <label style="font-weight:700;font-size:0.85rem;">📅 締め払い設定</label>
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-top:8px;">
+                    <div class="form-group" style="margin:0;">
+                        <label style="font-size:0.78rem;">締め日</label>
+                        <select id="custClosingDay">
+                            <option value="31">月末</option>
+                            <option value="20">20日</option>
+                            <option value="15">15日</option>
+                            <option value="10">10日</option>
+                            <option value="25">25日</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin:0;">
+                        <label style="font-size:0.78rem;">支払月</label>
+                        <select id="custPayMonthOffset">
+                            <option value="0">当月</option>
+                            <option value="1" selected>翌月</option>
+                            <option value="2">翌々月</option>
+                        </select>
+                    </div>
+                    <div class="form-group" style="margin:0;">
+                        <label style="font-size:0.78rem;">支払日</label>
+                        <select id="custPayDay">
+                            <option value="31">月末</option>
+                            <option value="20">20日</option>
+                            <option value="15">15日</option>
+                            <option value="10">10日</option>
+                            <option value="25">25日</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+            <div class="form-group"><label>メモ</label><textarea id="custNotes" placeholder="備考..."></textarea></div>
+            <button class="btn btn-primary" id="saveBtn" onclick="saveCustomer()">登録する</button>
+            <button class="btn btn-secondary mt-1" onclick="closeModal()">キャンセル</button>
+            <button class="btn btn-danger mt-1" id="deleteBtn" onclick="deleteCustomer()" style="display:none;">🗑
+                削除</button>
+        </div>
+    </div>
+
+    <!-- Bottom Nav -->
+    <nav class="bottom-nav">
+        <a href="index.html" class="nav-item"><span class="nav-icon">🏠</span><span>ホーム</span></a>
+        <a href="pipeline.html" class="nav-item"><span class="nav-icon">📊</span><span>パイプライン</span></a>
+        <a href="billing.html" class="nav-item"><span class="nav-icon">💰</span><span>請求</span></a>
+        <a href="customers.html" class="nav-item active"><span class="nav-icon">🏢</span><span>顧客</span></a>
+        <a href="manifests.html" class="nav-item"><span class="nav-icon">📜</span><span>マニフェスト</span></a>
+    </nav>
+
+    <script src="assets/js/utils.js"></script>
+    <script src="assets/js/api.js"></script>
+    <script>
+        if (!RyubeeAPI.requireAuth()) throw new Error("Not authenticated");
+
+        let allCustomers = [];
+        let editingId = null;
+
+        document.addEventListener('DOMContentLoaded', loadCustomers);
+
+        async function loadCustomers() {
+            try {
+                allCustomers = await RyubeeAPI.fetchCustomers();
+                filterCustomers();
+            } catch (e) {
+                document.getElementById('customerList').innerHTML = `<div class="alert alert-danger">${e.message}</div>`;
+            }
+        }
+
+        function filterCustomers() {
+            const q = document.getElementById('searchInput').value.toLowerCase();
+            const filtered = allCustomers.filter(c => {
+                const text = (c.name + c.address + c.phone + c.contact_person + c.email).toLowerCase();
+                return text.includes(q);
+            });
+            renderCustomers(filtered);
+        }
+
+        function renderCustomers(customers) {
+            const list = document.getElementById('customerList');
+            if (!customers.length) {
+                list.innerHTML = '<p style="text-align:center;color:var(--text-tertiary);margin-top:30px;">顧客が見つかりません</p>';
+                return;
+            }
+            list.innerHTML = customers.map(c => {
+                const typeBadge = c.contract_type === 'subscription'
+                    ? '<span class="badge badge-success">定期契約</span>'
+                    : '<span class="badge badge-primary">スポット</span>';
+                const expiry = c.contract_expiry_date
+                    ? `<div class="cc-expiry">📋 契約期限: ${c.contract_expiry_date}</div>` : '';
+                return `
+                    <div class="customer-card" onclick="openEdit('${c.id}')">
+                        <div class="cc-top">
+                            <span class="cc-name">${utils.escapeHtml(c.name)}</span>
+                            ${typeBadge}
+                        </div>
+                        ${c.contact_person ? `<div class="cc-meta">👤 ${utils.escapeHtml(c.contact_person)}</div>` : ''}
+                        <div class="cc-meta">📍 ${utils.escapeHtml(c.address || '未設定')}</div>
+                        <div class="cc-meta">📞 ${utils.escapeHtml(c.phone || '未設定')}</div>
+                        ${c.email ? `<div class="cc-meta">✉️ ${utils.escapeHtml(c.email)}</div>` : ''}
+                        ${expiry}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function openModal(cust = null) {
+            editingId = cust ? cust.id : null;
+            document.getElementById('modalTitle').textContent = cust ? '顧客を編集' : '顧客を登録';
+            document.getElementById('saveBtn').textContent = cust ? '更新する' : '登録する';
+            document.getElementById('deleteBtn').style.display = cust ? 'block' : 'none';
+            document.getElementById('custName').value = cust?.name || '';
+            document.getElementById('custContact').value = cust?.contact_person || '';
+            document.getElementById('custAddress').value = cust?.address || '';
+            document.getElementById('custPhone').value = cust?.phone || '';
+            document.getElementById('custEmail').value = cust?.email || '';
+            document.getElementById('custType').value = cust?.contract_type || 'spot';
+            document.getElementById('custExpiry').value = cust?.contract_expiry_date || '';
+            document.getElementById('custClosingDay').value = cust?.billing_closing_day || '31';
+            document.getElementById('custPayMonthOffset').value = cust?.payment_due_month_offset ?? '1';
+            document.getElementById('custPayDay').value = cust?.payment_due_day || '31';
+            document.getElementById('custNotes').value = cust?.notes || '';
+            document.getElementById('custOverlay').classList.add('show');
+        }
+
+        function closeModal() { document.getElementById('custOverlay').classList.remove('show'); editingId = null; }
+
+        function openEdit(id) {
+            const c = allCustomers.find(x => x.id === id);
+            if (c) openModal(c);
+        }
+
+        async function saveCustomer() {
+            const body = {
+                name: document.getElementById('custName').value.trim(),
+                contact_person: document.getElementById('custContact').value.trim(),
+                address: document.getElementById('custAddress').value.trim(),
+                phone: document.getElementById('custPhone').value.trim(),
+                email: document.getElementById('custEmail').value.trim(),
+                contract_type: document.getElementById('custType').value,
+                contract_expiry_date: document.getElementById('custExpiry').value || null,
+                billing_closing_day: parseInt(document.getElementById('custClosingDay').value) || 31,
+                payment_due_month_offset: parseInt(document.getElementById('custPayMonthOffset').value) || 1,
+                payment_due_day: parseInt(document.getElementById('custPayDay').value) || 31,
+                notes: document.getElementById('custNotes').value.trim(),
+            };
+            if (!body.name) { alert('顧客名を入力してください'); return; }
+            try {
+                if (editingId) {
+                    await RyubeeAPI.updateCustomer(editingId, body);
+                    showToast('✅ 更新しました');
+                } else {
+                    await RyubeeAPI.createCustomer(body);
+                    showToast('✅ 登録しました');
+                }
+                closeModal();
+                loadCustomers();
+            } catch (e) { alert('エラー: ' + e.message); }
+        }
+
+        async function deleteCustomer() {
+            if (!editingId || !confirm('この顧客を削除しますか？')) return;
+            try {
+                await RyubeeAPI.deleteCustomer(editingId);
+                closeModal();
+                showToast('🗑 削除しました');
+                loadCustomers();
+            } catch (e) { alert('エラー: ' + e.message); }
+        }
+
+        function showToast(msg) {
+            const t = document.createElement('div');
+            t.textContent = msg;
+            t.style.cssText = 'position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#34C759;color:#fff;padding:10px 20px;border-radius:20px;font-weight:600;z-index:9999;';
+            document.body.appendChild(t);
+            setTimeout(() => t.remove(), 2500);
+        }
+    </script>
+</body>
+
+</html>

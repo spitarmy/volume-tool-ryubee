@@ -290,6 +290,7 @@
     <script src="assets/js/utils.js"></script>
     <script src="assets/js/api.js"></script>
     <script>
+        if (!RyubeeAPI.requireAuth()) throw new Error("Not authenticated");
         // URLから案件IDを取得
         const urlParams = new URLSearchParams(window.location.search);
         const jobId = urlParams.get('id');
@@ -318,7 +319,7 @@
             }
 
             try {
-                const job = await api.getJob(jobId);
+                const job = await RyubeeAPI.fetchJob(jobId);
 
                 // ヘッダー・宛名情報
                 const today = new Date().toLocaleDateString('ja-JP');

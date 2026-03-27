@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ドライバー指示書 — Ryu兵衛</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+    <style>
+        @media print {
+            body {
+                background: #fff;
+                padding: 0;
+            }
+
+            .no-print {
+                display: none !important;
+            }
+
+            .sheet {
+                box-shadow: none;
+                margin: 0;
+                padding: 20px;
+            }
+        }
+
+        body {
+            background: #f5f5f7;
+        }
+
+        .sheet-header {
+            padding: 16px 20px;
+            background: var(--glass-bg);
+            backdrop-filter: var(--glass-blur);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 0.5px solid rgba(0, 0, 0, 0.06);
+        }
+
+        .sheet {
+            background: #fff;
+            max-width: 800px;
+            margin: 20px auto;
+            padding: 40px;
+            box-shadow: var(--shadow-md);
+            border-radius: var(--r-xl);
+        }
+
+        .sheet h1 {
+            font-size: 1.6rem;
+            text-align: center;
+            margin-bottom: 24px;
+            border-bottom: 2px solid #333;
+            padding-bottom: 12px;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: 120px 1fr;
+            gap: 0;
+            margin-bottom: 24px;
+        }
+
+        .info-label {
+            padding: 10px 12px;
+            background: #f8f9fa;
+            font-weight: 600;
+            font-size: 0.9rem;
+            border: 1px solid #e5e7eb;
+        }
+
+        .info-value {
+            padding: 10px 12px;
+            font-size: 0.95rem;
+            border: 1px solid #e5e7eb;
+            border-left: none;
+        }
+
+        .notes-section {
+            margin-top: 20px;
+            padding: 16px;
+            background: #fffde7;
+            border: 1px solid #fff9c4;
+            border-radius: var(--r-md);
+        }
+
+        .notes-section h3 {
+            font-size: 0.9rem;
+            margin-bottom: 8px;
+            color: #F57F17;
+        }
+
+        .photo-gallery {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 12px;
+            margin-top: 16px;
+        }
+
+        .photo-gallery img {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+            border-radius: var(--r-md);
+            border: 1px solid var(--border);
+        }
+
+        .checklist {
+            margin-top: 20px;
+            padding: 16px;
+            border: 1px solid var(--border);
+            border-radius: var(--r-md);
+        }
+
+        .checklist h3 {
+            font-size: 0.9rem;
+            margin-bottom: 10px;
+        }
+
+        .checklist-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 0;
+            font-size: 0.9rem;
+        }
+
+        .checklist-item input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div class="sheet-header no-print">
+        <button onclick="history.back()" class="btn btn-secondary" style="margin:0;padding:6px 12px;font-size:0.9rem;">‹
+            戻る</button>
+        <h2 style="font-size:1rem;margin:0;">ドライバー指示書</h2>
+        <button onclick="window.print()" class="btn btn-primary"
+            style="margin:0;padding:6px 16px;font-size:0.9rem;width:auto;">🖨 印刷</button>
+    </div>
+
+    <div class="sheet" id="driverSheet">
+        <h1>🚚 作業指示書</h1>
+        <div class="info-grid">
+            <div class="info-label">案件名</div>
+            <div class="info-value" id="dsJobName">–</div>
+            <div class="info-label">お客様名</div>
+            <div class="info-value" id="dsCustomer">–</div>
+            <div class="info-label">住所</div>
+            <div class="info-value" id="dsAddress">–</div>
+            <div class="info-label">作業日</div>
+            <div class="info-value" id="dsWorkDate">–</div>
+            <div class="info-label">案件タイプ</div>
+            <div class="info-value" id="dsJobType">–</div>
+            <div class="info-label">見積金額</div>
+            <div class="info-value" id="dsPrice">–</div>
+            <div class="info-label">担当営業</div>
+            <div class="info-value" id="dsAssignee">–</div>
+        </div>
+
+        <div class="notes-section" id="dsNotesSection" style="display:none;">
+            <h3>📝 注意事項・特記メモ</h3>
+            <div id="dsNotes"></div>
+        </div>
+
+        <div id="photoSection" style="display:none;">
+            <h3 style="margin-top:20px;font-size:0.95rem;">📷 現場写真</h3>
+            <div class="photo-gallery" id="dsPhotos"></div>
+        </div>
+
+        <div class="checklist">
+            <h3>✅ 作業チェックリスト</h3>
+            <div class="checklist-item"><input type="checkbox"> 現場到着・お客様ご挨拶</div>
+            <div class="checklist-item"><input type="checkbox"> 搬出前の養生・保護</div>
+            <div class="checklist-item"><input type="checkbox"> 搬出作業完了</div>
+            <div class="checklist-item"><input type="checkbox"> 清掃・原状回復</div>
+            <div class="checklist-item"><input type="checkbox"> お客様確認・サイン取得</div>
+            <div class="checklist-item"><input type="checkbox"> 車両積込完了</div>
+        </div>
+    </div>
+
+    <script src="assets/js/utils.js"></script>
+    <script src="assets/js/api.js"></script>
+    <script>
+        if (!RyubeeAPI.requireAuth()) throw new Error("Not authenticated");
+
+        const TYPE_LABELS = {
+            store_removal: '店舗残置物撤去', estate: '遺品整理',
+            welfare: '福祉残置物撤去', general_waste: '一般ゴミ収集', other: 'その他'
+        };
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            const jobId = new URLSearchParams(location.search).get('id');
+            if (!jobId) { alert('案件IDが未指定です'); return; }
+            try {
+                const job = await RyubeeAPI.fetchJob(jobId);
+                document.getElementById('dsJobName').textContent = job.job_name || '–';
+                document.getElementById('dsCustomer').textContent = job.customer_name || '–';
+                document.getElementById('dsAddress').textContent = job.address || '–';
+                document.getElementById('dsWorkDate').textContent = job.work_date || '未定';
+                document.getElementById('dsJobType').textContent = TYPE_LABELS[job.job_type] || 'その他';
+                document.getElementById('dsPrice').textContent = job.price_total ? `¥${job.price_total.toLocaleString()}` : '–';
+                document.getElementById('dsAssignee').textContent = job.assigned_to_name || '–';
+
+                if (job.notes) {
+                    document.getElementById('dsNotesSection').style.display = 'block';
+                    document.getElementById('dsNotes').textContent = job.notes;
+                }
+
+                if (Array.isArray(job.photos) && job.photos.length) {
+                    document.getElementById('photoSection').style.display = 'block';
+                    document.getElementById('dsPhotos').innerHTML = job.photos.map(url =>
+                        `<img src="${utils.escapeHtml(url)}" alt="現場写真">`
+                    ).join('');
+                }
+            } catch (e) { alert('読み込みエラー: ' + e.message); }
+        });
+    </script>
+</body>
+
+</html>

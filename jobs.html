@@ -257,456 +257,356 @@
       justify-content: space-between;
       margin-bottom: 24px;
     }
+  </style>
 
-    </head><body>< !-- 固定ヘッダー（一覧画面） --><div class="header-glass" style="flex-direction: column; align-items: stretch; padding-bottom: 8px;"><h1>📁 案件フォルダ</h1><div class="search-box"><input type="text" id="search-input" class="search-input" placeholder="🔍 現場名・お客様名・住所で検索..."
-    oninput="filterJobs()"></div>< !-- フォルダタブ --><div class="folder-tabs"><button class="folder-tab active" onclick="setFolder('all', this)">すべて <span class="folder-count" id="count-all">0</span></button><button class="folder-tab" onclick="setFolder('estimated', this)">見積済 <span class="folder-count" id="count-est">0</span></button><button class="folder-tab" onclick="setFolder('scheduled', this)">作業予定 <span class="folder-count" id="count-sch">0</span></button><button class="folder-tab" onclick="setFolder('completed', this)">完了 <span class="folder-count" id="count-comp">0</span></button></div></div><div class="container" id="jobs-container"><p id="jobs-status" class="text-center small-text mt-2">読み込み中...</p><div id="jobs-list">< !-- カードがJSで挿入される --></div></div>< !-- ボトムナビゲーション --><div class="bottom-nav"><a href="index.html" class="nav-item"><div class="nav-icon">🏠</div><span>ホーム</span></a><a href="volume.html" class="nav-item"><div class="nav-icon">📸</div><span>カメラ見積</span></a><a href="jobs.html" class="nav-item active"><div class="nav-icon">📁</div><span>案件一覧</span></a></div>< !--===============================案件詳細 ドロワー（スライドメニュー）===============================--><div id="detail-drawer"><div class="drawer-header"><button class="drawer-back-btn" onclick="closeDetail()"><i style="font-style:normal;">‹ 戻る</i></button><h3 class="drawer-title" id="drawer-title">案件詳細</h3><div style="width: 40px;"></div>< !-- バランス用 --></div><div class="drawer-content"><a href="#" target="_blank" id="pdf-link" class="pdf-btn"><span style="font-size: 1.2rem;">📄</span>作業書PDFを出力 </a><div class="card"><h3 class="card-title">基本情報編集</h3><div class="form-group"><label>ステータス（フォルダ）</label><select id="status"><option value="estimated">見積済</option><option value="scheduled">作業予定</option><option value="completed">作業完了</option></select></div><div class="form-group"><label>現場名（案件名）</label><input type="text" id="job_name"></div><div class="form-group"><label>お客様名</label><input type="text" id="customer_name"></div><div class="form-group"><label>住所</label><input type="text" id="address"></div><div class="d-flex gap-2"><div class="form-group flex-1" style="width:50%;"><label>作業日</label><input type="date" id="work_date"></div><div class="form-group flex-1" style="width:50%;"><label>時間帯</label><input type="text" id="work_time" placeholder="10:00~"></div></div><div class="d-flex gap-2"><div class="form-group flex-1" style="width:50%;"><label>見積金額(円)</label><input type="number" id="price_total"></div><div class="form-group flex-1" style="width:50%;"><label>作業員数</label><input type="number" id="workers"></div></div><div class="form-group"><label>備考</label><textarea id="notes" placeholder="注意事項などを入力..."></textarea></div><div class="section-title" style="margin-left:0;">✍️ お客様サイン（電子署名）</div><div class="signature-area"><canvas id="signature-canvas"></canvas></div><div class="signature-controls"><button class="btn btn-secondary" onclick="clearSignature()" style="margin:0; padding:4px 12px; font-size: 0.8rem;">書き直す</button><span style="font-size: 0.8rem; color: var(--text-muted); align-self: center;">※枠内にお書きください</span></div><button class="btn btn-primary" onclick="updateJob()" id="update-btn">更新を保存する</button></div>< !-- AI解析結果の表示領域 --><div class="section-title">AI立米解析結果</div><div class="card" id="ai-summary-area">< !-- JSで展開 --></div></div></div><script src="assets/js/utils.js"></script><script src="assets/js/api.js"></script><script>let allJobs=[]; // 取得した全案件
-    let currentJobId=null; // 選択中の案件ID
-    let currentFolder='all'; // 現在選択中のフォルダ
+</head>
 
-    // サインキャンバス用の変数
-    let sigCanvas,
-    sigCtx;
-    let isDrawing=false;
+<body>
 
-    document.addEventListener('DOMContentLoaded', async ()=> {
-        await fetchJobList();
+  <!-- 固定ヘッダー（一覧画面） -->
+  <div class="header-glass" style="flex-direction:column;align-items:stretch;padding-bottom:8px;">
+    <h1>📁 案件フォルダ</h1>
+    <div class="search-box">
+      <input type="text" id="search-input" class="search-input" placeholder="🔍 現場名・お客様名・住所で検索..."
+        oninput="filterJobs()">
+    </div>
+    <div class="folder-tabs">
+      <button class="folder-tab active" onclick="setFolder('all',this)">すべて <span class="folder-count"
+          id="count-all">0</span></button>
+      <button class="folder-tab" onclick="setFolder('estimated',this)">見積済 <span class="folder-count"
+          id="count-est">0</span></button>
+      <button class="folder-tab" onclick="setFolder('scheduled',this)">作業予定 <span class="folder-count"
+          id="count-sch">0</span></button>
+      <button class="folder-tab" onclick="setFolder('completed',this)">完了 <span class="folder-count"
+          id="count-comp">0</span></button>
+      <button class="folder-tab" onclick="setFolder('lost',this)">不成約 <span class="folder-count"
+          id="count-lost">0</span></button>
+    </div>
+  </div>
 
-        initSignature();
+  <div class="container" id="jobs-container">
+    <p id="jobs-status" class="text-center small-text mt-2">読み込み中...</p>
+    <div id="jobs-list"></div>
+  </div>
 
-        // URLパラメータにidがある場合は、その詳細を自動で開く
-        const urlParams=new URLSearchParams(window.location.search);
-        const targetId=urlParams.get('id');
+  <div class="bottom-nav">
+    <a href="index.html" class="nav-item">
+      <div class="nav-icon">🏠</div><span>ホーム</span>
+    </a>
+    <a href="pipeline.html" class="nav-item">
+      <div class="nav-icon">📊</div><span>パイプライン</span>
+    </a>
+    <a href="jobs.html" class="nav-item active">
+      <div class="nav-icon">📁</div><span>案件一覧</span>
+    </a>
+    <a href="billing.html" class="nav-item">
+      <div class="nav-icon">💰</div><span>請求</span>
+    </a>
+  </div>
 
-        if (targetId) {
-          openDetail(targetId);
-          // パラメータを消す場合
-          // window.history.replaceState({}, document.title, window.location.pathname);
-        }
-      });
+  <!-- 案件詳細ドロワー -->
+  <div id="detail-drawer">
+    <div class="drawer-header">
+      <button class="drawer-back-btn" onclick="closeDetail()"><i style="font-style:normal;">‹ 戻る</i></button>
+      <h3 class="drawer-title" id="drawer-title">案件詳細</h3>
+      <button onclick="deleteJob()"
+        style="background:none;border:none;color:#ff3b30;font-size:.85rem;font-weight:700;cursor:pointer;">🗑
+        削除</button>
+    </div>
+    <div class="drawer-content">
+      <a href="#" target="_blank" id="pdf-link" class="pdf-btn"><span style="font-size:1.2rem;">📄</span>見積書PDFを出力</a>
+      <a href="#" target="_blank" id="driver-sheet-link" class="pdf-btn"
+        style="background:#E3F2FD;color:#1565C0;border-color:#BBDEFB;"><span
+          style="font-size:1.2rem;">🚚</span>ドライバー指示書</a>
+      <div class="card">
+        <h3 class="card-title">基本情報編集</h3>
+        <div class="form-group">
+          <label>ステータス（フォルダ）</label>
+          <select id="status">
+            <option value="estimated">見積済</option>
+            <option value="scheduled">作業予定</option>
+            <option value="completed">作業完了</option>
+            <option value="lost">不成約（失注）</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>案件タイプ</label>
+          <select id="job_type">
+            <option value="other">その他</option>
+            <option value="store_removal">店舗残置物撤去</option>
+            <option value="estate">遺品整理</option>
+            <option value="welfare">福祉残置物撤去</option>
+            <option value="general_waste">一般ゴミ収集</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>パイプラインステージ</label>
+          <select id="pipeline_stage">
+            <option value="inquiry">問合せ</option>
+            <option value="estimate">見積</option>
+            <option value="negotiation">商談</option>
+            <option value="contract">契約</option>
+            <option value="scheduled">作業予定</option>
+            <option value="completed">完了</option>
+            <option value="lost">不成約</option>
+          </select>
+        </div>
+        <div class="form-group" id="tmplSelectorGroup" style="display:none;">
+          <label>雛形から入力（任意）</label>
+          <select id="tmplSelector" onchange="applyJobTemplate()"
+            style="padding:6px; font-size:0.9rem; margin-bottom:12px;">
+            <option value="">-- 追加する雛形を選択 --</option>
+          </select>
+        </div>
+        <div class="form-group"><label>現場名（案件名）</label><input type="text" id="job_name"></div>
+        <div class="form-group"><label>お客様名</label><input type="text" id="customer_name"></div>
+        <div class="form-group"><label>住所</label><input type="text" id="address"></div>
+        <div class="d-flex gap-2">
+          <div class="form-group flex-1" style="width:50%;"><label>作業日</label><input type="date" id="work_date"></div>
+          <div class="form-group flex-1" style="width:50%;"><label>時間帯</label><input type="text" id="work_time"
+              placeholder="10:00~"></div>
+        </div>
+        <div class="d-flex gap-2">
+          <div class="form-group flex-1" style="width:50%;"><label>見積金額(円)</label><input type="number" id="price_total">
+          </div>
+          <div class="form-group flex-1" style="width:50%;"><label>作業員数</label><input type="number" id="workers"></div>
+        </div>
+        <div class="form-group"><label>備考</label><textarea id="notes" placeholder="注意事項などを入力..."></textarea></div>
+        <div class="section-title" style="margin-left:0;">✍️ お客様サイン（電子署名）</div>
+        <div class="signature-area"><canvas id="signature-canvas"></canvas></div>
+        <div class="signature-controls">
+          <button class="btn btn-secondary" onclick="clearSignature()"
+            style="margin:0;padding:4px 12px;font-size:.8rem;">書き直す</button>
+          <span style="font-size:.8rem;color:var(--text-muted);align-self:center;">※枠内にお書きください</span>
+        </div>
+        <button class="btn btn-primary" onclick="updateJob()" id="update-btn">更新を保存する</button>
+      </div>
+      <div class="section-title">AI立米解析結果</div>
+      <div class="card" id="ai-summary-area"></div>
+    </div>
+  </div>
 
-    // 案件一覧の取得と描画
-    async function fetchJobList() {
-      const statusEl=document.getElementById('jobs-status');
+  <script src="assets/js/api.js"></script>
+  <script>
+    RyubeeAPI.requireAuth();
 
+    let allJobs = [], currentJobId = null, currentFolder = 'all';
+    let sigCanvas, sigCtx, isDrawing = false;
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      await fetchJobList();
+      await loadTemplatesDropdown();
+      initSignature();
+      const id = new URLSearchParams(location.search).get('id');
+      if (id) openDetail(id);
+    });
+
+    let allTemplates = [];
+    async function loadTemplatesDropdown() {
       try {
-        statusEl.textContent="読み込み中...";
-        statusEl.style.display='block';
-
-        allJobs=await api.getJobs();
-
-        if ( !Array.isArray(allJobs) || allJobs.length===0) {
-          statusEl.textContent="案件がありません。";
-          return;
-        }
-
-        statusEl.style.display='none';
-
-        // 取得日が新しい順にソートする（API側でソート済みの場合は不要）
-        allJobs.sort((a, b)=> new Date(b.created_at) - new Date(a.created_at));
-
-        // モック: ステータスが未設定の場合は適当に割り当てる
-        allJobs.forEach(j=> {
-            if ( !j.status) j.status='estimated'; // default
+        allTemplates = await RyubeeAPI.fetchTemplates();
+        if (allTemplates.length > 0) {
+          document.getElementById('tmplSelectorGroup').style.display = 'block';
+          const sel = document.getElementById('tmplSelector');
+          allTemplates.forEach(t => {
+            const opt = document.createElement('option');
+            opt.value = t.id;
+            opt.textContent = `${t.name} (¥${t.unit_price.toLocaleString()})`;
+            sel.appendChild(opt);
           });
-
-        updateFolderCounts();
-        filterJobs();
-
-      }
-
-      catch (e) {
-        statusEl.innerHTML=`<div class="alert alert-danger" style="text-align: left;"><strong>API取得エラー</strong><br><span style="font-size: 0.85rem;">案件の取得に失敗しました。<br>詳細: $ {
-          e.message
         }
+      } catch (e) { console.error("Template load err:", e); }
+    }
 
-        </span></div>`;
-        console.error(e);
+    function applyJobTemplate() {
+      const id = document.getElementById('tmplSelector').value;
+      if (!id) return;
+      const t = allTemplates.find(x => x.id === id);
+      if (t) {
+        document.getElementById('job_name').value = t.name;
+        document.getElementById('price_total').value = t.unit_price;
       }
     }
 
-    // フォルダ切り替え
-    function setFolder(folderName, btnEl) {
-      currentFolder=folderName;
-      document.querySelectorAll('.folder-tab').forEach(el=> el.classList.remove('active'));
-      btnEl.classList.add('active');
-      filterJobs();
+    async function fetchJobList() {
+      const el = document.getElementById('jobs-status');
+      try {
+        el.textContent = '読み込み中...'; el.style.display = 'block';
+        allJobs = await RyubeeAPI.fetchJobs();
+        if (!Array.isArray(allJobs) || !allJobs.length) { el.textContent = '案件がありません。'; return; }
+        el.style.display = 'none';
+        updateFolderCounts(); filterJobs();
+      } catch (e) {
+        el.innerHTML = `<div class="alert alert-danger" style="text-align:left"><strong>取得エラー</strong><br><span style="font-size:.85rem">${e.message}</span></div>`;
+      }
     }
 
-    // 各フォルダの件数を更新
+    function setFolder(name, btn) {
+      currentFolder = name;
+      document.querySelectorAll('.folder-tab').forEach(el => el.classList.remove('active'));
+      btn.classList.add('active'); filterJobs();
+    }
+
     function updateFolderCounts() {
-      const counts= {
-        all: allJobs.length, estimated: 0, scheduled: 0, completed: 0
-      }
-
-      ;
-
-      allJobs.forEach(j=> {
-          if (counts[j.status] !==undefined) counts[j.status]++;
-        });
-      document.getElementById('count-all').textContent=counts.all;
-      document.getElementById('count-est').textContent=counts.estimated;
-      document.getElementById('count-sch').textContent=counts.scheduled;
-      document.getElementById('count-comp').textContent=counts.completed;
+      const c = { all: allJobs.length, estimated: 0, scheduled: 0, completed: 0, lost: 0 };
+      allJobs.forEach(j => {
+        if (j.status === 'pending') c.estimated++;
+        if (j.status === 'confirmed') c.scheduled++;
+        if (j.status === 'completed') c.completed++;
+        if (j.status === 'lost') c.lost++;
+      });
+      ['all', 'est', 'sch', 'comp', 'lost'].forEach((k, i) => {
+        const keys = ['all', 'estimated', 'scheduled', 'completed', 'lost'];
+        document.getElementById('count-' + k).textContent = c[keys[i]];
+      });
     }
 
-    // 検索・フォルダフィルター
     function filterJobs() {
-      const query=document.getElementById('search-input').value.toLowerCase();
-
-      const filtered=allJobs.filter(j=> {
-          // テキスト検索
-          const name=(j.job_name || "").toLowerCase();
-          const cust=(j.customer_name || "").toLowerCase();
-          const addr=(j.address || "").toLowerCase();
-          const matchesQuery=name.includes(query) || cust.includes(query) || addr.includes(query);
-
-          // フォルダ検索
-          const matchesFolder=(currentFolder==='all') || (j.status===currentFolder);
-
-          return matchesQuery && matchesFolder;
-        });
+      const q = document.getElementById('search-input').value.toLowerCase();
+      const filtered = allJobs.filter(j => {
+        const text = ((j.job_name || '') + (j.customer_name || '') + (j.address || '')).toLowerCase();
+        const matchQ = text.includes(q);
+        let matchF = currentFolder === 'all';
+        if (currentFolder === 'estimated') matchF = j.status === 'pending';
+        if (currentFolder === 'scheduled') matchF = j.status === 'confirmed';
+        if (currentFolder === 'completed') matchF = j.status === 'completed';
+        if (currentFolder === 'lost') matchF = j.status === 'lost';
+        return matchQ && matchF;
+      });
       renderJobs(filtered);
     }
 
-    // カード一覧の描画
     function renderJobs(jobs) {
-      const listEl=document.getElementById('jobs-list');
-      listEl.innerHTML='';
-
-      if (jobs.length===0) {
-        listEl.innerHTML='<p class="text-center small-text">見つかりませんでした。</p>';
-        return;
-      }
-
-      jobs.forEach(j=> {
-          const dateStr=utils.formatDateTime(j.created_at).split(' ')[0];
-
-          const title=j.job_name || `案件 $ {
-            j.job_id.slice(0, 6)
-          }
-
-          ...`;
-
-          const vol=j.total_volume_m3 !=null ? `$ {
-            j.total_volume_m3
-          }
-
-          ㎥` : "-";
-
-          const price=j.price_total !=null ? `$ {
-            Number(j.price_total).toLocaleString()
-          }
-
-          円` : "-";
-
-          // 作業日がある場合はバッジを表示するなど工夫可能
-          const workDateStr=j.work_date ? `作業日: $ {
-            j.work_date
-          }
-
-          ` : "作業日: 未定";
-
-          const card=document.createElement('div');
-          card.className='job-card';
-          card.onclick=()=> openDetail(j.job_id);
-
-          card.innerHTML=` <div class="job-card-header" > <h3 class="job-title" >$ {
-            utils.escapeHtml(title)
-          }
-
-          </h3> <span class="job-date" >$ {
-            dateStr
-          }
-
-          </span> </div> <div class="job-body" > <div class="job-metric" > <div class="job-metric-label" >立米(ai)</div> <div class="job-metric-val" >$ {
-            vol
-          }
-
-          </div> </div> <div class="job-metric" > <div class="job-metric-label" >見積金額</div> <div class="job-metric-val" style="color:var(--text-main);" >$ {
-            price
-          }
-
-          </div> </div> </div> <div class="job-footer" > <span>$ {
-            utils.escapeHtml(j.customer_name || 'お客様名未設定')
-          }
-
-          </span> <span class="badge ${j.work_date ? 'badge-primary' : ''}" >$ {
-            workDateStr
-          }
-
-          </span> </div> `;
-          listEl.appendChild(card);
-        });
+      const list = document.getElementById('jobs-list');
+      list.innerHTML = '';
+      if (!jobs.length) { list.innerHTML = '<p class="text-center small-text">見つかりませんでした。</p>'; return; }
+      jobs.forEach(j => {
+        const date = new Date(j.created_at).toLocaleDateString('ja-JP');
+        const vol = j.total_volume_m3 != null ? `${j.total_volume_m3} ㎥` : '-';
+        const price = j.price_total != null ? `${Number(j.price_total).toLocaleString()} 円` : '-';
+        const wdate = j.work_date ? `作業日: ${j.work_date}` : '作業日: 未定';
+        const slabel = { pending: '見積済', confirmed: '作業予定', completed: '完了', lost: '不成約' }[j.status] || j.status;
+        const card = document.createElement('div');
+        card.className = 'job-card';
+        card.onclick = () => openDetail(j.job_id);
+        card.innerHTML = `
+          <div class="job-card-header">
+            <h3 class="job-title">${esc(j.job_name || '案件')}</h3>
+            <span class="job-date">${date}</span>
+          </div>
+          <div class="job-body">
+            <div class="job-metric"><div class="job-metric-label">立米(AI)</div><div class="job-metric-val">${vol}</div></div>
+            <div class="job-metric"><div class="job-metric-label">見積金額</div><div class="job-metric-val" style="color:var(--text-main)">${price}</div></div>
+          </div>
+          <div class="job-footer">
+            <span>${esc(j.customer_name || 'お客様名未設定')}</span>
+            <span>${wdate} &nbsp;<b>${slabel}</b></span>
+          </div>`;
+        list.appendChild(card);
+      });
     }
 
-    // === 詳細・編集（ドロワー）処理 ===
+    function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
-    async function openDetail(jobId) {
-      currentJobId=jobId;
-      const drawer=document.getElementById('detail-drawer');
-      drawer.classList.add('open');
-
-      // データ取得前にとりあえず手持ちのデータを表示するか、
-      // 常に最新をAPIから取ってくるか
-      const localData=allJobs.find(j=> j.job_id===jobId) || {}
-
-      ;
-
-      document.getElementById('drawer-title').textContent=localData.job_name || "案件詳細";
-
-      // フォームリセット
-      document.getElementById('job_name').value="読込中...";
-
-      try {
-        const jobDetail=await api.getJobDetail(jobId);
-        fillForm(jobDetail);
-        renderAiSummary(jobDetail.ai_result);
-
-        // 作業書PDFリンクのセット
-        const pdfLink=document.getElementById('pdf-link');
-
-        pdfLink.href=`invoice.html?id=$ {
-          jobId
-        }
-
-        `;
-
-      }
-
-      catch (e) {
-        alert("詳細データの取得に失敗しました");
-        closeDetail();
+    function openDetail(jobId) {
+      currentJobId = jobId;
+      document.getElementById('detail-drawer').classList.add('open');
+      const job = allJobs.find(j => j.job_id === jobId);
+      if (job) {
+        fillForm(job);
+        renderAiSummary(job.ai_result);
+        document.getElementById('pdf-link').href = `invoice.html?id=${jobId}`;
+        document.getElementById('driver-sheet-link').href = `driver-sheet.html?id=${jobId}`;
       }
     }
 
-    function closeDetail() {
-      document.getElementById('detail-drawer').classList.remove('open');
-      currentJobId=null;
-    }
+    function closeDetail() { document.getElementById('detail-drawer').classList.remove('open'); currentJobId = null; }
 
     function fillForm(job) {
-      document.getElementById('drawer-title').textContent=job.job_name || "案件詳細";
-      document.getElementById("job_name").value=job.job_name || "";
-      document.getElementById("customer_name").value=job.customer_name || "";
-      document.getElementById("address").value=job.address || "";
-      document.getElementById("work_date").value=job.work_date || "";
-      document.getElementById("work_time").value=job.work_time || "";
-      document.getElementById("price_total").value=job.price_total !=null ? job.price_total: "";
-      document.getElementById("workers").value=job.workers !=null ? job.workers: "";
-      document.getElementById("notes").value=job.notes || "";
-
-      // ステータス（フロント側で持たせている想定）
-      document.getElementById("status").value=job.status || "estimated";
-
-      // サイン画像の復元
+      document.getElementById('drawer-title').textContent = job.job_name || '案件詳細';
+      ['job_name', 'customer_name', 'address', 'work_date', 'work_time', 'notes'].forEach(id => {
+        document.getElementById(id).value = job[id] || '';
+      });
+      document.getElementById('price_total').value = job.price_total != null ? job.price_total : '';
+      document.getElementById('workers').value = job.workers != null ? job.workers : '';
+      const sm = { pending: 'estimated', confirmed: 'scheduled', completed: 'completed', lost: 'lost' };
+      document.getElementById('status').value = sm[job.status] || 'estimated';
+      document.getElementById('job_type').value = job.job_type || 'other';
+      document.getElementById('pipeline_stage').value = job.pipeline_stage || 'inquiry';
       clearSignature();
-
-      if (job.signature_data) {
-        const img=new Image();
-
-        img.onload=()=> {
-          sigCtx.drawImage(img, 0, 0, sigCanvas.width, sigCanvas.height);
-        }
-
-        ;
-        img.src=job.signature_data;
-      }
+      if (job.signature_data) { const img = new Image(); img.onload = () => sigCtx.drawImage(img, 0, 0, sigCanvas.width, sigCanvas.height); img.src = job.signature_data; }
     }
 
     function renderAiSummary(ai) {
-      const container=document.getElementById("ai-summary-area");
-
-      if ( !ai) {
-        container.innerHTML="<p class='small-text text-center'>AI結果が存在しません。</p>";
-        return;
+      const c = document.getElementById('ai-summary-area');
+      if (!ai) { c.innerHTML = "<p class='small-text text-center'>AI結果が存在しません。</p>"; return; }
+      let h = `<div style="text-align:center;margin-bottom:12px"><span style="font-size:.85rem;color:var(--text-muted)">総立米</span><br><span style="font-size:2rem;font-weight:bold;color:var(--primary)">${ai.total_volume_m3 ?? '-'} ㎥</span></div>`;
+      if (Array.isArray(ai.items) && ai.items.length) {
+        h += `<table style="width:100%;border-collapse:collapse;font-size:.9rem"><tr style="border-bottom:1px solid #ccc"><th style="text-align:left;padding:4px">品目</th><th style="padding:4px">量</th><th style="text-align:right;padding:4px">立米</th></tr>`;
+        ai.items.forEach(it => { h += `<tr style="border-bottom:1px solid #eee"><td style="padding:6px 4px">${esc(it.category)}</td><td style="text-align:center;padding:6px 4px">${it.quantity ?? ''}</td><td style="text-align:right;padding:6px 4px">${it.volume_total_m3 ?? ''}</td></tr>`; });
+        h += `</table>`;
       }
-
-      let html=`<div style="text-align:center; margin-bottom:12px;"><span style="font-size:0.85rem; color:var(--text-muted);">総立米</span><br><span style="font-size:2rem; font-weight:bold; color:var(--primary);">$ {
-        ai.total_volume_m3 ?? "-"
-      }
-
-      ㎥</span></div>`;
-
-      if (Array.isArray(ai.items) && ai.items.length > 0) {
-        html+=`<table style="width:100%; border-collapse:collapse; font-size:0.9rem;">`;
-        html+=`<tr style="border-bottom:1px solid #ccc;"><th style="text-align:left; padding:4px;">品目</th><th style="padding:4px;">量</th><th style="text-align:right; padding:4px;">立米</th></tr>`;
-
-        for (const item of ai.items) {
-          html+=`<tr style="border-bottom:1px solid #eee;"><td style="padding:6px 4px;">$ {
-            utils.escapeHtml(item.category)
-          }
-
-          </td><td style="text-align:center; padding:6px 4px;">$ {
-            item.quantity ?? ""
-          }
-
-          </td><td style="text-align:right; padding:6px 4px;">$ {
-            item.volume_total_m3 ?? ""
-          }
-
-          </td></tr>`;
-        }
-
-        html+=`</table>`;
-      }
-
-      container.innerHTML=html;
+      c.innerHTML = h;
     }
 
-    // === サインキャンバス処理 ===
     function initSignature() {
-      sigCanvas=document.getElementById('signature-canvas');
-      sigCtx=sigCanvas.getContext('2d');
-      // 解像度調整（Retina対応等のためにCSSサイズと内部サイズを合わせる）
-      sigCanvas.width=sigCanvas.offsetWidth;
-      sigCanvas.height=150;
-
-      sigCtx.lineWidth=3;
-      sigCtx.lineCap='round';
-      sigCtx.strokeStyle='#000';
-
-      // PCマウスイベント
-      sigCanvas.addEventListener('mousedown', startDrawing);
-      sigCanvas.addEventListener('mousemove', draw);
-      sigCanvas.addEventListener('mouseup', stopDrawing);
-      sigCanvas.addEventListener('mouseout', stopDrawing);
-
-      // スマホタッチイベント
-      sigCanvas.addEventListener('touchstart', touchStart, {
-        passive: false
-      });
-
-    sigCanvas.addEventListener('touchmove', touchMove, {
-      passive: false
-    });
-    sigCanvas.addEventListener('touchend', stopDrawing);
+      sigCanvas = document.getElementById('signature-canvas'); sigCtx = sigCanvas.getContext('2d');
+      sigCanvas.width = sigCanvas.offsetWidth; sigCanvas.height = 150;
+      sigCtx.lineWidth = 3; sigCtx.lineCap = 'round'; sigCtx.strokeStyle = '#000';
+      const mp = e => { const r = sigCanvas.getBoundingClientRect(); return { x: e.clientX - r.left, y: e.clientY - r.top }; };
+      const tp = e => { const r = sigCanvas.getBoundingClientRect(); return { x: e.touches[0].clientX - r.left, y: e.touches[0].clientY - r.top }; };
+      sigCanvas.addEventListener('mousedown', e => { isDrawing = true; const p = mp(e); sigCtx.beginPath(); sigCtx.moveTo(p.x, p.y); });
+      sigCanvas.addEventListener('mousemove', e => { if (!isDrawing) return; const p = mp(e); sigCtx.lineTo(p.x, p.y); sigCtx.stroke(); });
+      sigCanvas.addEventListener('mouseup', () => isDrawing = false);
+      sigCanvas.addEventListener('mouseout', () => isDrawing = false);
+      sigCanvas.addEventListener('touchstart', e => { e.preventDefault(); isDrawing = true; const p = tp(e); sigCtx.beginPath(); sigCtx.moveTo(p.x, p.y); }, { passive: false });
+      sigCanvas.addEventListener('touchmove', e => { if (!isDrawing) return; e.preventDefault(); const p = tp(e); sigCtx.lineTo(p.x, p.y); sigCtx.stroke(); }, { passive: false });
+      sigCanvas.addEventListener('touchend', () => isDrawing = false);
     }
-
-    function getMousePos(evt) {
-      const rect=sigCanvas.getBoundingClientRect();
-
-      return {
-        x: evt.clientX - rect.left,
-          y: evt.clientY - rect.top
-      }
-
-      ;
-    }
-
-    function getTouchPos(evt) {
-      const rect=sigCanvas.getBoundingClientRect();
-
-      return {
-        x: evt.touches[0].clientX - rect.left,
-          y: evt.touches[0].clientY - rect.top
-      }
-
-      ;
-    }
-
-    function startDrawing(evt) {
-      isDrawing=true;
-      const pos=getMousePos(evt);
-      sigCtx.beginPath();
-      sigCtx.moveTo(pos.x, pos.y);
-    }
-
-    function touchStart(evt) {
-      evt.preventDefault();
-      isDrawing=true;
-      const pos=getTouchPos(evt);
-      sigCtx.beginPath();
-      sigCtx.moveTo(pos.x, pos.y);
-    }
-
-    function draw(evt) {
-      if ( !isDrawing) return;
-      const pos=getMousePos(evt);
-      sigCtx.lineTo(pos.x, pos.y);
-      sigCtx.stroke();
-    }
-
-    function touchMove(evt) {
-      if ( !isDrawing) return;
-      evt.preventDefault();
-      const pos=getTouchPos(evt);
-      sigCtx.lineTo(pos.x, pos.y);
-      sigCtx.stroke();
-    }
-
-    function stopDrawing() {
-      isDrawing=false;
-    }
-
-    function clearSignature() {
-      if(sigCtx && sigCanvas) {
-        sigCtx.clearRect(0, 0, sigCanvas.width, sigCanvas.height);
-      }
-    }
-
-    function isCanvasBlank() {
-      const blank=document.createElement('canvas');
-      blank.width=sigCanvas.width;
-      blank.height=sigCanvas.height;
-      return sigCanvas.toDataURL()===blank.toDataURL();
-    }
+    function clearSignature() { if (sigCtx && sigCanvas) sigCtx.clearRect(0, 0, sigCanvas.width, sigCanvas.height); }
+    function isCanvasBlank() { const b = document.createElement('canvas'); b.width = sigCanvas.width; b.height = sigCanvas.height; return sigCanvas.toDataURL() === b.toDataURL(); }
 
     async function updateJob() {
-      if ( !currentJobId) return;
-
-      const btn=document.getElementById('update-btn');
-      btn.textContent="保存中...";
-      btn.disabled=true;
-
-      const payload= {}
-
-      ;
-      const jobName=document.getElementById("job_name").value.trim();
-      const customerName=document.getElementById("customer_name").value.trim();
-      const address=document.getElementById("address").value.trim();
-      const workDate=document.getElementById("work_date").value.trim();
-      const workTime=document.getElementById("work_time").value.trim();
-      const priceTotal=document.getElementById("price_total").value.trim();
-      const workers=document.getElementById("workers").value.trim();
-      const notes=document.getElementById("notes").value.trim();
-      const status=document.getElementById("status").value;
-
-      // サインデータの取得 (Base64 URL)
-      let signatureData=null;
-
-      if ( !isCanvasBlank()) {
-        signatureData=sigCanvas.toDataURL("image/png");
-      }
-
-      if (jobName) payload.job_name=jobName;
-      if (customerName) payload.customer_name=customerName;
-      if (address) payload.address=address;
-      if (workDate) payload.work_date=workDate;
-      if (workTime) payload.work_time=workTime;
-      if (priceTotal) payload.price_total=Number(priceTotal);
-      if (workers) payload.workers=Number(workers);
-      if (notes) payload.notes=notes;
-      if (status) payload.status=status;
-      if (signatureData) payload.signature_data=signatureData;
-
+      if (!currentJobId) return;
+      const btn = document.getElementById('update-btn');
+      btn.textContent = '保存中...'; btn.disabled = true;
+      const sm = { estimated: 'pending', scheduled: 'confirmed', completed: 'completed', lost: 'lost' };
+      const payload = {
+        job_name: document.getElementById('job_name').value.trim() || undefined,
+        customer_name: document.getElementById('customer_name').value.trim() || undefined,
+        address: document.getElementById('address').value.trim() || undefined,
+        work_date: document.getElementById('work_date').value.trim() || undefined,
+        notes: document.getElementById('notes').value.trim() || undefined,
+        price_total: Number(document.getElementById('price_total').value) || undefined,
+        status: sm[document.getElementById('status').value] || 'pending',
+        job_type: document.getElementById('job_type').value || 'other',
+        pipeline_stage: document.getElementById('pipeline_stage').value || 'inquiry',
+      };
+      if (!isCanvasBlank()) payload.signature_data = sigCanvas.toDataURL('image/png');
+      Object.keys(payload).forEach(k => payload[k] === undefined && delete payload[k]);
       try {
-        await api.saveJob(currentJobId, payload);
-        alert("案件情報を更新しました");
-
-        // 一覧を再取得してリストを更新（裏側で）
+        await RyubeeAPI.updateJob(currentJobId, payload);
         await fetchJobList();
-        document.getElementById('drawer-title').textContent=jobName;
-
-      }
-
-      catch (e) {
-        alert("更新に失敗しました：" + e.message);
-      }
-
-      finally {
-        btn.textContent="更新を保存する";
-        btn.disabled=false;
-      }
+        document.getElementById('drawer-title').textContent = payload.job_name || '案件詳細';
+        showToast('✅ 保存しました');
+      } catch (e) { alert('更新に失敗しました：' + e.message); }
+      finally { btn.textContent = '更新を保存する'; btn.disabled = false; }
     }
 
-    </script></body></html>
+    async function deleteJob() {
+      if (!currentJobId) return;
+      if (!confirm('この案件を削除してもよろしいですか？')) return;
+      try { await RyubeeAPI.deleteJob(currentJobId); closeDetail(); await fetchJobList(); showToast('🗑 削除しました'); }
+      catch (e) { alert('削除に失敗しました：' + e.message); }
+    }
+
+    function showToast(msg) {
+      const t = document.createElement('div');
+      t.textContent = msg;
+      t.style.cssText = 'position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#34C759;color:#fff;padding:10px 20px;border-radius:20px;font-weight:600;z-index:9999;';
+      document.body.appendChild(t); setTimeout(() => t.remove(), 2500);
+    }
+  </script>
+</body>
+
+</html>

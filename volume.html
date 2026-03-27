@@ -456,8 +456,20 @@
   <script src="assets/js/utils.js"></script>
   <script src="assets/js/api.js"></script>
   <script>
+    if (!RyubeeAPI.requireAuth()) throw new Error("Not authenticated");
     // 定数
     const MAX_FILES = 20;
+
+    document.addEventListener('DOMContentLoaded', async () => {
+      try {
+        const settings = await RyubeeAPI.fetchSettings();
+        if (settings) {
+          localStorage.setItem('ryubee_pricing_settings', JSON.stringify(settings));
+        }
+      } catch (e) {
+        console.warn("APIから設定を取得できませんでした。キャッシュを利用します。", e);
+      }
+    });
 
     // 状態管理
     let selectedFiles = [];
@@ -622,7 +634,7 @@
         }
 
         // api.js経由で送信
-        const data = await api.estimateVolume(formData);
+        const data = await RyubeeAPI.estimateVolume(formData);
 
         computedResult = data;
         renderResult(data);
@@ -812,7 +824,7 @@
       btn.textContent = "保存中...";
 
       try {
-        await api.saveJob(jobId, payload);
+        await RyubeeAPI.updateJob(jobId, payload);
         alert("✅ 案件を保存しました！");
         // 保存成功したら案件一覧へ遷移（その案件の詳細を開く想定）
         window.location.href = `jobs.html?id=${jobId}`;

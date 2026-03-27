@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>マニフェスト管理 — Ryu兵衛 山文SaaS</title>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <link rel="stylesheet" href="assets/css/style.css">
+    <style>
+        .manifests-header {
+            background: #FFFFFF;
+            padding: 30px 24px 20px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .manifests-header h1 {
+            font-size: 1.8rem;
+            margin-bottom: 6px;
+        }
+
+        .tab-bar {
+            display: flex;
+            gap: 8px;
+            padding: 12px 20px;
+        }
+
+        .tab-btn {
+            flex: 1;
+            padding: 10px;
+            border-radius: var(--r-md);
+            border: 1px solid var(--border);
+            background: #fff;
+            font-weight: 600;
+            font-size: 0.85rem;
+            cursor: pointer;
+            transition: all 0.15s;
+            text-align: center;
+        }
+
+        .tab-btn.active {
+            background: var(--blue);
+            color: #fff;
+            border-color: var(--blue);
+        }
+
+        .manifest-list {
+            padding: 0 20px 120px;
+        }
+
+        .manifest-card {
+            background: #fff;
+            border-radius: var(--r-xl);
+            padding: 20px;
+            margin-bottom: 12px;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--border);
+            cursor: pointer;
+            transition: transform 0.15s;
+        }
+
+        .manifest-card:active {
+            transform: scale(0.98);
+        }
+
+        .mc-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .mc-waste {
+            font-weight: 700;
+            font-size: 1rem;
+        }
+
+        .mc-meta {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 3px;
+        }
+
+        .mc-billing {
+            font-weight: 700;
+            color: var(--blue-dark);
+            font-size: 1rem;
+            margin-top: 6px;
+        }
+
+        .status-badge {
+            padding: 3px 10px;
+            border-radius: 50px;
+            font-size: 0.75rem;
+            font-weight: 700;
+        }
+
+        .status-badge.issued {
+            background: var(--blue-light);
+            color: var(--blue-dark);
+        }
+
+        .status-badge.returned {
+            background: var(--green-light);
+            color: var(--green-dark);
+        }
+
+        .status-badge.overdue {
+            background: var(--red-light);
+            color: var(--red);
+        }
+
+        /* 登録モーダル */
+        .mf-modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.36);
+            backdrop-filter: blur(10px);
+            display: none;
+            z-index: 3000;
+            align-items: flex-end;
+            justify-content: center;
+        }
+
+        .mf-modal-overlay.show {
+            display: flex;
+        }
+
+        .mf-modal {
+            background: #fff;
+            border-radius: var(--r-xl) var(--r-xl) 0 0;
+            width: 100%;
+            max-width: 600px;
+            padding: 24px 20px 40px;
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: sheetUp 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+
+        .overdue-banner {
+            margin: 0 20px;
+            padding: 14px 16px;
+            background: var(--red-light);
+            border-radius: var(--r-md);
+            color: #B00B06;
+            font-weight: 600;
+            font-size: 0.9rem;
+            display: none;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header class="manifests-header">
+        <h1>📜 マニフェスト管理</h1>
+        <p style="color: var(--text-secondary); font-size: 0.9rem;">産廃・一般ゴミの交付・重量・請求管理</p>
+    </header>
+
+    <!-- 産廃/一般切替タブ -->
+    <div class="tab-bar">
+        <button class="tab-btn active" data-cat="all" onclick="setCategory('all', this)">すべて</button>
+        <button class="tab-btn" data-cat="industrial" onclick="setCategory('industrial', this)">🏭 産廃</button>
+        <button class="tab-btn" data-cat="general" onclick="setCategory('general', this)">🏠 一般</button>
+    </div>
+
+    <!-- 期限超過バナー -->
+    <div class="overdue-banner" id="overdueBanner">
+        ⚠️ <span id="overdueCount">0</span>件 のマニフェストが返送期限を超過しています
+    </div>
+
+    <div class="manifest-list" id="manifestList">
+        <p style="text-align:center; color: var(--text-tertiary); margin-top: 20px;">読み込み中...</p>
+    </div>
+
+    <button class="fab" onclick="openMfModal()">+</button>
+
+    <!-- 登録/編集モーダル -->
+    <div class="mf-modal-overlay" id="mfOverlay">
+        <div class="mf-modal">
+            <div class="modal-drag-handle"></div>
+            <h3 class="card-title" id="mfModalTitle">マニフェスト登録</h3>
+            <input type="hidden" id="mfEditId">
+            <div class="form-group">
+                <label>廃棄物区分</label>
+                <select id="mfCategory">
+                    <option value="industrial">産業廃棄物</option>
+                    <option value="general">一般廃棄物</option>
+                </select>
+            </div>
+            <div class="form-group"><label>マニフェスト番号</label><input type="text" id="mfNumber" placeholder="A-12345"></div>
+            <div class="form-group">
+                <label>顧客</label>
+                <select id="mfCustomer"></select>
+            </div>
+            <div class="form-group"><label>廃棄物の種類</label><input type="text" id="mfWasteType" placeholder="廃プラスチック類">
+            </div>
+            <div class="form-group"><label>重量 (kg)</label><input type="number" id="mfWeight" placeholder="500"
+                    step="0.1"></div>
+            <div class="form-group"><label>kg単価 (円)</label><input type="number" id="mfUnitPrice" value="30" step="0.1">
+            </div>
+            <div class="form-group"><label>交付日</label><input type="date" id="mfIssueDate"></div>
+            <div class="form-group"><label>返送期限</label><input type="date" id="mfReturnDate"></div>
+            <div id="mfBillingPreview"
+                style="padding:12px;background:var(--blue-light);border-radius:var(--r-md);margin-bottom:16px;font-weight:700;text-align:center;display:none;">
+            </div>
+            <button class="btn btn-primary" onclick="saveMf()">登録する</button>
+            <button class="btn btn-secondary mt-1" onclick="closeMfModal()">キャンセル</button>
+        </div>
+    </div>
+
+    <!-- Bottom Nav -->
+    <nav class="bottom-nav">
+        <a href="index.html" class="nav-item"><span class="nav-icon">🏠</span><span>ホーム</span></a>
+        <a href="pipeline.html" class="nav-item"><span class="nav-icon">📊</span><span>パイプライン</span></a>
+        <a href="billing.html" class="nav-item"><span class="nav-icon">💰</span><span>請求</span></a>
+        <a href="customers.html" class="nav-item"><span class="nav-icon">🏢</span><span>顧客</span></a>
+        <a href="manifests.html" class="nav-item active"><span class="nav-icon">📜</span><span>マニフェスト</span></a>
+    </nav>
+
+    <script src="assets/js/utils.js"></script>
+    <script src="assets/js/api.js"></script>
+    <script>
+        if (!RyubeeAPI.requireAuth()) throw new Error("Not authenticated");
+
+        let allManifests = [];
+        let allCustomers = [];
+        let currentCategory = 'all';
+        let editingMfId = null;
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            await Promise.all([loadManifests(), loadCustomers(), checkOverdue()]);
+            // 重量変更時のプレビュー
+            document.getElementById('mfWeight').addEventListener('input', updateBillingPreview);
+            document.getElementById('mfUnitPrice').addEventListener('input', updateBillingPreview);
+        });
+
+        async function loadManifests() {
+            try {
+                const params = currentCategory === 'all' ? {} : { waste_category: currentCategory };
+                allManifests = await RyubeeAPI.fetchManifests(params);
+                renderManifests();
+            } catch (e) {
+                document.getElementById('manifestList').innerHTML = `<div class="alert alert-danger">${e.message}</div>`;
+            }
+        }
+
+        async function loadCustomers() {
+            try {
+                allCustomers = await RyubeeAPI.fetchCustomers();
+                const sel = document.getElementById('mfCustomer');
+                sel.innerHTML = allCustomers.map(c =>
+                    `<option value="${c.id}">${utils.escapeHtml(c.name)}</option>`
+                ).join('');
+            } catch (e) { console.error(e); }
+        }
+
+        async function checkOverdue() {
+            try {
+                const overdue = await RyubeeAPI.fetchManifestsOverdue();
+                const banner = document.getElementById('overdueBanner');
+                if (overdue.length > 0) {
+                    banner.style.display = 'block';
+                    document.getElementById('overdueCount').textContent = overdue.length;
+                }
+            } catch (e) { console.error(e); }
+        }
+
+        function setCategory(cat, btn) {
+            currentCategory = cat;
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            loadManifests();
+        }
+
+        function renderManifests() {
+            const list = document.getElementById('manifestList');
+            if (!allManifests.length) {
+                list.innerHTML = '<p style="text-align:center;color:var(--text-tertiary);margin-top:30px;">マニフェストなし</p>';
+                return;
+            }
+            const statusLabels = { issued: '交付済(未返却)', returned: '返却済', overdue: '期限超過' };
+            const catLabels = { industrial: '🏭 産廃', general: '🏠 一般' };
+            list.innerHTML = allManifests.map(m => {
+                const billing = m.billing_amount ? `¥${m.billing_amount.toLocaleString()}` : '–';
+                return `
+                    <div class="manifest-card" onclick="openMfEdit('${m.id}')">
+                        <div class="mc-top">
+                            <span class="mc-waste">${utils.escapeHtml(m.waste_type || '未分類')}</span>
+                            <span class="status-badge ${m.status}">${statusLabels[m.status] || m.status}</span>
+                        </div>
+                        ${m.manifest_number ? `<div class="mc-meta">🔖 No. ${utils.escapeHtml(m.manifest_number)}</div>` : ''}
+                        <div class="mc-meta">👤 ${utils.escapeHtml(m.customer_name || '–')}</div>
+                        <div class="mc-meta">📅 交付日: ${m.issue_date || '未設定'} | 返送期限: ${m.expected_return_date || '未設定'}</div>
+                        <div class="mc-meta">${catLabels[m.waste_category] || ''} | ${m.weight_kg != null ? m.weight_kg + ' kg' : '重量未入力'}</div>
+                        <div class="mc-billing">請求額: ${billing}</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function openMfModal(mf = null) {
+            editingMfId = mf ? mf.id : null;
+            document.getElementById('mfModalTitle').textContent = mf ? 'マニフェスト編集' : 'マニフェスト登録';
+            document.getElementById('mfCategory').value = mf?.waste_category || 'industrial';
+            document.getElementById('mfNumber').value = mf?.manifest_number || '';
+            document.getElementById('mfWasteType').value = mf?.waste_type || '';
+            document.getElementById('mfWeight').value = mf?.weight_kg || '';
+            document.getElementById('mfUnitPrice').value = mf?.unit_price_per_kg || 30;
+            document.getElementById('mfIssueDate').value = mf?.issue_date || '';
+            document.getElementById('mfReturnDate').value = mf?.expected_return_date || '';
+            if (mf?.customer_id) document.getElementById('mfCustomer').value = mf.customer_id;
+            updateBillingPreview();
+            document.getElementById('mfOverlay').classList.add('show');
+        }
+
+        function closeMfModal() { document.getElementById('mfOverlay').classList.remove('show'); editingMfId = null; }
+
+        function openMfEdit(id) {
+            const m = allManifests.find(x => x.id === id);
+            if (m) openMfModal(m);
+        }
+
+        function updateBillingPreview() {
+            const w = parseFloat(document.getElementById('mfWeight').value) || 0;
+            const p = parseFloat(document.getElementById('mfUnitPrice').value) || 0;
+            const preview = document.getElementById('mfBillingPreview');
+            if (w > 0 && p > 0) {
+                preview.style.display = 'block';
+                preview.textContent = `請求額: ¥${Math.round(w * p).toLocaleString()} (${w}kg × ¥${p}/kg)`;
+            } else {
+                preview.style.display = 'none';
+            }
+        }
+
+        async function saveMf() {
+            const body = {
+                customer_id: document.getElementById('mfCustomer').value,
+                waste_category: document.getElementById('mfCategory').value,
+                manifest_number: document.getElementById('mfNumber').value.trim(),
+                waste_type: document.getElementById('mfWasteType').value.trim(),
+                weight_kg: parseFloat(document.getElementById('mfWeight').value) || null,
+                unit_price_per_kg: parseFloat(document.getElementById('mfUnitPrice').value) || 30,
+                issue_date: document.getElementById('mfIssueDate').value || null,
+                expected_return_date: document.getElementById('mfReturnDate').value || null,
+            };
+            if (!body.customer_id) { alert('顧客を選択してください'); return; }
+            try {
+                if (editingMfId) {
+                    await RyubeeAPI.updateManifest(editingMfId, body);
+                    showToast('✅ 更新しました');
+                } else {
+                    await RyubeeAPI.createManifest(body);
+                    showToast('✅ 登録しました');
+                }
+                closeMfModal();
+                loadManifests();
+            } catch (e) { alert('エラー: ' + e.message); }
+        }
+
+        function showToast(msg) {
+            const t = document.createElement('div');
+            t.textContent = msg;
+            t.style.cssText = 'position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#34C759;color:#fff;padding:10px 20px;border-radius:20px;font-weight:600;z-index:9999;';
+            document.body.appendChild(t);
+            setTimeout(() => t.remove(), 2500);
+        }
+    </script>
+</body>
+
+</html>

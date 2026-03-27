@@ -1,0 +1,631 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>営業パイプライン — Ryu兵衛 山文SaaS</title>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <link rel="stylesheet" href="assets/css/style.css">
+    <style>
+        .pipeline-header {
+            background: #FFFFFF;
+            padding: 30px 24px 20px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .pipeline-header h1 {
+            font-size: 1.8rem;
+            margin-bottom: 6px;
+        }
+
+        .pipeline-container {
+            display: flex;
+            overflow-x: auto;
+            gap: 16px;
+            padding: 20px 16px 120px;
+            scroll-snap-type: x mandatory;
+            -webkit-overflow-scrolling: touch;
+        }
+
+        .pipeline-container::-webkit-scrollbar {
+            display: none;
+        }
+
+        .pipeline-column {
+            min-width: 280px;
+            max-width: 320px;
+            flex-shrink: 0;
+            background: var(--bg-secondary);
+            border-radius: var(--r-xl);
+            padding: 16px;
+            scroll-snap-align: start;
+        }
+
+        .col-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--border);
+        }
+
+        .col-title {
+            font-size: 0.9rem;
+            font-weight: 700;
+        }
+
+        .col-count {
+            background: var(--blue-light);
+            color: var(--blue-dark);
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 3px 8px;
+            border-radius: 20px;
+        }
+
+        .pipeline-card {
+            background: #fff;
+            border-radius: var(--r-md);
+            padding: 14px;
+            margin-bottom: 10px;
+            box-shadow: var(--shadow-xs);
+            border: 1px solid var(--border);
+            cursor: grab;
+            transition: transform 0.15s, box-shadow 0.15s;
+        }
+
+        .pipeline-card:active {
+            transform: scale(0.97);
+            box-shadow: var(--shadow-md);
+        }
+
+        .pipeline-card.dragging {
+            opacity: 0.5;
+        }
+
+        .pc-name {
+            font-weight: 700;
+            font-size: 0.95rem;
+            margin-bottom: 4px;
+        }
+
+        .pc-customer {
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+            margin-bottom: 6px;
+        }
+
+        .pc-bottom {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .pc-price {
+            font-weight: 700;
+            color: var(--blue-dark);
+            font-size: 0.9rem;
+        }
+
+        .pc-type {
+            font-size: 0.7rem;
+            font-weight: 600;
+            padding: 2px 8px;
+            border-radius: 10px;
+            background: var(--bg-secondary);
+            color: var(--text-secondary);
+        }
+
+        .pc-type.estate {
+            background: #FDF2F8;
+            color: #BE185D;
+        }
+
+        .pc-type.store_removal {
+            background: #EFF6FF;
+            color: #1D4ED8;
+        }
+
+        .pc-type.welfare {
+            background: #F0FDF4;
+            color: #15803D;
+        }
+
+        .pc-type.general_waste {
+            background: var(--orange-light);
+            color: #C06000;
+        }
+
+        .pc-assignee {
+            font-size: 0.75rem;
+            color: var(--text-tertiary);
+            margin-top: 6px;
+        }
+
+        .stage-btn {
+            border: none;
+            background: none;
+            cursor: pointer;
+            font-size: 0.75rem;
+            color: var(--blue);
+            font-weight: 600;
+            padding: 4px 8px;
+            border-radius: 8px;
+        }
+
+        .stage-btn:hover {
+            background: var(--blue-light);
+        }
+
+        .drop-zone {
+            min-height: 60px;
+            border: 2px dashed transparent;
+            border-radius: var(--r-md);
+            transition: border-color 0.2s;
+        }
+
+        .drop-zone.over {
+            border-color: var(--blue);
+            background: rgba(14, 165, 233, 0.05);
+        }
+
+        .pc-comments-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            font-size: 0.72rem;
+            color: var(--text-tertiary);
+            margin-left: 8px;
+        }
+
+        .pc-deal-amounts {
+            display: flex;
+            gap: 6px;
+            align-items: center;
+            margin-top: 6px;
+            font-size: 0.78rem;
+        }
+
+        .pc-deal-amounts .estimated {
+            color: var(--text-tertiary);
+            text-decoration: line-through;
+        }
+
+        .pc-deal-amounts .final {
+            color: var(--green-dark);
+            font-weight: 700;
+        }
+
+        .pc-deal-amounts .diff-tag {
+            font-size: 0.68rem;
+            font-weight: 700;
+            padding: 1px 5px;
+            border-radius: 4px;
+        }
+
+        .pc-deal-amounts .diff-discount {
+            background: var(--red-light);
+            color: var(--red);
+        }
+
+        .pc-deal-amounts .diff-surcharge {
+            background: var(--green-light);
+            color: var(--green-dark);
+        }
+
+        /* Detail Drawer */
+        .detail-drawer-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.36);
+            backdrop-filter: blur(10px);
+            display: none;
+            z-index: 3000;
+            align-items: flex-end;
+            justify-content: center;
+        }
+
+        .detail-drawer-overlay.show,
+        .modal-overlay.show {
+            display: flex;
+        }
+
+        .detail-drawer {
+            background: #fff;
+            border-radius: var(--r-xl) var(--r-xl) 0 0;
+            width: 100%;
+            max-width: 600px;
+            max-height: 85vh;
+            overflow-y: auto;
+            padding: 20px;
+            animation: sheetUp 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+
+        .comment-thread {
+            margin-top: 16px;
+            border-top: 1px solid var(--border);
+            padding-top: 12px;
+        }
+
+        .comment-item {
+            padding: 10px 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .comment-item:last-child {
+            border-bottom: none;
+        }
+
+        .comment-meta {
+            font-size: 0.78rem;
+            color: var(--text-tertiary);
+            margin-bottom: 4px;
+        }
+
+        .comment-text {
+            font-size: 0.9rem;
+            line-height: 1.5;
+        }
+
+        .comment-input-row {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+        }
+
+        .comment-input-row input {
+            flex: 1;
+            padding: 10px 14px;
+            border-radius: var(--r-md);
+            border: 1px solid var(--border);
+            font-size: 0.9rem;
+        }
+
+        .comment-input-row button {
+            white-space: nowrap;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header class="pipeline-header" style="display:flex; justify-content:space-between; align-items:center;">
+        <div>
+            <h1 style="margin-bottom:0;">📊 営業パイプライン</h1>
+            <p style="color: var(--text-secondary); font-size: 0.9rem; margin-top:4px; margin-bottom:0;">案件の進捗を可視化 —
+                ドラッグで移動</p>
+        </div>
+        <button class="btn btn-sm btn-primary" style="width:auto; padding:8px 16px;" onclick="openNewJobModal()">➕
+            新規追加</button>
+    </header>
+
+    <div class="pipeline-container" id="pipelineContainer">
+        <p style="text-align:center; width:100%; color:var(--text-tertiary); margin-top:40px;">読み込み中...</p>
+    </div>
+
+    <!-- Detail Drawer -->
+    <div class="detail-drawer-overlay" id="drawerOverlay" onclick="closeDrawer(event)">
+        <div class="detail-drawer" id="drawerContent">
+            <div class="modal-drag-handle"></div>
+            <div id="drawerBody"></div>
+        </div>
+    </div>
+
+    <!-- New Job Modal -->
+    <div class="modal-overlay" id="newJobModal" onclick="if(event.target===this) this.classList.remove('show')">
+        <div class="modal-content" style="max-height: 85vh; max-width: 500px;">
+            <div class="modal-drag-handle"></div>
+            <button class="modal-close"
+                onclick="document.getElementById('newJobModal').classList.remove('show')">✕</button>
+            <h3 style="margin-bottom:20px; font-size:1.3rem;">✨ 新規案件 手動追加</h3>
+            <div class="form-group">
+                <label>案件・お客様名</label>
+                <input type="text" id="njName" placeholder="例: 山田様邸 片付け">
+            </div>
+            <div class="form-group">
+                <label>種別</label>
+                <select id="njType">
+                    <option value="general_waste">一般ゴミ</option>
+                    <option value="store_removal">店舗残置物</option>
+                    <option value="estate">遺品整理</option>
+                    <option value="welfare">福祉残置物</option>
+                    <option value="other">その他</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>ステージ</label>
+                <select id="njStage">
+                    <option value="inquiry">問合せ</option>
+                    <option value="estimate">見積</option>
+                    <option value="negotiation">商談</option>
+                    <option value="contract">契約</option>
+                </select>
+            </div>
+            <div class="form-group" style="margin-bottom:24px;">
+                <label>見込金額</label>
+                <input type="number" id="njAmount" placeholder="未定の場合は空欄" style="width:100%;">
+            </div>
+            <button class="btn btn-primary" onclick="submitNewJob()">保存する</button>
+        </div>
+    </div>
+
+    <!-- Bottom Nav -->
+    <nav class="bottom-nav">
+        <a href="index.html" class="nav-item"><span class="nav-icon">🏠</span><span>ホーム</span></a>
+        <a href="pipeline.html" class="nav-item active"><span class="nav-icon">📊</span><span>パイプライン</span></a>
+        <a href="billing.html" class="nav-item"><span class="nav-icon">💰</span><span>請求</span></a>
+        <a href="customers.html" class="nav-item"><span class="nav-icon">🏢</span><span>顧客</span></a>
+        <a href="manifests.html" class="nav-item"><span class="nav-icon">📜</span><span>マニフェスト</span></a>
+    </nav>
+
+    <script src="assets/js/utils.js"></script>
+    <script src="assets/js/api.js"></script>
+    <script>
+        if (!RyubeeAPI.requireAuth()) throw new Error("Not authenticated");
+
+        const STAGES = [
+            { key: 'inquiry', label: '問合せ', emoji: '📩' },
+            { key: 'estimate', label: '見積', emoji: '📝' },
+            { key: 'negotiation', label: '商談', emoji: '🤝' },
+            { key: 'contract', label: '契約', emoji: '📋' },
+            { key: 'scheduled', label: '作業予定', emoji: '📅' },
+            { key: 'completed', label: '完了', emoji: '✅' },
+            { key: 'lost', label: '不成約', emoji: '❌' },
+        ];
+
+        const TYPE_LABELS = {
+            store_removal: '店舗残置物', estate: '遺品整理',
+            welfare: '福祉残置物', general_waste: '一般ゴミ', other: 'その他'
+        };
+
+        let pipelineData = {};
+
+        document.addEventListener('DOMContentLoaded', loadPipeline);
+
+        async function loadPipeline() {
+            try {
+                pipelineData = await RyubeeAPI.fetchPipeline();
+                renderPipeline();
+            } catch (e) {
+                document.getElementById('pipelineContainer').innerHTML =
+                    `<div class="alert alert-danger" style="width:100%">${e.message}</div>`;
+            }
+        }
+
+        function renderPipeline() {
+            const container = document.getElementById('pipelineContainer');
+            container.innerHTML = '';
+
+            STAGES.forEach(stage => {
+                const jobs = pipelineData[stage.key] || [];
+                const col = document.createElement('div');
+                col.className = 'pipeline-column';
+                col.dataset.stage = stage.key;
+
+                col.innerHTML = `
+                    <div class="col-header">
+                        <span class="col-title">${stage.emoji} ${stage.label}</span>
+                        <span class="col-count">${jobs.length}</span>
+                    </div>
+                    <div class="drop-zone" data-stage="${stage.key}">
+                        ${jobs.map(j => renderCard(j, stage.key)).join('')}
+                    </div>
+                `;
+                container.appendChild(col);
+            });
+
+            // ドラッグ＆ドロップのセットアップ
+            setupDragDrop();
+        }
+
+        function renderCard(job, currentStage) {
+            const typeClass = job.job_type || 'other';
+            const typeLabel = TYPE_LABELS[job.job_type] || 'その他';
+            const price = job.price_total ? `¥${job.price_total.toLocaleString()}` : '–';
+            const stageIdx = STAGES.findIndex(s => s.key === currentStage);
+            const nextStage = stageIdx < STAGES.length - 2 ? STAGES[stageIdx + 1] : null;
+
+            return `
+                <div class="pipeline-card" draggable="true" data-job-id="${job.job_id}" data-stage="${currentStage}" onclick="openJobDetail('${job.job_id}')">
+                    <div class="pc-name">
+                        ${utils.escapeHtml(job.job_name || '案件')}
+                        ${job.comment_count ? `<span class="pc-comments-badge">💬 ${job.comment_count}</span>` : ''}
+                    </div>
+                    <div class="pc-customer">👤 ${utils.escapeHtml(job.customer_name || '未設定')}</div>
+                    <div class="pc-bottom">
+                        <span class="pc-price">${price}</span>
+                        <span class="pc-type ${typeClass}">${typeLabel}</span>
+                    </div>
+                    ${(job.estimated_price && job.final_price && job.estimated_price !== job.final_price) ? `
+                        <div class="pc-deal-amounts">
+                            <span class="estimated">¥${job.estimated_price.toLocaleString()}</span>
+                            <span>→</span>
+                            <span class="final">¥${job.final_price.toLocaleString()}</span>
+                            ${job.discount_amount ? `<span class="diff-tag diff-discount">-¥${job.discount_amount.toLocaleString()}</span>` : ''}
+                            ${job.surcharge_amount ? `<span class="diff-tag diff-surcharge">+¥${job.surcharge_amount.toLocaleString()}</span>` : ''}
+                        </div>
+                    ` : ''}
+                    ${job.assigned_to_name ? `<div class="pc-assignee">担当: ${utils.escapeHtml(job.assigned_to_name)}</div>` : ''}
+                    ${nextStage ? `<button class="stage-btn" onclick="event.stopPropagation();moveJob('${job.job_id}', '${nextStage.key}')">${nextStage.label} へ →</button>` : ''}
+                </div>
+            `;
+        }
+
+        function setupDragDrop() {
+            document.querySelectorAll('.pipeline-card').forEach(card => {
+                card.addEventListener('dragstart', e => {
+                    e.dataTransfer.setData('text/plain', card.dataset.jobId);
+                    card.classList.add('dragging');
+                });
+                card.addEventListener('dragend', () => card.classList.remove('dragging'));
+            });
+
+            document.querySelectorAll('.drop-zone').forEach(zone => {
+                zone.addEventListener('dragover', e => {
+                    e.preventDefault();
+                    zone.classList.add('over');
+                });
+                zone.addEventListener('dragleave', () => zone.classList.remove('over'));
+                zone.addEventListener('drop', async e => {
+                    e.preventDefault();
+                    zone.classList.remove('over');
+                    const jobId = e.dataTransfer.getData('text/plain');
+                    const newStage = zone.dataset.stage;
+                    await moveJob(jobId, newStage);
+                });
+            });
+        }
+
+        async function moveJob(jobId, newStage) {
+            try {
+                await RyubeeAPI.updateJobStage(jobId, newStage);
+                await loadPipeline();
+                showToast(`✅ ステージを「${STAGES.find(s => s.key === newStage)?.label}」に変更`);
+            } catch (e) { alert('更新エラー: ' + e.message); }
+        }
+
+        function showToast(msg) {
+            const t = document.createElement('div');
+            t.textContent = msg;
+            t.style.cssText = 'position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#34C759;color:#fff;padding:10px 20px;border-radius:20px;font-weight:600;z-index:9999;';
+            document.body.appendChild(t);
+            setTimeout(() => t.remove(), 2500);
+        }
+        
+        async function submitNewJob() {
+            const name = document.getElementById('njName').value.trim();
+            const type = document.getElementById('njType').value;
+            const stage = document.getElementById('njStage').value;
+            const amount = document.getElementById('njAmount').value;
+            
+            if(!name) { alert("案件名を入力してください"); return; }
+            
+            try {
+                // 手動でのジョブ作成（API）
+                await RyubeeAPI.createJob({
+                    job_name: name,
+                    customer_name: name, // 顧客名と案件名を同じにして簡略化
+                    job_type: type,
+                    pipeline_stage: stage,
+                    estimated_price: amount ? parseInt(amount, 10) : 0,
+                    source: 'manual'
+                });
+                document.getElementById('newJobModal').classList.remove('show');
+                showToast("✅ 新規案件を手動追加しました");
+                loadPipeline();
+                // フォームリセット
+                document.getElementById('njName').value = '';
+                document.getElementById('njAmount').value = '';
+            } catch (e) {
+                alert("追加エラー: " + e.message);
+            }
+        }
+        
+        function openNewJobModal() {
+            document.getElementById('newJobModal').classList.add('show');
+        }
+
+        // ── Detail Drawer (Comments + Deal Amounts) ───
+        function closeDrawer(e) {
+            if (e && e.target !== document.getElementById('drawerOverlay')) return;
+            document.getElementById('drawerOverlay').classList.remove('show');
+        }
+
+        async function openJobDetail(jobId) {
+            const drawer = document.getElementById('drawerOverlay');
+            const body = document.getElementById('drawerBody');
+
+            // Find job in pipeline data
+            let job = null;
+            for (const jobs of Object.values(pipelineData)) {
+                const found = jobs.find(j => j.job_id === jobId);
+                if (found) { job = found; break; }
+            }
+            if (!job) return;
+
+            // Load comments
+            let comments = [];
+            try { comments = await RyubeeAPI.fetchComments(jobId); } catch (e) { }
+
+            const est = job.estimated_price || job.price_total || 0;
+            const fin = job.final_price || 0;
+            const disc = job.discount_amount || 0;
+            const surcharge = job.surcharge_amount || 0;
+
+            body.innerHTML = `
+                <h3 style="font-size:1.2rem;font-weight:700;margin-bottom:4px;">${utils.escapeHtml(job.job_name || '案件')}</h3>
+                <p class="small-text">👤 ${utils.escapeHtml(job.customer_name || '未設定')} | ${TYPE_LABELS[job.job_type] || 'その他'}</p>
+
+                <div style="margin-top:16px;padding:16px;background:var(--bg-secondary);border-radius:var(--r-md);">
+                    <h4 style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:10px;">💰 金額トラッキング</h4>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                        <div><span class="small-text">見積金額</span><br><strong>¥${est.toLocaleString()}</strong></div>
+                        <div><span class="small-text">成約金額</span><br><strong style="color:var(--green-dark);">¥${fin ? fin.toLocaleString() : '–'}</strong></div>
+                        ${disc ? `<div><span class="small-text">割引</span><br><strong style="color:var(--red);">-¥${disc.toLocaleString()}</strong></div>` : ''}
+                        ${surcharge ? `<div><span class="small-text">追加料金</span><br><strong style="color:var(--blue);">+¥${surcharge.toLocaleString()}</strong></div>` : ''}
+                    </div>
+                    ${job.price_notes ? `<p class="small-text" style="margin-top:8px;">📝 ${utils.escapeHtml(job.price_notes)}</p>` : ''}
+                </div>
+
+                <div style="display:flex;gap:8px;margin-top:8px;">
+                    <button class="btn btn-success" onclick="convertToInvoice('${jobId}')" style="flex:1;padding:12px 8px;font-size:0.9rem;">📄 請求書を発行</button>
+                    <button class="btn btn-warning" onclick="collectCash('${jobId}')" style="flex:1;padding:12px 8px;font-size:0.9rem;">💴 現場で現金受取</button>
+                </div>
+
+                <div class="comment-thread">
+                    <h4 style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:8px;">💬 コメント (${comments.length})</h4>
+                    <div id="commentList">
+                        ${comments.length ? comments.map(c => `
+                            <div class="comment-item">
+                                <div class="comment-meta">${utils.escapeHtml(c.user_name)} ・ ${c.created_at ? new Date(c.created_at).toLocaleString('ja-JP') : ''}</div>
+                                <div class="comment-text">${utils.escapeHtml(c.content)}</div>
+                            </div>
+                        `).join('') : '<p class="small-text">コメントなし</p>'}
+                    </div>
+                    <div class="comment-input-row">
+                        <input type="text" id="commentInput" placeholder="コメントを入力..." onkeypress="if(event.key==='Enter')postJobComment('${jobId}')">
+                        <button class="btn btn-xs btn-primary" onclick="postJobComment('${jobId}')">送信</button>
+                    </div>
+                </div>
+            `;
+            drawer.classList.add('show');
+        }
+
+        async function postJobComment(jobId) {
+            const input = document.getElementById('commentInput');
+            const content = input.value.trim();
+            if (!content) return;
+            try {
+                await RyubeeAPI.postComment(jobId, content);
+                input.value = '';
+                openJobDetail(jobId);
+                showToast('✅ コメントを投稿しました');
+            } catch (e) { alert('エラー: ' + e.message); }
+        }
+
+        async function convertToInvoice(jobId) {
+            if (!confirm('この見積書から請求書を発行しますか？\n（業者の締め払い設定に基づいて支払期限が自動設定されます）')) return;
+            try {
+                const inv = await RyubeeAPI.createInvoiceFromEstimate(jobId);
+                showToast(`✅ 請求書を発行しました (¥${inv.total_amount.toLocaleString()})`);
+                document.getElementById('drawerOverlay').classList.remove('show');
+                setTimeout(() => { window.location.href = 'billing.html'; }, 1500);
+            } catch (e) { alert('エラー: ' + e.message); }
+        }
+
+        async function collectCash(jobId) {
+            if (!confirm('この案件の代金を「現金」で全額受け取りましたか？\n（請求書が自動生成され、入金済みとして処理されます）')) return;
+            try {
+                const inv = await RyubeeAPI.createInvoiceAndCollectCash(jobId);
+                showToast(`✅ 現金回収を記録しました (¥${inv.total_amount.toLocaleString()})`);
+                document.getElementById('drawerOverlay').classList.remove('show');
+                loadPipeline();
+            } catch (e) { alert('エラー: ' + e.message); }
+        }
+    </script>
+</body>
+
+</html>

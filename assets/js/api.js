@@ -1,82 +1,413 @@
 /**
- * 立米AI Ryu兵衛 - API通信用ユーティリティ
+ * 立米AI Ryu兵衛 - バックエンドAPI通信モジュール
+ *
+ * 使い方:
+ *   const jobs = await RyubeeAPI.fetchJobs();
+ *   const token = await RyubeeAPI.authLogin(email, password);
  */
 
-const API_BASE_URL = "https://ryubee-api.onrender.com/v1";
+// ── 環境切り替え ─────────────────────────────────────────────
+// ローカル開発: http://localhost:8000
+// 本番Render:   https://ryubee-api.onrender.com
+const API_BASE = (() => {
+  const host = location.hostname;
+  if (host === "localhost" || host === "127.0.0.1") {
+    return "http://localhost:8000";
+  }
+  return "https://ryubee-api.onrender.com";
+})();
 
-const api = {
-  /**
-   * 案件一覧を取得する
-   */
-  async getJobs() {
+// ── 共通フェッチラッパー ──────────────────────────────────────
+async function apiFetch(path, options = {}) {
+  const token = localStorage.getItem("ryubee_token");
+  const headers = {
+    "Content-Type": "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+    ...(options.headers || {}),
+  };
+
+  // FormData の場合は Content-Type を削除（ブラウザに自動設定させる）
+  if (options.body instanceof FormData) {
+    delete headers["Content-Type"];
+  }
+
+  const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+
+  if (res.status === 401) {
+    // トークン期限切れ → 強制ログアウト
+    localStorage.removeItem("ryubee_token");
+    localStorage.removeItem("ryubee_user");
+    window.location.href = "/login.html";
+    throw new Error("セッションが切れました。再ログインしてください。");
+  }
+
+  if (!res.ok) {
+    let msg = `HTTP ${res.status}`;
     try {
-      const res = await fetch(`${API_BASE_URL}/jobs`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      return await res.json();
-    } catch (err) {
-      console.error("案件一覧の取得に失敗しました", err);
-      throw err;
+      const err = await res.json();
+      msg = err.detail || JSON.stringify(err);
+    } catch (_) { }
+    throw new Error(msg);
+  }
+
+  // 204 No Content
+  if (res.status === 204) return null;
+
+  return res.json();
+}
+
+// ── Auth ──────────────────────────────────────────────────────
+const RyubeeAPI = {
+
+  async authLogin(email, password) {
+    const data = await apiFetch("/v1/auth/login", {
+      method: "POST",
+      body: JSON.stringify({ email, password }),
+    });
+    localStorage.setItem("ryubee_token", data.token);
+    localStorage.setItem("ryubee_user", JSON.stringify(data.user));
+    return data;
+  },
+
+  async authRegister(companyName, email, password, name = "") {
+    const data = await apiFetch("/v1/auth/register", {
+      method: "POST",
+      body: JSON.stringify({ company_name: companyName, email, password, name }),
+    });
+    localStorage.setItem("ryubee_token", data.token);
+    localStorage.setItem("ryubee_user", JSON.stringify(data.user));
+    return data;
+  },
+
+  async authMe() {
+    return apiFetch("/v1/auth/me");
+  },
+
+  authLogout() {
+    localStorage.removeItem("ryubee_token");
+    localStorage.removeItem("ryubee_user");
+    window.location.href = "/login.html";
+  },
+
+  /** ログイン済みかチェック。未ログインなら login.html へ飛ばす */
+  requireAuth() {
+    const token = localStorage.getItem("ryubee_token");
+    if (!token) {
+      window.location.href = "/login.html";
+      return false;
+    }
+    return true;
+  },
+
+  /** 現在のユーザー情報を取得（localStorageキャッシュ） */
+  currentUser() {
+    try {
+      return JSON.parse(localStorage.getItem("ryubee_user") || "null");
+    } catch {
+      return null;
     }
   },
 
-  /**
-   * 案件詳細を取得する
-   * @param {string} jobId 
-   */
-  async getJobDetail(jobId) {
-    try {
-      const res = await fetch(`${API_BASE_URL}/jobs/${jobId}`);
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      return await res.json();
-    } catch (err) {
-      console.error("案件詳細の取得に失敗しました", err);
-      throw err;
-    }
+  // ── Jobs ────────────────────────────────────────────────────
+
+  async fetchJobs({ status = null, q = null } = {}) {
+    const params = new URLSearchParams();
+    if (status) params.set("status", status);
+    if (q) params.set("q", q);
+    const qs = params.toString();
+    return apiFetch(`/v1/jobs${qs ? "?" + qs : ""}`);
   },
 
-  /**
-   * 案件を保存（更新）する
-   * @param {string} jobId 
-   * @param {Object} payload 
-   */
-  async saveJob(jobId, payload) {
-    try {
-      const res = await fetch(`${API_BASE_URL}/jobs/${jobId}`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      return await res.json();
-    } catch (err) {
-      console.error("案件の保存に失敗しました", err);
-      throw err;
-    }
+  async fetchJob(jobId) {
+    return apiFetch(`/v1/jobs/${jobId}`);
   },
 
-  /**
-   * 画像を送信して立米を見積もる
-   * @param {FormData} formData
-   */
+  async createJob(body) {
+    return apiFetch("/v1/jobs", {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+  },
+
+  async updateJob(jobId, body) {
+    return apiFetch(`/v1/jobs/${jobId}`, {
+      method: "PUT",
+      body: JSON.stringify(body),
+    });
+  },
+
+  async deleteJob(jobId) {
+    return apiFetch(`/v1/jobs/${jobId}`, { method: "DELETE" });
+  },
+
+  // ── Settings ─────────────────────────────────────────────────
+
+  async fetchSettings() {
+    return apiFetch("/v1/settings");
+  },
+
+  async saveSettings(body) {
+    return apiFetch("/v1/settings", {
+      method: "PUT",
+      body: JSON.stringify(body),
+    });
+  },
+
+  // ── Admin ────────────────────────────────────────────────────
+
+  async fetchAdminSummary() {
+    return apiFetch("/v1/admin/summary");
+  },
+
+  async fetchSalesChart(days = 7) {
+    return apiFetch(`/v1/admin/sales-chart?days=${days}`);
+  },
+
+  async fetchStaffRanking() {
+    return apiFetch("/v1/admin/staff-ranking");
+  },
+
+  // ── Volume Estimate (AI) ──────────────────────────────────────
+
   async estimateVolume(formData) {
-    try {
-      const res = await fetch(`${API_BASE_URL}/volume-estimate`, {
-        method: "POST",
-        body: formData, // fetchはFormDataを渡すと自動でmultipart/form-dataヘッダを設定する
-      });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      return await res.json();
-    } catch (err) {
-      console.error("立米計算APIの呼び出しに失敗しました", err);
-      throw err;
-    }
+    return apiFetch("/v1/volume-estimate", {
+      method: "POST",
+      body: formData,
+      headers: {}, // Content-Type は自動（FormData）
+    });
   },
 
-  /**
-   * 作業書PDFのURLを生成する
-   * @param {string} jobId 
-   */
-  getWorksheetUrl(jobId) {
-    return `${API_BASE_URL}/jobs/${jobId}/worksheet`;
+  // ── Invoices (請求書) ──────────────────────────────────────
+
+  async fetchInvoices({ month = null, status = null, customer_id = null } = {}) {
+    const params = new URLSearchParams();
+    if (month) params.set("month", month);
+    if (status) params.set("status", status);
+    if (customer_id) params.set("customer_id", customer_id);
+    const qs = params.toString();
+    return apiFetch(`/v1/invoices${qs ? "?" + qs : ""}`);
+  },
+
+  async fetchInvoice(invoiceId) {
+    return apiFetch(`/v1/invoices/${invoiceId}`);
+  },
+
+  async createInvoice(body) {
+    return apiFetch("/v1/invoices", {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+  },
+
+  async updateInvoice(invoiceId, body) {
+    return apiFetch(`/v1/invoices/${invoiceId}`, {
+      method: "PUT",
+      body: JSON.stringify(body),
+    });
+  },
+
+  async generateMonthlyInvoices(month, dueDate = null) {
+    return apiFetch("/v1/invoices/generate-monthly", {
+      method: "POST",
+      body: JSON.stringify({ month, due_date: dueDate }),
+    });
+  },
+
+  async fetchUnpaidAlerts() {
+    return apiFetch("/v1/invoices/unpaid-alerts");
+  },
+
+  // ── Payments (入金・消し込み) ────────────────────────────────
+
+  async fetchPayments() {
+    return apiFetch("/v1/payments");
+  },
+
+  async registerPayment(body) {
+    return apiFetch("/v1/payments", {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+  },
+
+  async deletePayment(paymentId) {
+    return apiFetch(`/v1/payments/${paymentId}`, { method: "DELETE" });
+  },
+
+  // ── Pipeline (営業パイプライン) ──────────────────────────────
+
+  async fetchPipeline() {
+    return apiFetch("/v1/jobs/pipeline");
+  },
+
+  async updateJobStage(jobId, pipelineStage) {
+    return apiFetch(`/v1/jobs/${jobId}`, {
+      method: "PUT",
+      body: JSON.stringify({ pipeline_stage: pipelineStage }),
+    });
+  },
+
+  // ── Customers (顧客管理) ────────────────────────────────────
+
+  async fetchCustomers() {
+    return apiFetch("/v1/customers");
+  },
+
+  async createCustomer(body) {
+    return apiFetch("/v1/customers", {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+  },
+
+  async updateCustomer(customerId, body) {
+    return apiFetch(`/v1/customers/${customerId}`, {
+      method: "PUT",
+      body: JSON.stringify(body),
+    });
+  },
+
+  async deleteCustomer(customerId) {
+    return apiFetch(`/v1/customers/${customerId}`, { method: "DELETE" });
+  },
+
+  // ── Manifests (マニフェスト) ─────────────────────────────────
+
+  async fetchManifests({ waste_category = null, status = null } = {}) {
+    const params = new URLSearchParams();
+    if (waste_category) params.set("waste_category", waste_category);
+    if (status) params.set("status", status);
+    const qs = params.toString();
+    return apiFetch(`/v1/manifests${qs ? "?" + qs : ""}`);
+  },
+
+  async createManifest(body) {
+    return apiFetch("/v1/manifests", {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+  },
+
+  async updateManifest(manifestId, body) {
+    return apiFetch(`/v1/manifests/${manifestId}`, {
+      method: "PUT",
+      body: JSON.stringify(body),
+    });
+  },
+
+  async fetchManifestsOverdue() {
+    return apiFetch("/v1/manifests/overdue");
+  },
+
+  // ── Estimate → Invoice (見積→請求変換) ───────────────────────
+
+  async createInvoiceFromEstimate(jobId) {
+    return apiFetch(`/v1/invoices/from-estimate/${jobId}`, {
+      method: "POST",
+    });
+  },
+
+  async createInvoiceAndCollectCash(jobId) {
+    return apiFetch(`/v1/invoices/cash-collection/${jobId}`, {
+      method: "POST",
+    });
+  },
+
+  // ── Job Comments (コメント) ──────────────────────────────────
+
+  async fetchComments(jobId) {
+    return apiFetch(`/v1/jobs/${jobId}/comments`);
+  },
+
+  async postComment(jobId, content) {
+    return apiFetch(`/v1/jobs/${jobId}/comments`, {
+      method: "POST",
+      body: JSON.stringify({ content }),
+    });
+  },
+
+  // ── Bank (銀行入金取込) ─────────────────────────────────────
+
+  async uploadBankCSV(file) {
+    const formData = new FormData();
+    formData.append("file", file);
+    const token = localStorage.getItem("token");
+    const resp = await fetch(`${BASE}/v1/bank/upload`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body: formData,
+    });
+    if (!resp.ok) throw new Error(await resp.text());
+    return resp.json();
+  },
+
+  async bankAutoMatch() {
+    return apiFetch("/v1/bank/auto-match", { method: "POST" });
+  },
+
+  async fetchUnmatchedTransactions() {
+    return apiFetch("/v1/bank/unmatched");
+  },
+
+  async fetchBankTransactions() {
+    return apiFetch("/v1/bank/transactions");
+  },
+
+  // ── freee連携 ───────────────────────────────────────────────
+
+  async freeeAuthUrl() {
+    return apiFetch("/v1/freee/auth-url");
+  },
+
+  async freeeCallback(code) {
+    return apiFetch(`/v1/freee/callback?code=${code}`, { method: "POST" });
+  },
+
+  async freeeStatus() {
+    return apiFetch("/v1/freee/status");
+  },
+
+  async freeSyncInvoice(invoiceId) {
+    return apiFetch(`/v1/freee/sync-invoice/${invoiceId}`, { method: "POST" });
+  },
+  // ── Settings (会社設定・メール) ──────────────────────────────
+  async fetchSettings() {
+    return apiFetch("/v1/settings");
+  },
+  async updateSettings(body) {
+    return apiFetch("/v1/settings", {
+      method: "PUT",
+      body: JSON.stringify(body),
+    });
+  },
+
+  // ── Item Templates (品目雛形) ────────────────────────────
+  async fetchTemplates() {
+    return apiFetch("/v1/templates");
+  },
+  async createTemplate(body) {
+    return apiFetch("/v1/templates", {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+  },
+  async updateTemplate(id, body) {
+    return apiFetch(`/v1/templates/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(body),
+    });
+  },
+  async deleteTemplate(id) {
+    return apiFetch(`/v1/templates/${id}`, {
+      method: "DELETE",
+    });
+  },
+
+  // ── Automated Reminders (未入金メール) ─────────────────
+  async sendUnpaidReminders() {
+    return apiFetch("/v1/invoices/send-reminders", { method: "POST" });
   }
 };
+
+// グローバルに公開
+window.RyubeeAPI = RyubeeAPI;

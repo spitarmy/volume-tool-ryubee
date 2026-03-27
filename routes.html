@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Route Dispatch — Ryu兵衛 山文SaaS</title>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <link rel="stylesheet" href="assets/css/style.css">
+
+    <style>
+        .routes-header {
+            background: #FFFFFF;
+            padding: 40px 24px 30px;
+            border-bottom: 1px solid var(--border);
+            text-align: center;
+        }
+
+        .routes-header h1 {
+            font-size: 2rem;
+            color: var(--text-primary);
+            margin-bottom: 8px;
+        }
+
+        .route-list {
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
+        .route-card {
+            background: #FFFFFF;
+            border-radius: var(--r-xl);
+            padding: 24px;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--border);
+            border-left: 6px solid var(--blue);
+        }
+
+        .route-card.completed {
+            border-left-color: var(--green);
+        }
+
+        .route-card.completed h3 {
+            color: var(--text-secondary);
+            text-decoration: line-through;
+        }
+
+        .fab {
+            position: fixed;
+            bottom: calc(var(--bottom-nav-height) + 24px);
+            right: 24px;
+            width: 64px;
+            height: 64px;
+            background: var(--blue);
+            color: white;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 32px;
+            box-shadow: var(--shadow-float);
+            cursor: pointer;
+            border: none;
+            z-index: 100;
+        }
+    </style>
+</head>
+
+<body>
+
+    <header class="routes-header">
+        <h1>配車ルート</h1>
+        <p style="color: var(--text-secondary);">本日の回収トラック指示表</p>
+    </header>
+
+    <main class="route-list" id="routeList">
+        <p style="text-align:center; color: var(--text-tertiary); margin-top: 40px;">読み込み中...</p>
+    </main>
+
+    <button class="fab" onclick="addRoute()">+</button>
+
+    <!-- Bottom Navigation -->
+    <nav class="bottom-nav">
+        <a href="index.html" class="nav-item">
+            <span class="nav-icon">🏠</span>
+            <span class="nav-label">ホーム</span>
+        </a>
+        <a href="routes.html" class="nav-item active">
+            <span class="nav-icon">🚚</span>
+            <span class="nav-label">配車</span>
+        </a>
+        <a href="customers.html" class="nav-item">
+            <span class="nav-icon">🏢</span>
+            <span class="nav-label">顧客</span>
+        </a>
+        <a href="manifests.html" class="nav-item">
+            <span class="nav-icon">📜</span>
+            <span class="nav-label">マニフェスト</span>
+        </a>
+    </nav>
+
+    <script src="assets/js/utils.js"></script>
+    <script src="assets/js/api.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            if (!API.getToken()) return window.location.href = 'login.html';
+            loadRoutes();
+        });
+
+        async function loadRoutes() {
+            try {
+                const res = await API.request('/v1/routes');
+                const list = document.getElementById('routeList');
+                if (res.length === 0) {
+                    list.innerHTML = `<p style="text-align:center; color: var(--text-tertiary); margin-top: 40px;">本日の配車ルートはありません</p>`;
+                    return;
+                }
+                list.innerHTML = res.map(r => `
+                    <div class="route-card ${r.status}">
+                        <div style="display:flex; justify-content:space-between; margin-bottom: 8px;">
+                            <h3 style="font-size:1.15rem; color:var(--text-primary)">🚚 ${Utils.escapeHtml(r.vehicle_name || '未定トラック')}</h3>
+                        </div>
+                        <p style="color:var(--text-secondary); font-size: 0.95rem; font-weight: bold;">日付: ${r.date}</p>
+                        <p style="color:var(--text-secondary); font-size: 0.95rem;">ステータス: ${r.status === 'completed' ? '完了' : (r.status === 'active' ? '運行中' : '準備中')}</p>
+                    </div>
+                `).join('');
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        function addRoute() {
+            const vehicle = prompt("配車する車両名（例: ピンクの2tトラック）");
+            if (!vehicle) return;
+            const date = new Date().toISOString().split('T')[0];
+            API.request('/v1/routes', {
+                method: 'POST',
+                body: JSON.stringify({ date: date, vehicle_name: vehicle, status: 'draft' })
+            }).then(() => loadRoutes()).catch(e => alert("追加エラー"));
+        }
+    </script>
+</body>
+
+</html>

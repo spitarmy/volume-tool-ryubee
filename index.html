@@ -14,31 +14,22 @@
         /* ── Hero Header ─────────────────────────── */
         .home-hero {
             position: relative;
-            background: linear-gradient(155deg, #0A84FF 0%, #0055CC 55%, #0A3B8C 100%);
-            padding: 52px 24px 80px;
+            background: #FFFFFF;
+            padding: 40px 24px 60px;
             overflow: hidden;
+            border-bottom: 1px solid var(--border);
         }
 
         .home-hero::before {
             content: '';
             position: absolute;
-            top: -60px;
-            right: -60px;
-            width: 260px;
-            height: 260px;
-            background: rgba(255, 255, 255, 0.08);
+            top: -50px;
+            right: -50px;
+            width: 250px;
+            height: 250px;
+            background: radial-gradient(circle, rgba(14, 165, 233, 0.08) 0%, rgba(255, 255, 255, 0) 70%);
             border-radius: 50%;
-        }
-
-        .home-hero::after {
-            content: '';
-            position: absolute;
-            bottom: -80px;
-            left: -40px;
-            width: 200px;
-            height: 200px;
-            background: rgba(52, 199, 89, 0.15);
-            border-radius: 50%;
+            pointer-events: none;
         }
 
         .home-hero .hero-inner {
@@ -50,31 +41,29 @@
             display: inline-flex;
             align-items: center;
             gap: 6px;
-            background: rgba(255, 255, 255, 0.15);
-            border: 1px solid rgba(255, 255, 255, 0.25);
-            backdrop-filter: blur(8px);
-            -webkit-backdrop-filter: blur(8px);
+            background: rgba(14, 165, 233, 0.1);
+            border: 1px solid rgba(14, 165, 233, 0.2);
             border-radius: 50px;
-            padding: 4px 12px;
-            font-size: 0.75rem;
+            padding: 6px 14px;
+            font-size: 0.85rem;
             font-weight: 700;
-            color: rgba(255, 255, 255, 0.92);
-            letter-spacing: 0.04em;
-            margin-bottom: 18px;
+            color: var(--blue);
+            letter-spacing: 0.02em;
+            margin-bottom: 20px;
         }
 
         .home-hero h1 {
-            font-size: 2rem;
+            font-size: 2.2rem;
             font-weight: 800;
-            color: #ffffff;
-            letter-spacing: -0.04em;
-            line-height: 1.15;
-            margin-bottom: 10px;
+            color: var(--text-primary);
+            letter-spacing: -0.02em;
+            line-height: 1.25;
+            margin-bottom: 12px;
         }
 
         .home-hero .hero-sub {
-            font-size: 0.92rem;
-            color: rgba(255, 255, 255, 0.75);
+            font-size: 1rem;
+            color: var(--text-secondary);
             font-weight: 500;
             line-height: 1.5;
         }
@@ -82,37 +71,36 @@
         /* ── Stat Bar ─────────────────────────── */
         .stat-bar {
             display: flex;
-            gap: 12px;
+            gap: 16px;
             padding: 0 20px;
-            margin-top: -36px;
-            position: relative;
-            z-index: 20;
-            margin-bottom: 24px;
+            margin-top: 24px;
+            margin-bottom: 32px;
         }
 
         .stat-card {
             flex: 1;
             background: #ffffff;
-            border-radius: 18px;
-            padding: 16px 14px;
-            box-shadow: 0 8px 28px rgba(0, 0, 0, 0.09), 0 2px 8px rgba(0, 0, 0, 0.05);
+            border-radius: var(--r-xl);
+            padding: 24px 20px;
+            box-shadow: var(--shadow-sm);
             display: flex;
             flex-direction: column;
-            gap: 4px;
+            gap: 8px;
+            border: 1px solid var(--border);
         }
 
         .stat-label {
-            font-size: 0.72rem;
-            font-weight: 600;
+            font-size: 0.85rem;
+            font-weight: 700;
             color: var(--text-secondary);
-            letter-spacing: 0.02em;
+            letter-spacing: 0.01em;
         }
 
         .stat-value {
-            font-size: 1.6rem;
+            font-size: 2rem;
             font-weight: 800;
-            color: var(--blue);
-            letter-spacing: -0.04em;
+            color: var(--text-primary);
+            letter-spacing: -0.02em;
             line-height: 1;
         }
 
@@ -121,40 +109,18 @@
             display: block;
             position: relative;
             overflow: hidden;
-            background: linear-gradient(155deg, #34C759 0%, #1E8040 100%);
-            border-radius: 24px;
-            padding: 28px 24px;
+            background: var(--blue);
+            border-radius: 32px;
+            padding: 32px 28px;
             text-decoration: none;
-            box-shadow: 0 12px 32px rgba(52, 199, 89, 0.30), 0 4px 12px rgba(52, 199, 89, 0.18);
-            transition: transform 0.22s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.2s;
-            margin-bottom: 28px;
+            box-shadow: var(--shadow-float);
+            transition: all 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+            margin-bottom: 36px;
         }
 
         .main-cta:active {
-            transform: scale(0.97);
-            box-shadow: 0 4px 12px rgba(52, 199, 89, 0.20);
-        }
-
-        .main-cta::before {
-            content: '';
-            position: absolute;
-            right: -30px;
-            top: -30px;
-            width: 150px;
-            height: 150px;
-            background: rgba(255, 255, 255, 0.1);
-            border-radius: 50%;
-        }
-
-        .main-cta::after {
-            content: '';
-            position: absolute;
-            left: -10px;
-            bottom: -40px;
-            width: 100px;
-            height: 100px;
-            background: rgba(0, 0, 0, 0.06);
-            border-radius: 50%;
+            transform: scale(0.975);
+            box-shadow: var(--shadow-md);
         }
 
         .main-cta .cta-inner {
@@ -163,23 +129,37 @@
         }
 
         .main-cta .cta-icon {
-            font-size: 44px;
-            margin-bottom: 14px;
+            font-size: 52px;
+            margin-bottom: 16px;
             display: block;
-            filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.2));
+            filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.1));
         }
 
         .main-cta .cta-title {
-            font-size: 1.35rem;
+            font-size: 1.5rem;
             font-weight: 800;
             color: #fff;
-            letter-spacing: -0.03em;
-            margin-bottom: 4px;
+            letter-spacing: -0.02em;
+            margin-bottom: 6px;
         }
 
         .main-cta .cta-desc {
-            font-size: 0.88rem;
-            color: rgba(255, 255, 255, 0.8);
+            font-size: 1rem;
+            color: rgba(255, 255, 255, 0.9);
+            font-weight: 500;
+        }
+
+        .main-cta .cta-title {
+            font-size: 1.45rem;
+            font-weight: 800;
+            color: #fff;
+            letter-spacing: -0.03em;
+            margin-bottom: 6px;
+        }
+
+        .main-cta .cta-desc {
+            font-size: 0.95rem;
+            color: rgba(255, 255, 255, 0.85);
             font-weight: 500;
         }
 
@@ -365,6 +345,9 @@
         </div>
     </div>
 
+    <!-- ── Alert Widgets ──────────── -->
+    <div id="alert-widgets" style="padding: 0 20px;"></div>
+
     <!-- ── Main Content ────────────── -->
     <div class="container" style="padding-top: 0;">
 
@@ -396,19 +379,28 @@
             <div class="nav-icon">🏠</div>
             <span>ホーム</span>
         </a>
-        <a href="volume.html" class="nav-item">
-            <div class="nav-icon">📸</div>
-            <span>カメラ見積</span>
+        <a href="pipeline.html" class="nav-item">
+            <div class="nav-icon">📊</div>
+            <span>パイプライン</span>
         </a>
-        <a href="jobs.html" class="nav-item">
-            <div class="nav-icon">📁</div>
-            <span>案件一覧</span>
+        <a href="billing.html" class="nav-item">
+            <div class="nav-icon">💰</div>
+            <span>請求</span>
+        </a>
+        <a href="customers.html" class="nav-item">
+            <div class="nav-icon">🏢</div>
+            <span>顧客</span>
+        </a>
+        <a href="manifests.html" class="nav-item">
+            <div class="nav-icon">📜</div>
+            <span>マニフェスト</span>
         </a>
     </nav>
 
     <script src="assets/js/api.js"></script>
     <script src="assets/js/utils.js"></script>
     <script>
+        if (!RyubeeAPI.requireAuth()) throw new Error("Not authenticated");
         document.addEventListener('DOMContentLoaded', async () => {
             // Role-based header
             const role = localStorage.getItem('ryubee_user_role');
@@ -418,6 +410,7 @@
             }
 
             await loadRecentJobs();
+            await loadDashboardAlerts();
         });
 
         async function loadRecentJobs() {
@@ -425,7 +418,7 @@
             const msgEl = document.getElementById('loading-msg');
 
             try {
-                const jobs = await api.getJobs();
+                const jobs = await RyubeeAPI.fetchJobs();
 
                 if (!Array.isArray(jobs) || jobs.length === 0) {
                     msgEl.innerHTML = '';
@@ -471,6 +464,51 @@
           </div>`;
                 console.error(e);
             }
+        }
+
+        async function loadDashboardAlerts() {
+            try {
+                const widgets = document.getElementById('alert-widgets');
+                let html = '';
+
+                // 未入金アラート
+                try {
+                    const alerts = await RyubeeAPI.fetchUnpaidAlerts();
+                    if (alerts.length > 0) {
+                        const totalUnpaid = alerts.reduce((s, a) => s + a.remaining, 0);
+                        const fiscal = alerts.filter(a => a.is_fiscal_crossover);
+                        html += `
+                            <a href="billing.html" style="display:block;background:var(--red-light);border-radius:var(--r-xl);padding:16px 20px;margin-bottom:12px;text-decoration:none;color:inherit;border:1px solid rgba(239,68,68,0.2);">
+                                <div style="display:flex;justify-content:space-between;align-items:center;">
+                                    <div>
+                                        <div style="font-weight:700;color:#B00B06;font-size:0.95rem;">🔴 未入金 ${alerts.length}件</div>
+                                        <div style="font-size:0.8rem;color:var(--text-secondary);margin-top:2px;">合計 ¥${totalUnpaid.toLocaleString()} ${fiscal.length ? `(売掛金 ${fiscal.length}件)` : ''}</div>
+                                    </div>
+                                    <span style="color:var(--red);font-size:1.2rem;">→</span>
+                                </div>
+                            </a>`;
+                    }
+                } catch (e) { console.error(e); }
+
+                // マニフェスト期限切れ
+                try {
+                    const overdue = await RyubeeAPI.fetchManifestsOverdue();
+                    if (overdue.length > 0) {
+                        html += `
+                            <a href="manifests.html" style="display:block;background:var(--orange-light);border-radius:var(--r-xl);padding:16px 20px;margin-bottom:12px;text-decoration:none;color:inherit;border:1px solid rgba(245,158,11,0.2);">
+                                <div style="display:flex;justify-content:space-between;align-items:center;">
+                                    <div>
+                                        <div style="font-weight:700;color:#C06000;font-size:0.95rem;">⚠️ マニフェスト期限超過 ${overdue.length}件</div>
+                                        <div style="font-size:0.8rem;color:var(--text-secondary);margin-top:2px;">返送期限を過ぎています</div>
+                                    </div>
+                                    <span style="color:var(--orange);font-size:1.2rem;">→</span>
+                                </div>
+                            </a>`;
+                    }
+                } catch (e) { console.error(e); }
+
+                widgets.innerHTML = html;
+            } catch (e) { console.error(e); }
         }
 
         if ('serviceWorker' in navigator) {
