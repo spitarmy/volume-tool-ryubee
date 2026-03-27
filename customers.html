@@ -277,6 +277,9 @@
 
             <div style="margin-top:24px;">
                 <button class="btn btn-primary" id="saveBtn" onclick="saveCustomer()">登録する</button>
+                <a class="btn btn-primary mt-1" id="printContractBtn"
+                    style="display:none; text-align:center; text-decoration:none; background:#34C759; color:#fff;"
+                    target="_blank">📄 産廃契約書を作成</a>
                 <button class="btn btn-secondary mt-1" onclick="closeModal()">キャンセル</button>
                 <button class="btn btn-danger mt-1" id="deleteBtn" onclick="deleteCustomer()" style="display:none;">🗑
                     削除</button>
@@ -354,6 +357,13 @@
             document.getElementById('modalTitle').textContent = cust ? '顧客を編集' : '顧客を登録';
             document.getElementById('saveBtn').textContent = cust ? '更新する' : '登録する';
             document.getElementById('deleteBtn').style.display = cust ? 'block' : 'none';
+            const printBtn = document.getElementById('printContractBtn');
+            if (cust) {
+                printBtn.style.display = 'block';
+                printBtn.href = `contract-form.html?id=${cust.id}`;
+            } else {
+                printBtn.style.display = 'none';
+            }
             document.getElementById('custName').value = cust?.name || '';
             document.getElementById('custContact').value = cust?.contact_person || '';
             document.getElementById('custAddress').value = cust?.address || '';
