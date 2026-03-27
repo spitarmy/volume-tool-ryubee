@@ -138,12 +138,16 @@
 
 <body>
 
-    <div class="sheet-header no-print">
-        <button onclick="history.back()" class="btn btn-secondary" style="margin:0;padding:6px 12px;font-size:0.9rem;">‹
+    <div class="sheet-header no-print"
+        style="display:flex; align-items:center; justify-content:space-between; padding:12px 16px;">
+        <button onclick="history.back()"
+            style="background:none; border:none; color:var(--primary); font-size:1.1rem; padding:8px 0; cursor:pointer; flex-shrink:0;">‹
             戻る</button>
-        <h2 style="font-size:1rem;margin:0;">ドライバー指示書</h2>
+        <h2
+            style="font-size:1.1rem; margin:0; flex:1; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; padding:0 8px;">
+            ドライバー指示書</h2>
         <button onclick="window.print()" class="btn btn-primary"
-            style="margin:0;padding:6px 16px;font-size:0.9rem;width:auto;">🖨 印刷</button>
+            style="margin:0;padding:6px 12px;font-size:0.9rem;width:auto;flex-shrink:0;">🖨 印刷</button>
     </div>
 
     <div class="sheet" id="driverSheet">
@@ -183,6 +187,12 @@
             <div class="checklist-item"><input type="checkbox"> 清掃・原状回復</div>
             <div class="checklist-item"><input type="checkbox"> お客様確認・サイン取得</div>
             <div class="checklist-item"><input type="checkbox"> 車両積込完了</div>
+        </div>
+
+        <!-- 印刷後手書き用 特記事項ボックス -->
+        <div style="margin-top: 24px; border: 2px solid #333; border-radius: 8px; padding: 16px;">
+            <h3 style="font-size: 0.95rem; margin-bottom: 12px; color: #333;">📝 特記事項（手書き用）</h3>
+            <div style="min-height: 150px; width: 100%;"></div>
         </div>
     </div>
 

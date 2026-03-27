@@ -212,11 +212,15 @@
 
 <body>
 
-    <div class="app-header header-glass">
-        <button onclick="history.back()" class="btn btn-secondary"
-            style="margin:0; padding: 6px 12px; font-size: 0.9rem;">‹ 戻る</button>
-        <h1 style="font-size: 1.1rem; margin: 0;">見積書プレビュー</h1>
-        <div style="width: 60px;"></div>
+    <div class="app-header header-glass"
+        style="background:var(--surface); display:flex; align-items:center; justify-content:space-between; padding:16px; border-bottom:1px solid var(--border);">
+        <button onclick="history.back()"
+            style="background:none; border:none; color:var(--primary); font-size:1.1rem; padding:8px 0; cursor:pointer; flex-shrink:0;">‹
+            戻る</button>
+        <h1
+            style="font-size: 1.1rem; margin: 0; flex:1; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; padding:0 8px;">
+            見積書プレビュー</h1>
+        <div style="width: 60px; flex-shrink:0;"></div>
     </div>
 
     <div class="action-buttons mt-3">
