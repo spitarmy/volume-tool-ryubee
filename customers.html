@@ -113,6 +113,13 @@
 
     <div class="search-wrap">
         <input type="text" id="searchInput" placeholder="🔍 顧客名・住所・電話で検索..." oninput="filterCustomers()">
+        <div style="display:flex; gap:8px; margin-top:12px;">
+            <button class="btn btn-primary" id="btn-tab-all" style="flex:1" onclick="setCustTab('all')">全て</button>
+            <button class="btn btn-secondary" id="btn-tab-ind" style="flex:1"
+                onclick="setCustTab('industrial')">産廃</button>
+            <button class="btn btn-secondary" id="btn-tab-gen" style="flex:1"
+                onclick="setCustTab('general')">一般</button>
+        </div>
     </div>
 
     <div class="customer-list" id="customerList">
@@ -158,7 +165,18 @@
             <input type="hidden" id="editId">
 
             <h4 class="section-title">🏢 基本情報</h4>
-            <div class="form-group"><label>法人名 / 会社名 *</label><input type="text" id="custName" placeholder="株式会社○○">
+            <div style="display:grid;grid-template-columns:1fr 2fr;gap:8px;">
+                <div class="form-group"><label>山文管理番号 *</label><input type="text" id="custYamabunNumber"
+                        placeholder="例: Y-101"></div>
+                <div class="form-group"><label>法人名 / 会社名 *</label><input type="text" id="custName" placeholder="株式会社○○">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>廃棄物カテゴリ (管理用)</label>
+                <select id="custWasteCategory">
+                    <option value="general">一般 / 未指定</option>
+                    <option value="industrial">産業廃棄物</option>
+                </select>
             </div>
             <div class="form-group"><label>ご住所</label><input type="text" id="custAddress" placeholder="京都市..."></div>
             <div class="form-group"><label>担当者名</label><input type="text" id="custContact" placeholder="山田太郎"></div>
@@ -290,10 +308,10 @@
     <!-- Bottom Nav -->
     <nav class="bottom-nav">
         <a href="index.html" class="nav-item"><span class="nav-icon">🏠</span><span>ホーム</span></a>
-        <a href="pipeline.html" class="nav-item"><span class="nav-icon">📊</span><span>パイプライン</span></a>
+        <a href="calendar.html" class="nav-item"><span class="nav-icon">📅</span><span>配車</span></a>
+        <a href="pipeline.html" class="nav-item"><span class="nav-icon">📊</span><span>案件</span></a>
         <a href="billing.html" class="nav-item"><span class="nav-icon">💰</span><span>請求</span></a>
         <a href="customers.html" class="nav-item active"><span class="nav-icon">🏢</span><span>顧客</span></a>
-        <a href="manifests.html" class="nav-item"><span class="nav-icon">📜</span><span>マニフェスト</span></a>
     </nav>
 
     <script src="assets/js/utils.js"></script>
@@ -319,17 +337,44 @@
         async function loadCustomers() {
             try {
                 allCustomers = await RyubeeAPI.fetchCustomers();
+                allCustomers.forEach(c => {
+                    try { c.parsed_form = JSON.parse(c.form_data || "{}"); } catch (e) { c.parsed_form = {}; }
+                });
                 filterCustomers();
             } catch (e) {
                 document.getElementById('customerList').innerHTML = `<div class="alert alert-danger">${e.message}</div>`;
             }
         }
 
+        let currentCustTab = 'all';
+        function setCustTab(tab) {
+            currentCustTab = tab;
+            document.getElementById('btn-tab-all').className = 'btn ' + (tab === 'all' ? 'btn-primary' : 'btn-secondary');
+            document.getElementById('btn-tab-ind').className = 'btn ' + (tab === 'industrial' ? 'btn-primary' : 'btn-secondary');
+            document.getElementById('btn-tab-gen').className = 'btn ' + (tab === 'general' ? 'btn-primary' : 'btn-secondary');
+            filterCustomers();
+        }
+
         function filterCustomers() {
             const q = document.getElementById('searchInput').value.toLowerCase();
             const filtered = allCustomers.filter(c => {
-                const text = (c.name + c.address + c.phone + c.contact_person + c.email).toLowerCase();
-                return text.includes(q);
+                const text = (c.name + c.address + c.phone + c.contact_person + c.email + (c.parsed_form?.yamabun_management_number || '')).toLowerCase();
+                const matchQ = text.includes(q);
+                let matchT = true;
+                const wc = c.parsed_form?.waste_category || 'general';
+                if (currentCustTab === 'industrial' && wc !== 'industrial') matchT = false;
+                if (currentCustTab === 'general' && wc !== 'general') matchT = false;
+                return matchQ && matchT;
+            });
+            // 締め日順 -> 管理番号順にソート (Phase 5)
+            filtered.sort((a, b) => {
+                const dayA = a.billing_closing_day || 31;
+                const dayB = b.billing_closing_day || 31;
+                if (dayA !== dayB) return dayA - dayB;
+
+                const numA = a.parsed_form?.yamabun_management_number || "";
+                const numB = b.parsed_form?.yamabun_management_number || "";
+                return numA.localeCompare(numB);
             });
             renderCustomers(filtered);
         }
@@ -344,14 +389,19 @@
                 const typeBadge = c.contract_type === 'subscription'
                     ? '<span class="badge badge-success">定期契約</span>'
                     : '<span class="badge badge-primary">スポット</span>';
+                const wasteBadge = c.parsed_form?.waste_category === 'industrial'
+                    ? '<span class="badge" style="background:#5A67D8; color:white;">産廃</span>'
+                    : '<span class="badge" style="background:#48BB78; color:white;">一般</span>';
                 const expiry = c.contract_expiry_date
                     ? `<div class="cc-expiry">📋 契約期限: ${c.contract_expiry_date}</div>` : '';
                 return `
                     <div class="customer-card" onclick="openEdit('${c.id}')">
                         <div class="cc-top">
                             <span class="cc-name">${utils.escapeHtml(c.name)}</span>
-                            ${typeBadge}
+                            <div>${wasteBadge} ${typeBadge}</div>
                         </div>
+                        ${c.parsed_form?.yamabun_management_number ? `<div class="cc-meta" style="font-weight:700; color:var(--primary); margin-top:2px; font-size:13px;">🎫 山文管理番号: ${utils.escapeHtml(c.parsed_form.yamabun_management_number)}</div>` : ''}
+                        <div class="cc-meta" style="font-size:12px; color:var(--text-tertiary); margin-bottom:8px;">📅 締め日: ${c.billing_closing_day === 31 ? '月末' : c.billing_closing_day + '日'}締め</div>
                         ${c.contact_person ? `<div class="cc-meta">👤 ${utils.escapeHtml(c.contact_person)}</div>` : ''}
                         <div class="cc-meta">📍 ${utils.escapeHtml(c.address || '未設定')}</div>
                         <div class="cc-meta">📞 ${utils.escapeHtml(c.phone || '未設定')}</div>
@@ -391,6 +441,8 @@
             if (cust && cust.form_data) {
                 try { fd = JSON.parse(cust.form_data); } catch (e) { }
             }
+            document.getElementById('custYamabunNumber').value = fd.yamabun_management_number || '';
+            document.getElementById('custWasteCategory').value = fd.waste_category || 'general';
             document.getElementById('custMobile').value = fd.mobile || '';
             document.getElementById('custBranchName').value = fd.branch_name || '';
             document.getElementById('custBranchAddress').value = fd.branch_address || '';
@@ -449,6 +501,8 @@
             });
 
             const formData = {
+                yamabun_management_number: document.getElementById('custYamabunNumber').value.trim(),
+                waste_category: document.getElementById('custWasteCategory').value,
                 mobile: document.getElementById('custMobile').value.trim(),
                 branch_name: document.getElementById('custBranchName').value.trim(),
                 branch_address: document.getElementById('custBranchAddress').value.trim(),

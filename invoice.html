@@ -198,6 +198,53 @@
                 padding: 20px;
                 max-width: none;
             }
+
+            .app-header,
+            .action-buttons,
+            .inv-signature-box {
+                margin-top: 20px !important;
+            }
+        }
+
+        @media screen and (max-width: 600px) {
+            .app-header {
+                padding: 12px;
+            }
+
+            .app-header h1 {
+                font-size: 1rem;
+            }
+
+            .invoice-container {
+                padding: 16px;
+                margin: 0;
+            }
+
+            .inv-top-wrapper {
+                flex-direction: column;
+                gap: 20px;
+                margin-bottom: 24px;
+            }
+
+            .inv-customer,
+            .inv-company {
+                width: 100%;
+            }
+
+            .inv-title {
+                font-size: 20px;
+            }
+
+            .inv-footer-info {
+                flex-direction: column;
+                gap: 12px;
+            }
+
+            .inv-table th,
+            .inv-table td {
+                padding: 8px 4px;
+                font-size: 12px;
+            }
         }
 
         .action-buttons {

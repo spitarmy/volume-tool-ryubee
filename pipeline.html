@@ -355,10 +355,10 @@
     <!-- Bottom Nav -->
     <nav class="bottom-nav">
         <a href="index.html" class="nav-item"><span class="nav-icon">🏠</span><span>ホーム</span></a>
-        <a href="pipeline.html" class="nav-item active"><span class="nav-icon">📊</span><span>パイプライン</span></a>
+        <a href="calendar.html" class="nav-item"><span class="nav-icon">📅</span><span>配車</span></a>
+        <a href="pipeline.html" class="nav-item active"><span class="nav-icon">📊</span><span>案件</span></a>
         <a href="billing.html" class="nav-item"><span class="nav-icon">💰</span><span>請求</span></a>
         <a href="customers.html" class="nav-item"><span class="nav-icon">🏢</span><span>顧客</span></a>
-        <a href="manifests.html" class="nav-item"><span class="nav-icon">📜</span><span>マニフェスト</span></a>
     </nav>
 
     <script src="assets/js/utils.js"></script>
@@ -427,6 +427,7 @@
             const price = job.price_total ? `¥${job.price_total.toLocaleString()}` : '–';
             const stageIdx = STAGES.findIndex(s => s.key === currentStage);
             const nextStage = stageIdx < STAGES.length - 2 ? STAGES[stageIdx + 1] : null;
+            const prevStage = stageIdx > 0 ? STAGES[stageIdx - 1] : null;
 
             return `
                 <div class="pipeline-card" draggable="true" data-job-id="${job.job_id}" data-stage="${currentStage}" onclick="openJobDetail('${job.job_id}')">
@@ -449,7 +450,10 @@
                         </div>
                     ` : ''}
                     ${job.assigned_to_name ? `<div class="pc-assignee">担当: ${utils.escapeHtml(job.assigned_to_name)}</div>` : ''}
-                    ${nextStage ? `<button class="stage-btn" onclick="event.stopPropagation();moveJob('${job.job_id}', '${nextStage.key}')">${nextStage.label} へ →</button>` : ''}
+                    <div style="display:flex; justify-content:space-between; margin-top:8px;">
+                        ${prevStage ? `<button class="stage-btn" onclick="event.stopPropagation();moveJob('${job.job_id}', '${prevStage.key}')">← ${prevStage.label}</button>` : '<div></div>'}
+                        ${nextStage ? `<button class="stage-btn" onclick="event.stopPropagation();moveJob('${job.job_id}', '${nextStage.key}')">${nextStage.label} →</button>` : '<div></div>'}
+                    </div>
                 </div>
             `;
         }
@@ -494,15 +498,15 @@
             document.body.appendChild(t);
             setTimeout(() => t.remove(), 2500);
         }
-        
+
         async function submitNewJob() {
             const name = document.getElementById('njName').value.trim();
             const type = document.getElementById('njType').value;
             const stage = document.getElementById('njStage').value;
             const amount = document.getElementById('njAmount').value;
-            
-            if(!name) { alert("案件名を入力してください"); return; }
-            
+
+            if (!name) { alert("案件名を入力してください"); return; }
+
             try {
                 // 手動でのジョブ作成（API）
                 await RyubeeAPI.createJob({
@@ -523,7 +527,7 @@
                 alert("追加エラー: " + e.message);
             }
         }
-        
+
         function openNewJobModal() {
             document.getElementById('newJobModal').classList.add('show');
         }
@@ -555,11 +559,44 @@
             const disc = job.discount_amount || 0;
             const surcharge = job.surcharge_amount || 0;
 
+            // Form Data for Subcontractor
+            let fd = {};
+            try { fd = JSON.parse(job.form_data || "{}"); } catch (e) { }
+
+            // Photos parsing
+            let photos = [];
+            try { photos = JSON.parse(job.photos || "[]"); } catch (e) { }
+
             body.innerHTML = `
                 <h3 style="font-size:1.2rem;font-weight:700;margin-bottom:4px;">${utils.escapeHtml(job.job_name || '案件')}</h3>
                 <p class="small-text">👤 ${utils.escapeHtml(job.customer_name || '未設定')} | ${TYPE_LABELS[job.job_type] || 'その他'}</p>
 
-                <div style="margin-top:16px;padding:16px;background:var(--bg-secondary);border-radius:var(--r-md);">
+                <div style="margin-top:16px;padding:12px;background:var(--bg-secondary);border-radius:var(--r-md);">
+                    <h4 style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:8px;">🚚 配車・協力業者アサイン</h4>
+                    <div style="display:flex;gap:8px;">
+                        <input type="text" id="jobSubcontractor" placeholder="協力業者名 (例: 山本文夫)" value="${utils.escapeHtml(fd.subcontractor_name || '')}" style="flex:1;font-size:0.85rem;padding:6px;border-radius:6px;border:1px solid var(--border);" onchange="updateJobFormData('${jobId}')">
+                        <input type="text" id="jobVehicleNum" placeholder="号車 (例: 3号車)" value="${utils.escapeHtml(fd.vehicle_number || '')}" style="width:100px;font-size:0.85rem;padding:6px;border-radius:6px;border:1px solid var(--border);" onchange="updateJobFormData('${jobId}')">
+                    </div>
+                </div>
+
+                <div style="margin-top:12px;padding:12px;background:var(--bg-secondary);border-radius:var(--r-md);">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                        <h4 style="font-size:0.85rem;color:var(--text-secondary);margin:0;">📸 現場写真</h4>
+                        <label class="btn btn-xs btn-primary" style="cursor:pointer;margin:0;">追加
+                            <input type="file" style="display:none;" accept="image/*" onchange="uploadJobPhoto(event, '${jobId}')">
+                        </label>
+                    </div>
+                    <div id="jobPhotosGrid" style="display:flex;gap:8px;overflow-x:auto;">
+                        ${photos.length ? photos.map((p, i) => `
+                            <div style="position:relative;flex-shrink:0;">
+                                <img src="${p}" style="width:80px;height:80px;object-fit:cover;border-radius:8px;border:1px solid var(--border);">
+                                <button onclick="deleteJobPhoto('${jobId}', ${i})" style="position:absolute;top:-5px;right:-5px;background:red;color:white;border:none;border-radius:50%;width:20px;height:20px;font-size:10px;cursor:pointer;">✕</button>
+                            </div>
+                        `).join('') : '<p class="small-text">写真はありません</p>'}
+                    </div>
+                </div>
+
+                <div style="margin-top:12px;padding:12px;background:var(--bg-secondary);border-radius:var(--r-md);">
                     <h4 style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:10px;">💰 金額トラッキング</h4>
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
                         <div><span class="small-text">見積金額</span><br><strong>¥${est.toLocaleString()}</strong></div>
@@ -570,9 +607,10 @@
                     ${job.price_notes ? `<p class="small-text" style="margin-top:8px;">📝 ${utils.escapeHtml(job.price_notes)}</p>` : ''}
                 </div>
 
-                <div style="display:flex;gap:8px;margin-top:8px;">
-                    <button class="btn btn-success" onclick="convertToInvoice('${jobId}')" style="flex:1;padding:12px 8px;font-size:0.9rem;">📄 請求書を発行</button>
-                    <button class="btn btn-warning" onclick="collectCash('${jobId}')" style="flex:1;padding:12px 8px;font-size:0.9rem;">💴 現場で現金受取</button>
+                <div style="display:flex;gap:8px;margin-top:16px;">
+                    <a href="packer-sheet.html?job_id=${jobId}" target="_blank" class="btn btn-secondary" style="flex:1;padding:12px 4px;font-size:0.8rem;text-align:center;text-decoration:none;">🖨 パッカー新指示書</a>
+                    <button class="btn btn-success" onclick="convertToInvoice('${jobId}')" style="flex:1;padding:12px 4px;font-size:0.8rem;">📄 請求書発行</button>
+                    <button class="btn btn-warning" onclick="collectCash('${jobId}')" style="flex:1;padding:12px 4px;font-size:0.8rem;">💴 現金受取</button>
                 </div>
 
                 <div class="comment-thread">
@@ -607,23 +645,156 @@
         }
 
         async function convertToInvoice(jobId) {
-            if (!confirm('この見積書から請求書を発行しますか？\n（業者の締め払い設定に基づいて支払期限が自動設定されます）')) return;
+            let job = null;
+            for (const jobs of Object.values(pipelineData)) {
+                job = jobs.find(j => j.job_id === jobId);
+                if (job) break;
+            }
+            if (!job) return;
+
+            const currentPrice = job.final_price || job.estimated_price || job.price_total || 0;
+            const newPriceStr = prompt('発行する請求書の最終金額(税抜)を入力してください。変更がない場合はそのままOKを押してください。', currentPrice);
+            if (newPriceStr === null) return; // cancelled
+
+            const newPrice = parseInt(newPriceStr, 10);
+            if (isNaN(newPrice)) { alert('正しい数値を入力してください'); return; }
+
+            if (!confirm(`請求金額を ${newPrice.toLocaleString()}円 で発行してよろしいですか？\n（業者の締め払い設定に基づいて支払期限が自動設定されます）`)) return;
+
             try {
+                // Update final price on Job if changed
+                if (newPrice !== currentPrice) {
+                    job.final_price = newPrice;
+                    await fetch(`${RyubeeAPI.baseUrl}/jobs/${jobId}`, {
+                        method: 'PUT', headers: RyubeeAPI.getHeaders(), body: JSON.stringify({ final_price: newPrice })
+                    });
+                }
+
                 const inv = await RyubeeAPI.createInvoiceFromEstimate(jobId);
-                showToast(`✅ 請求書を発行しました (¥${inv.total_amount.toLocaleString()})`);
+                showToast(`✅ 請求書を発行しました (税込¥${inv.total_amount.toLocaleString()})`);
                 document.getElementById('drawerOverlay').classList.remove('show');
                 setTimeout(() => { window.location.href = 'billing.html'; }, 1500);
             } catch (e) { alert('エラー: ' + e.message); }
         }
 
         async function collectCash(jobId) {
-            if (!confirm('この案件の代金を「現金」で全額受け取りましたか？\n（請求書が自動生成され、入金済みとして処理されます）')) return;
+            let job = null;
+            for (const jobs of Object.values(pipelineData)) {
+                job = jobs.find(j => j.job_id === jobId);
+                if (job) break;
+            }
+            if (!job) return;
+
+            const currentPrice = job.final_price || job.estimated_price || job.price_total || 0;
+            const newPriceStr = prompt('現金で受け取る最終金額(税抜)を入力してください。変更がない場合はそのままOKを押してください。', currentPrice);
+            if (newPriceStr === null) return;
+
+            const newPrice = parseInt(newPriceStr, 10);
+            if (isNaN(newPrice)) { alert('正しい数値を入力してください'); return; }
+
+            if (!confirm(`現金 ${newPrice.toLocaleString()}円(税抜) を受け取りましたか？\n（請求書が自動生成され、入金済みとして処理されます）`)) return;
+
             try {
+                if (newPrice !== currentPrice) {
+                    await fetch(`${RyubeeAPI.baseUrl}/jobs/${jobId}`, {
+                        method: 'PUT', headers: RyubeeAPI.getHeaders(), body: JSON.stringify({ final_price: newPrice })
+                    });
+                }
+
                 const inv = await RyubeeAPI.createInvoiceAndCollectCash(jobId);
-                showToast(`✅ 現金回収を記録しました (¥${inv.total_amount.toLocaleString()})`);
+                showToast(`✅ 現金回収を記録しました (税込¥${inv.total_amount.toLocaleString()})`);
                 document.getElementById('drawerOverlay').classList.remove('show');
                 loadPipeline();
             } catch (e) { alert('エラー: ' + e.message); }
+        }
+
+        async function updateJobFormData(jobId) {
+            let job = null;
+            for (const jobs of Object.values(pipelineData)) {
+                job = jobs.find(j => j.job_id === jobId);
+                if (job) break;
+            }
+            if (!job) return;
+
+            let fd = {};
+            try { fd = JSON.parse(job.form_data || "{}"); } catch (e) { }
+
+            fd.subcontractor_name = document.getElementById('jobSubcontractor').value.trim();
+            fd.vehicle_number = document.getElementById('jobVehicleNum').value.trim();
+            job.form_data = JSON.stringify(fd);
+
+            try {
+                await fetch(`${RyubeeAPI.baseUrl}/jobs/${jobId}`, {
+                    method: 'PUT', headers: RyubeeAPI.getHeaders(), body: JSON.stringify(job)
+                });
+                showToast("✅ 配車情報を保存しました");
+            } catch (e) { alert("保存エラー"); }
+        }
+
+        async function uploadJobPhoto(event, jobId) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            // Reduce image size via Canvas
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                const img = new Image();
+                img.onload = async function () {
+                    const canvas = document.createElement('canvas');
+                    const MAX_WIDTH = 800;
+                    const scaleSize = MAX_WIDTH / img.width;
+                    canvas.width = MAX_WIDTH;
+                    canvas.height = img.height * scaleSize;
+                    const ctx = canvas.getContext('2d');
+                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                    const base64Str = canvas.toDataURL('image/jpeg', 0.8);
+
+                    // Fetch job, update photos array
+                    let job = null;
+                    for (const jobs of Object.values(pipelineData)) {
+                        job = jobs.find(j => j.job_id === jobId);
+                        if (job) break;
+                    }
+                    if (!job) return;
+
+                    let pArr = [];
+                    try { pArr = JSON.parse(job.photos || "[]"); } catch (e) { }
+                    pArr.push(base64Str);
+                    job.photos = JSON.stringify(pArr);
+
+                    try {
+                        await fetch(`${RyubeeAPI.baseUrl}/jobs/${jobId}`, {
+                            method: 'PUT', headers: RyubeeAPI.getHeaders(), body: JSON.stringify(job)
+                        });
+                        showToast("📸 写真を保存しました");
+                        openJobDetail(jobId); // reload drawer
+                    } catch (err) { alert("アップロード失敗"); }
+                };
+                img.src = e.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        async function deleteJobPhoto(jobId, index) {
+            if (!confirm("この写真を削除しますか？")) return;
+            let job = null;
+            for (const jobs of Object.values(pipelineData)) {
+                job = jobs.find(j => j.job_id === jobId);
+                if (job) break;
+            }
+            if (!job) return;
+
+            let pArr = [];
+            try { pArr = JSON.parse(job.photos || "[]"); } catch (e) { }
+            pArr.splice(index, 1);
+            job.photos = JSON.stringify(pArr);
+
+            try {
+                await fetch(`${RyubeeAPI.baseUrl}/jobs/${jobId}`, {
+                    method: 'PUT', headers: RyubeeAPI.getHeaders(), body: JSON.stringify(job)
+                });
+                openJobDetail(jobId); // reload drawer
+            } catch (err) { alert("削除失敗"); }
         }
     </script>
 </body>

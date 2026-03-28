@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>配車カレンダー — Ryu兵衛 山文SaaS</title>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <link rel="stylesheet" href="assets/css/style.css">
+    <style>
+        .calendar-header {
+            background: #FFFFFF;
+            padding: 30px 24px 16px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .month-nav {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin-top: 10px;
+        }
+
+        .month-nav-btn {
+            background: var(--bg-secondary);
+            border: none;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            color: var(--text-primary);
+            cursor: pointer;
+            transition: 0.2s;
+        }
+
+        .month-nav-btn:hover {
+            background: var(--border);
+        }
+
+        .month-title {
+            font-size: 1.4rem;
+            font-weight: 800;
+            min-width: 140px;
+            text-align: center;
+        }
+
+        .cal-wrapper {
+            padding: 16px;
+            margin-bottom: 90px;
+        }
+
+        .cal-grid {
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 4px;
+            background: var(--border);
+            border: 1px solid var(--border);
+            border-radius: var(--r-md);
+            overflow: hidden;
+        }
+
+        .cal-header-day {
+            background: var(--bg-secondary);
+            text-align: center;
+            padding: 8px 4px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            color: var(--text-secondary);
+        }
+
+        .cal-header-day.sun {
+            color: var(--red);
+        }
+
+        .cal-header-day.sat {
+            color: var(--blue);
+        }
+
+        .cal-day {
+            background: #fff;
+            min-height: 90px;
+            padding: 4px;
+            cursor: pointer;
+            transition: background 0.15s;
+            position: relative;
+        }
+
+        .cal-day:hover {
+            background: var(--bg-secondary);
+        }
+
+        .cal-day.other-month {
+            background: #F9FAFB;
+            color: var(--text-tertiary);
+        }
+
+        .cal-day.today {
+            background: #F0F9FF;
+        }
+
+        .day-num {
+            font-size: 0.85rem;
+            font-weight: 700;
+            margin-bottom: 4px;
+            display: inline-block;
+        }
+
+        .cal-day.today .day-num {
+            background: var(--blue);
+            color: white;
+            width: 22px;
+            height: 22px;
+            text-align: center;
+            line-height: 22px;
+            border-radius: 50%;
+        }
+
+        .job-dot {
+            background: var(--blue);
+            color: white;
+            font-size: 0.65rem;
+            font-weight: 700;
+            padding: 2px 4px;
+            border-radius: 4px;
+            margin-bottom: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            line-height: 1.2;
+        }
+
+        .job-dot.general_waste {
+            background: var(--orange);
+        }
+
+        .job-dot.store_removal {
+            background: var(--teal);
+        }
+
+        /* Drawer styles */
+        .drawer-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(4px);
+            display: none;
+            z-index: 3000;
+            align-items: flex-end;
+            justify-content: center;
+        }
+
+        .drawer-overlay.show {
+            display: flex;
+        }
+
+        .drawer {
+            background: #fff;
+            border-radius: var(--r-xl) var(--r-xl) 0 0;
+            width: 100%;
+            max-width: 600px;
+            max-height: 85vh;
+            padding: 20px;
+            overflow-y: auto;
+            animation: sheetUp 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+
+        .drawer-job-card {
+            background: var(--bg-secondary);
+            border-radius: var(--r-md);
+            padding: 12px;
+            margin-bottom: 10px;
+            border: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .djc-info {
+            flex: 1;
+        }
+
+        .djc-title {
+            font-weight: 700;
+            font-size: 0.95rem;
+            margin-bottom: 4px;
+        }
+
+        .djc-meta {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+        }
+
+        .djc-actions {
+            display: flex;
+            gap: 8px;
+        }
+    </style>
+</head>
+
+<body>
+    <header class="calendar-header">
+        <div>
+            <h1 style="margin-bottom:0;">📅 配車カレンダー</h1>
+            <div class="month-nav">
+                <button class="month-nav-btn" onclick="changeMonth(-1)">‹</button>
+                <div class="month-title" id="monthTitle">2024年 5月</div>
+                <button class="month-nav-btn" onclick="changeMonth(1)">›</button>
+            </div>
+        </div>
+        <button class="btn btn-sm btn-primary" style="width:auto; padding:8px 16px;"
+            onclick="openUnscheduledDrawer()">📋 未割当案件</button>
+    </header>
+
+    <div class="cal-wrapper">
+        <div class="cal-grid" id="calendarGrid">
+            <!-- Rendered by JS -->
+        </div>
+    </div>
+
+    <!-- Bottom Nav -->
+    <nav class="bottom-nav">
+        <a href="index.html" class="nav-item"><span class="nav-icon">🏠</span><span>ホーム</span></a>
+        <a href="calendar.html" class="nav-item active"><span class="nav-icon">📅</span><span>配車</span></a>
+        <a href="pipeline.html" class="nav-item"><span class="nav-icon">📊</span><span>案件</span></a>
+        <a href="billing.html" class="nav-item"><span class="nav-icon">💰</span><span>請求</span></a>
+        <a href="customers.html" class="nav-item"><span class="nav-icon">🏢</span><span>顧客</span></a>
+    </nav>
+
+    <!-- Daily Detail Drawer -->
+    <div class="drawer-overlay" id="dailyDrawerOverlay" onclick="if(event.target===this) this.classList.remove('show')">
+        <div class="drawer">
+            <div class="modal-drag-handle"></div>
+            <h3 id="drawerDateTitle" style="margin-bottom: 16px;">5月12日の配車予定</h3>
+            <div id="dailyJobsList">
+                <!-- Rendered by JS -->
+            </div>
+            <button class="btn btn-secondary" style="margin-top:20px; width:100%;"
+                onclick="document.getElementById('dailyDrawerOverlay').classList.remove('show')">閉じる</button>
+        </div>
+    </div>
+
+    <!-- Unscheduled Jobs Drawer -->
+    <div class="drawer-overlay" id="unscheduledDrawerOverlay"
+        onclick="if(event.target===this) this.classList.remove('show')">
+        <div class="drawer">
+            <div class="modal-drag-handle"></div>
+            <h3 style="margin-bottom: 8px;">📋 未割り当て案件</h3>
+            <p style="font-size:0.85rem; color:var(--text-secondary); margin-bottom:16px;">
+                日程が決まっていない案件の一覧です。クリックして日付を設定してください。</p>
+            <div id="unscheduledJobsList">
+                <!-- Rendered by JS -->
+            </div>
+            <button class="btn btn-secondary" style="margin-top:20px; width:100%;"
+                onclick="document.getElementById('unscheduledDrawerOverlay').classList.remove('show')">閉じる</button>
+        </div>
+    </div>
+
+    <script src="assets/js/utils.js"></script>
+    <script src="assets/js/api.js"></script>
+    <script>
+        if (!RyubeeAPI.requireAuth()) throw new Error("Not authenticated");
+
+        let currentDate = new Date();
+        let allJobs = [];
+
+        document.addEventListener('DOMContentLoaded', init);
+
+        async function init() {
+            try {
+                // pipeline API returns jobs grouped by stage. We need to flatten them.
+                const pipelineData = await RyubeeAPI.fetchPipeline();
+                allJobs = Object.values(pipelineData).flat();
+                renderCalendar();
+            } catch (e) {
+                alert("データの読み込みに失敗しました: " + e.message);
+            }
+        }
+
+        function changeMonth(delta) {
+            currentDate.setMonth(currentDate.getMonth() + delta);
+            renderCalendar();
+        }
+
+        function renderCalendar() {
+            const year = currentDate.getFullYear();
+            const month = currentDate.getMonth();
+            document.getElementById('monthTitle').textContent = `${year}年 ${month + 1}月`;
+
+            const firstDay = new Date(year, month, 1);
+            const lastDay = new Date(year, month + 1, 0);
+            const startPad = firstDay.getDay(); // 0(Sun) - 6(Sat)
+            const daysInMonth = lastDay.getDate();
+
+            let html = `
+                <div class="cal-header-day sun">日</div>
+                <div class="cal-header-day">月</div>
+                <div class="cal-header-day">火</div>
+                <div class="cal-header-day">水</div>
+                <div class="cal-header-day">木</div>
+                <div class="cal-header-day">金</div>
+                <div class="cal-header-day sat">土</div>
+            `;
+
+            // Previous month padding
+            const prevLastDay = new Date(year, month, 0).getDate();
+            for (let i = startPad - 1; i >= 0; i--) {
+                html += `<div class="cal-day other-month"><span class="day-num">${prevLastDay - i}</span></div>`;
+            }
+
+            // Current month days
+            const today = new Date();
+            for (let d = 1; d <= daysInMonth; d++) {
+                const isToday = (year === today.getFullYear() && month === today.getMonth() && d === today.getDate());
+                const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+
+                // Find jobs for this day
+                const dayJobs = allJobs.filter(j => j.work_date && j.work_date.startsWith(dateStr));
+
+                let jobsHtml = dayJobs.slice(0, 3).map(j => {
+                    const cName = j.customer_name ? j.customer_name.substring(0, 5) : '案件';
+                    return `<div class="job-dot ${j.job_type}">${cName}</div>`;
+                }).join('');
+                if (dayJobs.length > 3) jobsHtml += `<div class="job-dot" style="background:var(--text-tertiary)">+${dayJobs.length - 3}件</div>`;
+
+                html += `
+                    <div class="cal-day ${isToday ? 'today' : ''}" onclick="openDailyDrawer('${dateStr}')">
+                        <span class="day-num">${d}</span>
+                        <div style="margin-top:2px;">${jobsHtml}</div>
+                    </div>
+                `;
+            }
+
+            // Next month padding
+            const totalCells = startPad + daysInMonth;
+            const endPad = totalCells % 7 === 0 ? 0 : 7 - (totalCells % 7);
+            for (let i = 1; i <= endPad; i++) {
+                html += `<div class="cal-day other-month"><span class="day-num">${i}</span></div>`;
+            }
+
+            document.getElementById('calendarGrid').innerHTML = html;
+        }
+
+        function openDailyDrawer(dateStr) {
+            const [y, m, d] = dateStr.split('-');
+            document.getElementById('drawerDateTitle').textContent = `${parseInt(m)}月${parseInt(d)}日の配車予定`;
+
+            const dayJobs = allJobs.filter(j => j.work_date && j.work_date.startsWith(dateStr));
+
+            const list = document.getElementById('dailyJobsList');
+            if (dayJobs.length === 0) {
+                list.innerHTML = '<p style="color:var(--text-tertiary); font-size:0.9rem;">この日の予定はありません。</p>';
+            } else {
+                list.innerHTML = dayJobs.map(j => `
+                    <div class="drawer-job-card">
+                        <div class="djc-info">
+                            <div class="djc-title">${utils.escapeHtml(j.customer_name || j.job_name)}</div>
+                            <div class="djc-meta">📍 ${utils.escapeHtml(j.address || '住所未設定')}</div>
+                            <div class="djc-meta" style="color:var(--blue); margin-top:4px;">🚚 ${utils.escapeHtml(j.assigned_to_name || '担当未定')}</div>
+                        </div>
+                        <div class="djc-actions">
+                            <button class="btn btn-sm btn-primary" onclick="openJobDetailUrl('${j.job_id}')">詳細</button>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            document.getElementById('dailyDrawerOverlay').classList.add('show');
+        }
+
+        function openUnscheduledDrawer() {
+            const unscheduled = allJobs.filter(j => !j.work_date && j.pipeline_stage !== 'lost' && j.pipeline_stage !== 'completed');
+
+            const list = document.getElementById('unscheduledJobsList');
+            if (unscheduled.length === 0) {
+                list.innerHTML = '<p style="color:var(--text-tertiary); font-size:0.9rem;">未割り当ての案件はありません。</p>';
+            } else {
+                list.innerHTML = unscheduled.map(j => `
+                    <div class="drawer-job-card">
+                        <div class="djc-info" style="cursor:pointer" onclick="promptSetDate('${j.job_id}', '${utils.escapeHtml(j.customer_name || j.job_name)}')">
+                            <div class="djc-title">${utils.escapeHtml(j.customer_name || j.job_name)}</div>
+                            <div class="djc-meta">📍 ${utils.escapeHtml(j.address || '住所未設定')}</div>
+                        </div>
+                        <div class="djc-actions">
+                            <button class="btn btn-sm btn-secondary" onclick="promptSetDate('${j.job_id}', '${utils.escapeHtml(j.customer_name || j.job_name)}')">日程設定</button>
+                        </div>
+                    </div>
+                `).join('');
+            }
+
+            document.getElementById('unscheduledDrawerOverlay').classList.add('show');
+        }
+
+        async function promptSetDate(jobId, name) {
+            const dateStr = prompt(`「${name}」の作業予定日を入力してください\n例: 2024-05-15`, new Date().toISOString().split('T')[0]);
+            if (!dateStr) return;
+
+            try {
+                // Fetch current job
+                const jobResp = await fetch(`${RyubeeAPI.baseUrl}/jobs/${jobId}`, {
+                    headers: RyubeeAPI.getHeaders()
+                });
+                const jobData = await jobResp.json();
+
+                // Update work_date
+                jobData.work_date = dateStr;
+                jobData.pipeline_stage = 'scheduled'; // 自動的に予定ステージへ
+
+                await fetch(`${RyubeeAPI.baseUrl}/jobs/${jobId}`, {
+                    method: 'PUT',
+                    headers: RyubeeAPI.getHeaders(),
+                    body: JSON.stringify(jobData)
+                });
+
+                document.getElementById('unscheduledDrawerOverlay').classList.remove('show');
+                await init(); // reload ALL
+            } catch (e) {
+                alert("更新エラー: " + e.message);
+            }
+        }
+
+        function openJobDetailUrl(jobId) {
+            // Ideally links back to pipeline.html with a query param to open the drawer
+            window.location.href = `pipeline.html?openJob=${jobId}`;
+        }
+    </script>
+</body>
+
+</html>

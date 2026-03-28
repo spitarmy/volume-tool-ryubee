@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <title>パッカー新規指示書 — Ryu兵衛</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&display=swap');
+
+        body {
+            font-family: 'Noto Sans JP', sans-serif;
+            margin: 0;
+            padding: 0;
+            background: #f0f2f5;
+            color: #111827;
+        }
+
+        .page {
+            width: 210mm;
+            min-height: 297mm;
+            margin: 10mm auto;
+            background: white;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            padding: 15mm;
+            box-sizing: border-box;
+            position: relative;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            border-bottom: 4px solid #111827;
+            padding-bottom: 8px;
+            margin-bottom: 20px;
+        }
+
+        .doc-title {
+            font-size: 24pt;
+            font-weight: 900;
+            margin: 0;
+            letter-spacing: 2px;
+        }
+
+        .doc-meta {
+            text-align: right;
+            font-size: 10pt;
+            line-height: 1.5;
+        }
+
+        .section {
+            margin-bottom: 20px;
+            border: 2px solid #111827;
+            border-radius: 4px;
+        }
+
+        .sec-title {
+            background: #111827;
+            color: white;
+            padding: 6px 12px;
+            font-size: 12pt;
+            font-weight: 700;
+            margin: 0;
+        }
+
+        .sec-content {
+            padding: 12px;
+        }
+
+        .huge-text {
+            font-size: 28pt;
+            font-weight: 900;
+            text-align: center;
+            margin: 10px 0;
+        }
+
+        .info-grid {
+            display: grid;
+            grid-template-columns: 100px 1fr;
+            gap: 12px 16px;
+            font-size: 12pt;
+        }
+
+        .info-label {
+            font-weight: 700;
+            color: #4b5563;
+            text-align: right;
+        }
+
+        .info-value {
+            font-weight: 700;
+            border-bottom: 1px dotted #9ca3af;
+            padding-bottom: 2px;
+        }
+
+        .address-box {
+            font-size: 16pt;
+            font-weight: 700;
+            margin: 10px 0;
+            padding: 12px;
+            background: #f9fafb;
+            border: 1px dashed #d1d5db;
+        }
+
+        .photo-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .photo-img {
+            width: 100%;
+            height: 160px;
+            object-fit: cover;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+        }
+
+        .btn-print {
+            display: block;
+            width: 200px;
+            margin: 20px auto;
+            padding: 12px 24px;
+            background: #0ea5e9;
+            color: white;
+            text-align: center;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(14, 165, 233, 0.3);
+            text-decoration: none;
+        }
+
+        @media print {
+            body {
+                background: white;
+            }
+
+            .page {
+                margin: 0;
+                padding: 10mm;
+                box-shadow: none;
+                width: 100%;
+                min-height: 100%;
+            }
+
+            .btn-print {
+                display: none;
+            }
+        }
+
+        @media screen and (max-width: 768px) {
+            .page {
+                width: 100%;
+                min-height: auto;
+                margin: 0;
+                padding: 15px;
+                box-shadow: none;
+                border-radius: 0;
+            }
+
+            .doc-title {
+                font-size: 18pt;
+            }
+
+            .btn-print {
+                width: 90%;
+            }
+
+            .photo-grid {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <button class="btn-print" onclick="window.print()">🖨 この指示書を印刷する</button>
+
+    <div class="page" id="sheetContent">
+        <p style="text-align:center; color:#6b7280;">読み込み中...</p>
+    </div>
+
+    <script src="assets/js/api.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', async () => {
+            if (!RyubeeAPI.requireAuth()) return;
+
+            const params = new URLSearchParams(window.location.search);
+            const jobId = params.get('job_id');
+            if (!jobId) {
+                document.getElementById('sheetContent').innerHTML = "<p>案件IDが指定されていません。</p>";
+                return;
+            }
+
+            try {
+                // We'll just fetch the job using a standard GET request or pipeline fetch
+                const resp = await fetch(`${RyubeeAPI.baseUrl}/jobs/${jobId}`, {
+                    headers: RyubeeAPI.getHeaders()
+                });
+                if (!resp.ok) throw new Error("案件データの取得に失敗");
+                const job = await resp.json();
+
+                // Get customer data for management number
+                let custMgmtNo = "未登録";
+                if (job.customer_id) {
+                    try {
+                        const cResp = await fetch(`${RyubeeAPI.baseUrl}/customers/${job.customer_id}`, { headers: RyubeeAPI.getHeaders() });
+                        if (cResp.ok) {
+                            const c = await cResp.json();
+                            const cfd = JSON.parse(c.form_data || "{}");
+                            if (cfd.yamabun_management_number) custMgmtNo = cfd.yamabun_management_number;
+                        }
+                    } catch (e) { }
+                }
+
+                let jfd = {};
+                try { jfd = JSON.parse(job.form_data || "{}"); } catch (e) { }
+                let photos = [];
+                try { photos = JSON.parse(job.photos || "[]"); } catch (e) { }
+
+                const workDate = job.work_date ? new Date(job.work_date).toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' }) : '未定';
+                const today = new Date().toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' });
+
+                document.getElementById('sheetContent').innerHTML = `
+                    <div class="header">
+                        <h1 class="doc-title">パッカー新規指示書</h1>
+                        <div class="doc-meta">
+                            発行日: ${today}<br>
+                            管理番号: ${custMgmtNo}<br>
+                            案件ID: ${job.job_id.substring(0, 8).toUpperCase()}
+                        </div>
+                    </div>
+
+                    <div class="section">
+                        <h2 class="sec-title">📍 回収先情報</h2>
+                        <div class="sec-content">
+                            <div class="huge-text">${job.customer_name || '名称未設定'}</div>
+                            <div class="address-box">
+                                住所: ${job.address || '未設定'}
+                            </div>
+                            <div class="info-grid" style="margin-top:10px;">
+                                <div class="info-label">担当者 / 電話</div>
+                                <div class="info-value">氏名・電話番号は元請け情報参照</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="section">
+                        <h2 class="sec-title">🚚 配車・作業情報</h2>
+                        <div class="sec-content info-grid">
+                            <div class="info-label">作業予定日</div>
+                            <div class="info-value" style="font-size:16pt; color:#dc2626;">${workDate}</div>
+
+                            <div class="info-label">協力業者名</div>
+                            <div class="info-value">${jfd.subcontractor_name || '未設定（自社便等）'}</div>
+
+                            <div class="info-label">号車</div>
+                            <div class="info-value">${jfd.vehicle_number || '未設定'}</div>
+
+                            <div class="info-label">回収品目</div>
+                            <div class="info-value">一般廃棄物（または別途指示の品目）</div>
+                            
+                            <div class="info-label">特記事項</div>
+                            <div class="info-value">${job.notes || '特になし'}</div>
+                        </div>
+                    </div>
+
+                    ${photos.length ? `
+                    <div class="section">
+                        <h2 class="sec-title">📸 現場状況・参考写真</h2>
+                        <div class="sec-content">
+                            <div class="photo-grid">
+                                ${photos.map(p => `<img src="${p}" class="photo-img">`).join('')}
+                            </div>
+                        </div>
+                    </div>
+                    ` : ''}
+
+                    <div style="margin-top: 40px; font-size: 10pt; color: #4b5563; text-align: center; border-top: 1px solid #e5e7eb; padding-top: 10px;">
+                        【注意事項】<br>
+                        ・安全運転を心がけ、現場でのトラブルがないようご対応をお願いいたします。<br>
+                        ・現場で不明点がある場合は、速やかに配車担当までご連絡ください。<br>
+                        <br>
+                        <strong>株式会社 山文</strong>
+                    </div>
+                `;
+            } catch (e) {
+                document.getElementById('sheetContent').innerHTML = `<p style="color:red;">エラーが発生しました: ${e.message}</p>`;
+            }
+        });
+    </script>
+</body>
+
+</html>

@@ -153,9 +153,14 @@
 
 <body>
 
-    <header class="manifests-header">
-        <h1>📜 マニフェスト管理</h1>
-        <p style="color: var(--text-secondary); font-size: 0.9rem;">産廃・一般ゴミの交付・重量・請求管理</p>
+    <header class="manifests-header" style="display:flex; justify-content:space-between; align-items:flex-end;">
+        <div>
+            <h1 style="margin-bottom:0;">📜 マニフェスト管理</h1>
+            <p style="color: var(--text-secondary); font-size: 0.9rem; margin-top:4px; margin-bottom:0;">
+                産廃・一般ゴミの交付・重量・請求管理</p>
+        </div>
+        <button class="btn btn-sm btn-secondary" style="width:auto; padding:8px 16px;" onclick="openReportModal()">📊
+            年次実績抽出</button>
     </header>
 
     <!-- 産廃/一般切替タブ -->
@@ -210,13 +215,52 @@
         </div>
     </div>
 
+    <!-- 実績抽出モーダル -->
+    <div class="mf-modal-overlay" id="reportOverlay">
+        <div class="mf-modal">
+            <div class="modal-drag-handle"></div>
+            <h3 class="card-title">📊 期間ごとの実績データ抽出</h3>
+            <p style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:16px;">
+                年ごとの産廃・一般ゴミの回収実績（キロ数・回数）を集計します。自治体報告や荷主への年次報告にご利用ください。</p>
+
+            <div class="form-group">
+                <label>対象年 (交付日基準)</label>
+                <select id="reportYear">
+                    <option value="2024">2024年</option>
+                    <option value="2023">2023年</option>
+                    <option value="2022">2022年</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>顧客 (全体の場合は未選択)</label>
+                <select id="reportCustomer">
+                    <option value="">-- すべての顧客 --</option>
+                </select>
+            </div>
+
+            <button class="btn btn-primary" onclick="generateReport()">集計を実行する</button>
+            <button class="btn btn-secondary mt-1"
+                onclick="document.getElementById('reportOverlay').classList.remove('show')">閉じる</button>
+
+            <div id="reportResultBlock" style="margin-top:20px;display:none;">
+                <h4
+                    style="font-size:1rem;font-weight:700;margin-bottom:10px;border-bottom:1px solid var(--border);padding-bottom:5px;">
+                    📋 集計結果</h4>
+                <div id="reportResultContent"
+                    style="background:var(--bg-secondary);padding:12px;border-radius:var(--r-md);font-size:0.9rem;white-space:pre-wrap;line-height:1.5;">
+                </div>
+                <button class="btn btn-success mt-1" onclick="copyReport()">テキストをコピー</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Bottom Nav -->
     <nav class="bottom-nav">
         <a href="index.html" class="nav-item"><span class="nav-icon">🏠</span><span>ホーム</span></a>
-        <a href="pipeline.html" class="nav-item"><span class="nav-icon">📊</span><span>パイプライン</span></a>
+        <a href="calendar.html" class="nav-item"><span class="nav-icon">📅</span><span>配車</span></a>
+        <a href="pipeline.html" class="nav-item"><span class="nav-icon">📊</span><span>案件</span></a>
         <a href="billing.html" class="nav-item"><span class="nav-icon">💰</span><span>請求</span></a>
         <a href="customers.html" class="nav-item"><span class="nav-icon">🏢</span><span>顧客</span></a>
-        <a href="manifests.html" class="nav-item active"><span class="nav-icon">📜</span><span>マニフェスト</span></a>
     </nav>
 
     <script src="assets/js/utils.js"></script>
@@ -250,9 +294,12 @@
             try {
                 allCustomers = await RyubeeAPI.fetchCustomers();
                 const sel = document.getElementById('mfCustomer');
-                sel.innerHTML = allCustomers.map(c =>
+                const selRep = document.getElementById('reportCustomer');
+                const opts = allCustomers.map(c =>
                     `<option value="${c.id}">${utils.escapeHtml(c.name)}</option>`
                 ).join('');
+                sel.innerHTML = opts;
+                selRep.innerHTML = `<option value="">-- すべての顧客 --</option>` + opts;
             } catch (e) { console.error(e); }
         }
 
@@ -365,6 +412,66 @@
             t.style.cssText = 'position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#34C759;color:#fff;padding:10px 20px;border-radius:20px;font-weight:600;z-index:9999;';
             document.body.appendChild(t);
             setTimeout(() => t.remove(), 2500);
+        }
+
+        // ── 期間ごとの実績データ抽出（年1の報告対応） ──
+        function openReportModal() {
+            // Set current year as default
+            const currentYear = new Date().getFullYear();
+            const yearSelect = document.getElementById('reportYear');
+            yearSelect.innerHTML = [0, 1, 2].map(i => `<option value="${currentYear - i}">${currentYear - i}年</option>`).join('');
+
+            document.getElementById('reportResultBlock').style.display = 'none';
+            document.getElementById('reportOverlay').classList.add('show');
+        }
+
+        function generateReport() {
+            const year = document.getElementById('reportYear').value;
+            const cid = document.getElementById('reportCustomer').value;
+
+            // Filter manifests
+            const targetMfs = allManifests.filter(m => {
+                if (!m.issue_date) return false;
+                if (!m.issue_date.startsWith(year)) return false;
+                if (cid && m.customer_id !== cid) return false;
+                return true;
+            });
+
+            if (targetMfs.length === 0) {
+                document.getElementById('reportResultContent').innerHTML = "この期間のデータはありません。";
+                document.getElementById('reportResultBlock').style.display = 'block';
+                return;
+            }
+
+            // Aggregate by waste_type
+            const agg = {};
+            let totalWeight = 0;
+            targetMfs.forEach(m => {
+                const type = m.waste_type || '未分類';
+                const w = m.weight_kg || 0;
+                if (!agg[type]) agg[type] = { count: 0, weight: 0 };
+                agg[type].count += 1;
+                agg[type].weight += w;
+                totalWeight += w;
+            });
+
+            // Format Output
+            const cName = cid ? (allCustomers.find(c => c.id === cid)?.name || '顧客') : '全体';
+            let txt = `【${year}年度 実績集計】\n対象: ${cName}\n総排出量: ${totalWeight.toLocaleString()} kg\n\n`;
+
+            for (const [type, data] of Object.entries(agg)) {
+                txt += `■ ${type}\n  回収回数 (交付枚数): ${data.count} 枚\n  総重量: ${data.weight.toLocaleString()} kg\n\n`;
+            }
+
+            document.getElementById('reportResultContent').textContent = txt;
+            document.getElementById('reportResultBlock').style.display = 'block';
+        }
+
+        function copyReport() {
+            const txt = document.getElementById('reportResultContent').textContent;
+            navigator.clipboard.writeText(txt).then(() => {
+                showToast("コピーしました！");
+            });
         }
     </script>
 </body>

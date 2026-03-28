@@ -463,15 +463,18 @@
     function updateFolderCounts() {
       const c = { all: allJobs.length, estimated: 0, scheduled: 0, completed: 0, lost: 0 };
       allJobs.forEach(j => {
-        if (j.status === 'pending') c.estimated++;
-        if (j.status === 'confirmed') c.scheduled++;
-        if (j.status === 'completed') c.completed++;
-        if (j.status === 'lost') c.lost++;
+        const stage = j.pipeline_stage || 'estimate';
+        if (['inquiry', 'estimate', 'negotiation', 'contract'].includes(stage)) c.estimated++;
+        else if (stage === 'scheduled') c.scheduled++;
+        else if (stage === 'completed') c.completed++;
+        else if (stage === 'lost') c.lost++;
       });
-      ['all', 'est', 'sch', 'comp', 'lost'].forEach((k, i) => {
-        const keys = ['all', 'estimated', 'scheduled', 'completed', 'lost'];
-        document.getElementById('count-' + k).textContent = c[keys[i]];
-      });
+      // The DOM IDs are count-all, count-estimated, count-scheduled, count-completed, count-lost
+      document.getElementById('count-all').textContent = c.all;
+      document.getElementById('count-estimated').textContent = c.estimated;
+      document.getElementById('count-scheduled').textContent = c.scheduled;
+      document.getElementById('count-completed').textContent = c.completed;
+      document.getElementById('count-lost').textContent = c.lost;
     }
 
     function filterJobs() {
@@ -480,10 +483,11 @@
         const text = ((j.job_name || '') + (j.customer_name || '') + (j.address || '')).toLowerCase();
         const matchQ = text.includes(q);
         let matchF = currentFolder === 'all';
-        if (currentFolder === 'estimated') matchF = j.status === 'pending';
-        if (currentFolder === 'scheduled') matchF = j.status === 'confirmed';
-        if (currentFolder === 'completed') matchF = j.status === 'completed';
-        if (currentFolder === 'lost') matchF = j.status === 'lost';
+        const stage = j.pipeline_stage || 'estimate';
+        if (currentFolder === 'estimated') matchF = ['inquiry', 'estimate', 'negotiation', 'contract'].includes(stage);
+        if (currentFolder === 'scheduled') matchF = (stage === 'scheduled');
+        if (currentFolder === 'completed') matchF = (stage === 'completed');
+        if (currentFolder === 'lost') matchF = (stage === 'lost');
         return matchQ && matchF;
       });
       renderJobs(filtered);
@@ -498,7 +502,9 @@
         const vol = j.total_volume_m3 != null ? `${j.total_volume_m3} ㎥` : '-';
         const price = j.price_total != null ? `${Number(j.price_total).toLocaleString()} 円` : '-';
         const wdate = j.work_date ? `作業日: ${j.work_date}` : '作業日: 未定';
-        const slabel = { pending: '見積済', confirmed: '作業予定', completed: '完了', lost: '不成約' }[j.status] || j.status;
+
+        const STAGE_LABELS = { inquiry: '問合せ', estimate: '見積', negotiation: '商談', contract: '契約', scheduled: '作業予定', completed: '完了', lost: '不成約' };
+        const slabel = STAGE_LABELS[j.pipeline_stage] || j.status;
         const card = document.createElement('div');
         card.className = 'job-card';
         card.onclick = () => openDetail(j.job_id);

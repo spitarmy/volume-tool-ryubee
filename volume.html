@@ -824,6 +824,22 @@
       btn.textContent = "保存中...";
 
       try {
+        let customerId = null;
+        if (customerName) {
+          try {
+            const cPayload = {
+              name: customerName,
+              address: address || "",
+              phone: "",
+              email: "",
+              form_data: JSON.stringify({ source: "AI見積生成" })
+            };
+            const newCus = await RyubeeAPI.createCustomer(cPayload);
+            if (newCus && newCus.id) customerId = newCus.id;
+          } catch (ce) { console.warn("Customer auto-create failed", ce); }
+        }
+        if (customerId) payload.customer_id = customerId;
+
         await RyubeeAPI.updateJob(jobId, payload);
         alert("✅ 案件を保存しました！");
         // 保存成功したら案件一覧へ遷移（その案件の詳細を開く想定）
