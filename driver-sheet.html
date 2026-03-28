@@ -8,6 +8,11 @@
     <link rel="stylesheet" href="assets/css/style.css">
     <style>
         @media print {
+            @page {
+                size: A4;
+                margin: 5mm 10mm;
+            }
+
             body {
                 background: #fff;
                 padding: 0;
@@ -20,7 +25,17 @@
             .sheet {
                 box-shadow: none;
                 margin: 0;
-                padding: 20px;
+                padding: 0;
+                transform: scale(0.95);
+                transform-origin: top left;
+                width: 105%;
+            }
+
+            .driver-table th,
+            .driver-table td {
+                padding: 6px 8px;
+                /* Compact padding for print */
+                font-size: 0.9rem;
             }
         }
 
@@ -264,7 +279,18 @@
                 document.getElementById('dsAssignee').textContent = job.assigned_to_name || '';
 
                 let notes = `案件名: ${job.job_name || '–'}\n`;
-                if (job.notes) notes += `メモ: ${job.notes}\n`;
+                if (job.notes) {
+                    let cleanNotes = job.notes;
+                    // Remove legacy raw JSON dumps from older database records that stretch A4 prints
+                    const jsonIdx1 = cleanNotes.indexOf('"items":');
+                    if (jsonIdx1 !== -1) cleanNotes = cleanNotes.substring(0, cleanNotes.lastIndexOf('{', jsonIdx1)).trim();
+                    const jsonIdx2 = cleanNotes.indexOf('\n{');
+                    if (jsonIdx2 !== -1) cleanNotes = cleanNotes.substring(0, jsonIdx2).trim();
+                    const jsonIdx3 = cleanNotes.indexOf('```json');
+                    if (jsonIdx3 !== -1) cleanNotes = cleanNotes.substring(0, jsonIdx3).trim();
+
+                    if (cleanNotes) notes += `メモ: ${cleanNotes}\n`;
+                }
                 document.getElementById('dsNotes').textContent = notes;
 
                 document.getElementById('dsAddress').textContent = job.address ? `現場住所: ${job.address}` : '';

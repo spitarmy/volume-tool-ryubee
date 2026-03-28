@@ -178,10 +178,14 @@
             padding-bottom: 4px;
         }
 
-        /* 印刷時の設定 */
         @media print {
+            @page {
+                size: A4;
+                margin: 5mm 10mm;
+            }
+
             body {
-                background: none;
+                background: #fff;
                 margin: 0;
                 padding: 0;
             }
@@ -195,14 +199,11 @@
             .invoice-container {
                 box-shadow: none;
                 margin: 0;
-                padding: 20px;
+                padding: 0;
                 max-width: none;
-            }
-
-            .app-header,
-            .action-buttons,
-            .inv-signature-box {
-                margin-top: 20px !important;
+                width: 105%;
+                transform: scale(0.95);
+                transform-origin: top left;
             }
         }
 

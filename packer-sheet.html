@@ -265,7 +265,16 @@
                             <div class="info-value">一般廃棄物（または別途指示の品目）</div>
                             
                             <div class="info-label">特記事項</div>
-                            <div class="info-value">${job.notes || '特になし'}</div>
+                            <div class="info-value">\${(() => {
+                                let cn = job.notes || '特になし';
+                                const i1 = cn.indexOf('"items":');
+                                if(i1!==-1) cn = cn.substring(0, cn.lastIndexOf('{', i1)).trim();
+                                const i2 = cn.indexOf('\\n{');
+                                if(i2!==-1) cn = cn.substring(0, i2).trim();
+                                const i3 = cn.indexOf('\`\`\`json');
+                                if(i3!==-1) cn = cn.substring(0, i3).trim();
+                                return cn || '特になし';
+                            })()}</div>
                         </div>
                     </div>
 
