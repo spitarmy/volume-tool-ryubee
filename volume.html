@@ -415,13 +415,22 @@
 
         <div class="d-flex" style="gap: 12px;">
           <div class="form-group" style="flex:1;">
+            <label>初期ステージ</label>
+            <select id="pipeline-stage">
+              <option value="inquiry">問合せ</option>
+              <option value="estimate" selected>見積</option>
+              <option value="negotiation">商談</option>
+            </select>
+          </div>
+          <div class="form-group" style="flex: 1;">
             <label>作業予定日</label>
             <input type="date" id="work_date">
           </div>
-          <div class="form-group" style="flex: 1;">
-            <label>見積金額（円） <span style="font-size: 14px;">✎微調整可</span></label>
-            <input type="number" id="price_total" placeholder="自動計算が入力されます">
-          </div>
+        </div>
+
+        <div class="form-group">
+          <label>見積金額（円） <span style="font-size: 14px;">✎微調整可</span></label>
+          <input type="number" id="price_total" placeholder="自動計算が入力されます">
         </div>
 
         <button class="btn btn-primary mt-2" id="save-job-btn" onclick="saveJob()">保存して案件一覧へ</button>
@@ -816,7 +825,8 @@
         address: address,
         work_date: workDate,
         price_total: Number(priceTotal) || null,
-        notes: combinedNotes
+        notes: combinedNotes,
+        pipeline_stage: document.getElementById('pipeline-stage').value
       };
 
       const btn = document.getElementById('save-job-btn');
@@ -887,10 +897,10 @@
               let address = data.display_name;
               if (data.address) {
                 const a = data.address;
-                address = `${a.province || ''}${a.city || ''}${a.suburb || ''}${a.neighbourhood || ''}${a.road || ''}`;
+                address = `${a.province || ''}${a.city || ''}${a.suburb || ''}${a.road || ''}`;
               }
               document.getElementById('job-address').value = address.replace(/日本,?\s*/, '').trim();
-              statusEl.textContent = "住所を自動入力しました。";
+              statusEl.textContent = "住所を取得。※番地や建物名は手で追記して下さい。";
               statusEl.style.color = "var(--primary)";
             } else {
               statusEl.textContent = `緯度:${lat.toFixed(4)}, 経度:${lon.toFixed(4)}`;

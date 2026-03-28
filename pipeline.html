@@ -302,6 +302,10 @@
             新規追加</button>
     </header>
 
+    <div style="padding: 10px 20px; background:var(--glass-bg); border-bottom: 0.5px solid rgba(0, 0, 0, 0.06);">
+        <input type="text" id="plSearch" placeholder="🔍 案件名・お客様名でスキャン..." oninput="filterPipeline()"
+            style="width:100%; padding:10px 14px; border-radius:10px; border:1px solid var(--border); font-size:0.95rem; background:#fff;">
+    </div>
     <div class="pipeline-container" id="pipelineContainer">
         <p style="text-align:center; width:100%; color:var(--text-tertiary); margin-top:40px;">読み込み中...</p>
     </div>
@@ -480,6 +484,18 @@
                     const newStage = zone.dataset.stage;
                     await moveJob(jobId, newStage);
                 });
+            });
+        }
+
+        function filterPipeline() {
+            const q = document.getElementById('plSearch').value.toLowerCase();
+            document.querySelectorAll('.pipeline-card').forEach(card => {
+                const text = card.textContent.toLowerCase();
+                if (text.includes(q)) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
             });
         }
 
