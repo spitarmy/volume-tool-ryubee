@@ -879,7 +879,9 @@ textarea {
   .billing-content,
   .sheet-header,
   .sheet,
-  #alert-widgets {
+  #alert-widgets,
+  .calendar-header,
+  .cal-wrapper {
     margin-left: 220px;
   }
 
@@ -1034,7 +1036,9 @@ textarea {
   .billing-content,
   .sheet-header,
   .sheet,
-  #alert-widgets {
+  #alert-widgets,
+  .calendar-header,
+  .cal-wrapper {
     margin-left: 260px;
   }
 }
