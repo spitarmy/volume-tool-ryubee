@@ -58,6 +58,19 @@ async function apiFetch(path, options = {}) {
 
 // ── Auth ──────────────────────────────────────────────────────
 const RyubeeAPI = {
+  baseUrl: API_BASE,
+
+  getToken() {
+    return localStorage.getItem("ryubee_token");
+  },
+
+  getHeaders() {
+    const token = this.getToken();
+    return {
+      "Content-Type": "application/json",
+      ...(token ? { Authorization: `Bearer ${token}` } : {})
+    };
+  },
 
   async authLogin(email, password) {
     const data = await apiFetch("/v1/auth/login", {
