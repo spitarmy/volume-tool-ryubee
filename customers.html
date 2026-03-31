@@ -119,6 +119,8 @@
                 onclick="setCustTab('industrial')">産廃</button>
             <button class="btn btn-secondary" id="btn-tab-gen" style="flex:1"
                 onclick="setCustTab('general')">一般</button>
+            <button class="btn btn-secondary" id="btn-tab-large" style="flex:1"
+                onclick="setCustTab('large')">大型</button>
         </div>
     </div>
 
@@ -127,6 +129,19 @@
     </div>
 
     <button class="fab" onclick="openModal()">+</button>
+
+    <!-- 顧客プレビューモーダル -->
+    <div class="cust-modal-overlay" id="previewOverlay" onclick="if(event.target===this) this.classList.remove('show')">
+        <div class="cust-modal" style="padding-top:16px;">
+            <div class="modal-drag-handle"></div>
+            <button class="modal-close"
+                onclick="document.getElementById('previewOverlay').classList.remove('show')">✕</button>
+            <div id="previewContent"></div>
+            <button class="btn btn-primary mt-2" onclick="openEditFromPreview()">✏️ 編集する</button>
+            <button class="btn btn-secondary mt-1"
+                onclick="document.getElementById('previewOverlay').classList.remove('show')">閉じる</button>
+        </div>
+    </div>
 
     <!-- 顧客編集モーダル -->
     <div class="cust-modal-overlay" id="custOverlay">
@@ -174,8 +189,9 @@
             <div class="form-group">
                 <label>廃棄物カテゴリ (管理用)</label>
                 <select id="custWasteCategory">
-                    <option value="general">一般 / 未指定</option>
+                    <option value="general">一般ゴミ</option>
                     <option value="industrial">産業廃棄物</option>
+                    <option value="large">大型ゴミ等</option>
                 </select>
             </div>
             <div class="form-group"><label>ご住所</label><input type="text" id="custAddress" placeholder="京都市..."></div>
@@ -352,18 +368,31 @@
             document.getElementById('btn-tab-all').className = 'btn ' + (tab === 'all' ? 'btn-primary' : 'btn-secondary');
             document.getElementById('btn-tab-ind').className = 'btn ' + (tab === 'industrial' ? 'btn-primary' : 'btn-secondary');
             document.getElementById('btn-tab-gen').className = 'btn ' + (tab === 'general' ? 'btn-primary' : 'btn-secondary');
+            document.getElementById('btn-tab-large').className = 'btn ' + (tab === 'large' ? 'btn-primary' : 'btn-secondary');
             filterCustomers();
         }
 
         function filterCustomers() {
             const q = document.getElementById('searchInput').value.toLowerCase();
             const filtered = allCustomers.filter(c => {
-                const text = (c.name + c.address + c.phone + c.contact_person + c.email + (c.parsed_form?.yamabun_management_number || '')).toLowerCase();
+                const fd = c.parsed_form || {};
+                let pricingItems = '';
+                if (fd.pricing_list) pricingItems = fd.pricing_list.map(p => p.item).join(' ');
+
+                const text = (
+                    c.name + ' ' + (c.address || '') + ' ' + (c.phone || '') + ' ' + (c.contact_person || '') + ' ' + (c.email || '') +
+                    ' ' + (fd.yamabun_management_number || '') +
+                    ' ' + (fd.collection_general || '') + ' ' + (fd.collection_recycle || '') +
+                    ' ' + (fd.collection_plastic || '') + ' ' + (fd.collection_paper || '') +
+                    ' ' + pricingItems
+                ).toLowerCase();
+
                 const matchQ = text.includes(q);
                 let matchT = true;
-                const wc = c.parsed_form?.waste_category || 'general';
+                const wc = fd.waste_category || 'general';
                 if (currentCustTab === 'industrial' && wc !== 'industrial') matchT = false;
                 if (currentCustTab === 'general' && wc !== 'general') matchT = false;
+                if (currentCustTab === 'large' && wc !== 'large') matchT = false;
                 return matchQ && matchT;
             });
             // 締め日順 -> 管理番号順にソート (Phase 5)
@@ -389,13 +418,16 @@
                 const typeBadge = c.contract_type === 'subscription'
                     ? '<span class="badge badge-success">定期契約</span>'
                     : '<span class="badge badge-primary">スポット</span>';
-                const wasteBadge = c.parsed_form?.waste_category === 'industrial'
-                    ? '<span class="badge" style="background:#5A67D8; color:white;">産廃</span>'
-                    : '<span class="badge" style="background:#48BB78; color:white;">一般</span>';
+
+                let wasteBadge = '<span class="badge" style="background:#48BB78; color:white;">一般</span>'; // general
+                const wc = c.parsed_form?.waste_category;
+                if (wc === 'industrial') wasteBadge = '<span class="badge" style="background:#5A67D8; color:white;">産廃</span>';
+                if (wc === 'large') wasteBadge = '<span class="badge" style="background:#ED8936; color:white;">大型</span>';
+
                 const expiry = c.contract_expiry_date
                     ? `<div class="cc-expiry">📋 契約期限: ${c.contract_expiry_date}</div>` : '';
                 return `
-                    <div class="customer-card" onclick="openEdit('${c.id}')">
+                    <div class="customer-card" onclick="openPreview('${c.id}')">
                         <div class="cc-top">
                             <span class="cc-name">${utils.escapeHtml(c.name)}</span>
                             <div>${wasteBadge} ${typeBadge}</div>
@@ -485,6 +517,89 @@
         }
 
         function closeModal() { document.getElementById('custOverlay').classList.remove('show'); editingId = null; }
+
+        let previewingId = null;
+        async function openPreview(id) {
+            const c = allCustomers.find(x => x.id === id);
+            if (!c) return;
+            previewingId = id;
+
+            let fd = c.parsed_form || {};
+            let history = [];
+            try { history = await RyubeeAPI.fetchCustomerHistory(id); } catch (e) { }
+
+            const pc = document.getElementById('previewContent');
+            pc.innerHTML = `
+                <h3 style="font-size:1.4rem;font-weight:700;margin-bottom:8px;">${utils.escapeHtml(c.name)}</h3>
+                <div style="font-size:0.9rem; color:var(--text-secondary); margin-bottom:16px;">
+                    ${fd.yamabun_management_number ? `🎫 山文管理番号: <strong style="color:var(--primary);">${utils.escapeHtml(fd.yamabun_management_number)}</strong><br>` : ''}
+                    ${fd.waste_category === 'industrial' ? '♻️ 産業廃棄物' : fd.waste_category === 'large' ? '🛋 大型ゴミ等' : '🗑 一般ゴミ'} | 
+                    ${c.contract_type === 'subscription' ? '🔄 定期契約' : '📍 スポット契約'}
+                </div>
+                
+                <div style="background:var(--bg-secondary); padding:16px; border-radius:12px; margin-bottom:16px; font-size:0.95rem; line-height:1.6;">
+                    📍 <strong style="margin-left:4px;">基本情報</strong><br>
+                    <span style="display:inline-block;width:60px;color:var(--text-tertiary);font-size:0.85rem;">住所:</span> ${utils.escapeHtml(c.address || '-')} 
+                    ${c.address ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(c.address)}" target="_blank" style="font-size:0.8rem;text-decoration:none;margin-left:8px;background:#E2E8F0;padding:2px 8px;border-radius:4px;color:var(--text-primary);">🗺 マップ</a>` : ''}<br>
+                    <span style="display:inline-block;width:60px;color:var(--text-tertiary);font-size:0.85rem;">TEL:</span> ${utils.escapeHtml(c.phone || '-')} <span style="margin-left:8px;color:var(--text-tertiary);font-size:0.85rem;">携帯:</span> ${utils.escapeHtml(fd.mobile || '-')}<br>
+                    <span style="display:inline-block;width:60px;color:var(--text-tertiary);font-size:0.85rem;">担当:</span> ${utils.escapeHtml(c.contact_person || '-')}<br>
+                    <span style="display:inline-block;width:60px;color:var(--text-tertiary);font-size:0.85rem;">Email:</span> ${utils.escapeHtml(c.email || '-')}
+                </div>
+                
+                <div style="background:var(--bg-secondary); padding:16px; border-radius:12px; margin-bottom:16px; font-size:0.95rem; line-height:1.6;">
+                    📝 <strong style="margin-left:4px;">回収・契約情報</strong><br>
+                    <span style="display:inline-block;width:70px;color:var(--text-tertiary);font-size:0.85rem;">平均量:</span> ${utils.escapeHtml(fd.average_volume || '-')} <span style="color:var(--text-tertiary);font-size:0.75rem;">(※実績推移は今後実装)</span><br>
+                    <span style="display:inline-block;width:70px;color:var(--text-tertiary);font-size:0.85rem;">一般ごみ:</span> ${utils.escapeHtml(fd.collection_general || '-')} <span style="margin-left:8px;color:var(--text-tertiary);font-size:0.85rem;">資源:</span> ${utils.escapeHtml(fd.collection_recycle || '-')}<br>
+                    <span style="display:inline-block;width:70px;color:var(--text-tertiary);font-size:0.85rem;">支払締:</span> ${utils.escapeHtml(fd.payment_method || '振込')} / ${c.billing_closing_day === 31 ? '月末' : c.billing_closing_day + '日'}締め
+                </div>
+
+                <div style="margin-top:16px; display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                    <a href="manifests.html?customer_id=${c.id}" class="btn btn-sm btn-secondary" style="text-align:center;text-decoration:none;padding:12px;">♻️ マニフェスト発行</a>
+                    <a href="contract-form.html?id=${c.id}" class="btn btn-sm btn-secondary" style="text-align:center;text-decoration:none;padding:12px;">📄 契約書確認</a>
+                </div>
+
+                <!-- 履歴・対応ログ (CRM Timeline) -->
+                <div style="margin-top:24px; padding-top:16px; border-top:1px solid var(--border);">
+                    <h4 style="font-size:1rem;color:var(--text-primary);margin-bottom:12px;">🕰 対応履歴・メモ</h4>
+                    <div style="display:flex;gap:8px;margin-bottom:16px;">
+                        <input type="text" id="newHistoryNote" placeholder="クレームや追加依頼などをメモ..." style="flex:1;font-size:0.9rem;padding:10px;border-radius:8px;border:1px solid var(--border);">
+                        <button class="btn btn-primary" style="padding:10px 16px;font-size:0.9rem;" onclick="addHistoryNote('${id}')">追記</button>
+                    </div>
+                    <div style="display:flex;flex-direction:column;gap:12px;">
+                        ${history.length === 0 ? '<div style="font-size:0.85rem;color:var(--text-tertiary);text-align:center;padding:10px;">まだ履歴はありません</div>' :
+                    history.map(h => `
+                              <div style="background:var(--bg-secondary);padding:10px 12px;border-left:3px solid var(--blue);border-radius:0 8px 8px 0;font-size:0.85rem;">
+                                  <div style="font-size:0.75rem;color:var(--text-tertiary);margin-bottom:4px;">
+                                      📅 ${new Date(h.created_at).toLocaleDateString('ja-JP', { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                  </div>
+                                  <div style="color:var(--text-primary);white-space:pre-wrap;word-break:break-all;">${utils.escapeHtml(h.description)}</div>
+                              </div>
+                          `).join('')
+                }
+                    </div>
+                </div>
+            `;
+            document.getElementById('previewOverlay').classList.add('show');
+        }
+
+        async function addHistoryNote(custId) {
+            const input = document.getElementById('newHistoryNote');
+            const text = input.value.trim();
+            if (!text) return;
+            try {
+                await RyubeeAPI.addCustomerHistory(custId, text, 'note');
+                input.value = '';
+                showToast('✍️ 履歴を追加しました');
+                openPreview(custId); // UIリフレッシュ
+            } catch (e) {
+                alert('エラー: ' + e.message);
+            }
+        }
+
+        function openEditFromPreview() {
+            document.getElementById('previewOverlay').classList.remove('show');
+            openEdit(previewingId);
+        }
 
         function openEdit(id) {
             const c = allCustomers.find(x => x.id === id);

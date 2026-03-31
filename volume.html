@@ -363,6 +363,8 @@
       <div class="card" style="border-top: 4px solid var(--primary);">
         <h2 class="text-center" style="margin-bottom: 0;">AI 計算結果</h2>
         <div class="volume-huge" id="res-volume">- ㎥</div>
+        <div class="text-center" style="font-size: 1.2rem; color: #666; font-weight: bold; margin-bottom: 12px;"
+          id="res-weight">- kg (推定総重量)</div>
 
         <!-- 自動計算された見積額 -->
         <div class="text-center mb-2"
@@ -703,8 +705,9 @@
     // 結果表示
     // -----------------------------------
     function renderResult(data) {
-      // 全体立米
+      // 全体立米・総重量
       document.getElementById('res-volume').textContent = data.total_volume_m3 != null ? `${data.total_volume_m3} ㎥` : "- ㎥";
+      document.getElementById('res-weight').textContent = data.total_weight_kg != null ? `${data.total_weight_kg.toLocaleString()} kg (推定)` : "- kg";
 
       // 自動見積額の計算と表示
       const price = calculateEstimatedPrice(data);
@@ -834,21 +837,7 @@
       btn.textContent = "保存中...";
 
       try {
-        let customerId = null;
-        if (customerName) {
-          try {
-            const cPayload = {
-              name: customerName,
-              address: address || "",
-              phone: "",
-              email: "",
-              form_data: JSON.stringify({ source: "AI見積生成" })
-            };
-            const newCus = await RyubeeAPI.createCustomer(cPayload);
-            if (newCus && newCus.id) customerId = newCus.id;
-          } catch (ce) { console.warn("Customer auto-create failed", ce); }
-        }
-        if (customerId) payload.customer_id = customerId;
+        // [PHASE 6] 顧客の自動登録は「見積もりフェーズ」では行わず、「契約フェーズ」で行う方針に変更されたため、ここでの自動生成ロジックを削除しました。
 
         await RyubeeAPI.updateJob(jobId, payload);
         alert("✅ 案件を保存しました！");

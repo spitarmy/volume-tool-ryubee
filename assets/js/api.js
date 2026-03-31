@@ -247,6 +247,25 @@ const RyubeeAPI = {
     });
   },
 
+  // ── Daily Reports (ドライバー日報・集計) ───────────────────
+
+  async fetchDailyReports(month = "") {
+    let url = "/v1/daily_reports";
+    if (month) url += `?month=${month}`;
+    return apiFetch(url);
+  },
+
+  async createDailyReport(body) {
+    return apiFetch("/v1/daily_reports", {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+  },
+
+  async deleteDailyReport(reportId) {
+    return apiFetch(`/v1/daily_reports/${reportId}`, { method: "DELETE" });
+  },
+
   // ── Customers (顧客管理) ────────────────────────────────────
 
   async fetchCustomers() {
@@ -269,6 +288,17 @@ const RyubeeAPI = {
 
   async deleteCustomer(customerId) {
     return apiFetch(`/v1/customers/${customerId}`, { method: "DELETE" });
+  },
+
+  async fetchCustomerHistory(customerId) {
+    return apiFetch(`/v1/customers/${customerId}/history`);
+  },
+
+  async addCustomerHistory(customerId, text, eventType) {
+    return apiFetch(`/v1/customers/${customerId}/history`, {
+      method: "POST",
+      body: JSON.stringify({ event_type: eventType, description: text }),
+    });
   },
 
   // ── Manifests (マニフェスト) ─────────────────────────────────

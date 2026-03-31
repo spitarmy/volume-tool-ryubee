@@ -333,10 +333,8 @@
                 <label>種別</label>
                 <select id="njType">
                     <option value="general_waste">一般ゴミ</option>
-                    <option value="store_removal">店舗残置物</option>
-                    <option value="estate">遺品整理</option>
-                    <option value="welfare">福祉残置物</option>
-                    <option value="other">その他</option>
+                    <option value="industrial_waste">産業廃棄物</option>
+                    <option value="large_waste">大型ゴミ等</option>
                 </select>
             </div>
             <div class="form-group">
@@ -381,8 +379,9 @@
         ];
 
         const TYPE_LABELS = {
-            store_removal: '店舗残置物', estate: '遺品整理',
-            welfare: '福祉残置物', general_waste: '一般ゴミ', other: 'その他'
+            general_waste: '一般ゴミ',
+            industrial_waste: '産業廃棄物',
+            large_waste: '大型ゴミ等'
         };
 
         let pipelineData = {};
@@ -433,6 +432,9 @@
             const nextStage = stageIdx < STAGES.length - 2 ? STAGES[stageIdx + 1] : null;
             const prevStage = stageIdx > 0 ? STAGES[stageIdx - 1] : null;
 
+            const createdText = job.created_at ? new Date(job.created_at).toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+            const updatedText = job.updated_at ? new Date(job.updated_at).toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+
             return `
                 <div class="pipeline-card" draggable="true" data-job-id="${job.job_id}" data-stage="${currentStage}" onclick="openJobDetail('${job.job_id}')">
                     <div class="pc-name">
@@ -440,6 +442,11 @@
                         ${job.comment_count ? `<span class="pc-comments-badge">💬 ${job.comment_count}</span>` : ''}
                     </div>
                     <div class="pc-customer">👤 ${utils.escapeHtml(job.customer_name || '未設定')}</div>
+                    
+                    <div style="font-size:0.65rem; color:var(--text-tertiary); margin:4px 0;">
+                        受付: ${createdText} | 更新: ${updatedText}
+                    </div>
+
                     <div class="pc-bottom">
                         <span class="pc-price">${price}</span>
                         <span class="pc-type ${typeClass}">${typeLabel}</span>
@@ -585,7 +592,15 @@
 
             body.innerHTML = `
                 <h3 style="font-size:1.2rem;font-weight:700;margin-bottom:4px;">${utils.escapeHtml(job.job_name || '案件')}</h3>
-                <p class="small-text">👤 ${utils.escapeHtml(job.customer_name || '未設定')} | ${TYPE_LABELS[job.job_type] || 'その他'}</p>
+                <p class="small-text">
+                    👤 ${utils.escapeHtml(job.customer_name || '未設定')} | ${TYPE_LABELS[job.job_type] || 'その他'}
+                    ${job.address ? `<br>📍 ${utils.escapeHtml(job.address)} <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(job.address)}" target="_blank" style="margin-left:4px;text-decoration:none;font-size:0.75rem;background:#E2E8F0;padding:2px 6px;border-radius:4px;color:var(--text-primary);">🗺 マップ</a>` : ''}
+                    ${!job.customer_id ? `
+                        <br><button class="btn btn-sm btn-primary" style="margin-top:8px;padding:4px 10px;font-size:0.75rem;" onclick="registerCustomerFromPipeline('${jobId}', '${utils.escapeHtml(job.customer_name || '')}')">👔 顧客マスタへ本登録</button>
+                    ` : `
+                        <br><span class="badge badge-success" style="margin-top:8px;display:inline-block;">✅ 顧客登録済</span>
+                    `}
+                </p>
 
                 <div style="margin-top:16px;padding:12px;background:var(--bg-secondary);border-radius:var(--r-md);">
                     <h4 style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:8px;">🚚 配車・協力業者アサイン</h4>
@@ -593,6 +608,10 @@
                         <input type="text" id="jobSubcontractor" placeholder="協力業者名 (例: 山本文夫)" value="${utils.escapeHtml(fd.subcontractor_name || '')}" style="flex:1;font-size:0.85rem;padding:6px;border-radius:6px;border:1px solid var(--border);" onchange="updateJobFormData('${jobId}')">
                         <input type="text" id="jobVehicleNum" placeholder="号車 (例: 3号車)" value="${utils.escapeHtml(fd.vehicle_number || '')}" style="width:100px;font-size:0.85rem;padding:6px;border-radius:6px;border:1px solid var(--border);" onchange="updateJobFormData('${jobId}')">
                     </div>
+                </div>
+
+                <div style="margin-top:16px;">
+                    <a href="jobs.html?id=${jobId}" class="btn btn-sm btn-outline" style="width:100%;text-align:center;padding:12px;display:block;">✏️ 案件情報をフル編集・詳細確認する</a>
                 </div>
 
                 <div style="margin-top:12px;padding:12px;background:var(--bg-secondary);border-radius:var(--r-md);">
@@ -623,10 +642,11 @@
                     ${job.price_notes ? `<p class="small-text" style="margin-top:8px;">📝 ${utils.escapeHtml(job.price_notes)}</p>` : ''}
                 </div>
 
-                <div style="display:flex;gap:8px;margin-top:16px;">
-                    <a href="packer-sheet.html?job_id=${jobId}" target="_blank" class="btn btn-secondary" style="flex:1;padding:12px 4px;font-size:0.8rem;text-align:center;text-decoration:none;">🖨 パッカー新指示書</a>
-                    <button class="btn btn-success" onclick="convertToInvoice('${jobId}')" style="flex:1;padding:12px 4px;font-size:0.8rem;">📄 請求書発行</button>
-                    <button class="btn btn-warning" onclick="collectCash('${jobId}')" style="flex:1;padding:12px 4px;font-size:0.8rem;">💴 現金受取</button>
+                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:16px;">
+                    <a href="invoice.html?id=${jobId}" target="_blank" class="btn btn-secondary" style="text-align:center;text-decoration:none;font-size:0.85rem;padding:10px;">📄 見積書を発行</a>
+                    <a href="packer-sheet.html?job_id=${jobId}" target="_blank" class="btn btn-secondary" style="text-align:center;text-decoration:none;font-size:0.85rem;padding:10px;">🖨 パッカー指示書</a>
+                    <button class="btn btn-success" onclick="convertToInvoice('${jobId}')" style="font-size:0.85rem;padding:10px;">🧾 請求書を発行</button>
+                    <button class="btn btn-warning" onclick="collectCash('${jobId}')" style="font-size:0.85rem;padding:10px;">💴 現金を回収</button>
                 </div>
 
                 <div class="comment-thread">
@@ -646,6 +666,37 @@
                 </div>
             `;
             drawer.classList.add('show');
+        }
+
+        async function registerCustomerFromPipeline(jobId, custName) {
+            const name = prompt("顧客マスタに登録する「お客様名 / 法人名」を入力してください:", custName);
+            if (!name) return;
+
+            try {
+                // 1. Create customer
+                const cPayload = {
+                    name: name,
+                    address: "",
+                    phone: "",
+                    email: "",
+                    form_data: JSON.stringify({ source: "パイプラインからの本登録" })
+                };
+                const newCus = await RyubeeAPI.createCustomer(cPayload);
+                if (!newCus || !newCus.id) throw new Error("顧客作成に失敗しました");
+
+                // 2. Link customer to job
+                await fetch(`${RyubeeAPI.baseUrl}/jobs/${jobId}`, {
+                    method: 'PUT',
+                    headers: RyubeeAPI.getHeaders(),
+                    body: JSON.stringify({ customer_id: newCus.id, customer_name: name })
+                });
+
+                showToast(`✅ "${name}" 様を顧客マスタに登録しました`);
+                document.getElementById('drawerOverlay').classList.remove('show');
+                loadPipeline();
+            } catch (e) {
+                alert("エラーが発生しました: " + e.message);
+            }
         }
 
         async function postJobComment(jobId) {
