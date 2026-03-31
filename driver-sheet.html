@@ -37,6 +37,10 @@
                 /* Compact padding for print */
                 font-size: 0.9rem;
             }
+
+            #photoSection.hidden-for-print {
+                display: none !important;
+            }
         }
 
         body {
@@ -105,6 +109,21 @@
             min-height: 1.2rem;
         }
 
+        .photo-gallery {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .photo-gallery img {
+            width: 100%;
+            height: 180px;
+            object-fit: cover;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+        }
+
         @media screen and (max-width: 768px) {
             .sheet {
                 padding: 16px;
@@ -126,6 +145,10 @@
                 margin-bottom: 12px;
                 padding-bottom: 8px;
             }
+
+            .photo-gallery {
+                grid-template-columns: 1fr 1fr;
+            }
         }
     </style>
 </head>
@@ -140,8 +163,13 @@
         <h2
             style="font-size:1.1rem; margin:0; flex:1; text-align:center; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; padding:0 8px;">
             ドライバー指示書</h2>
-        <button onclick="window.print()" class="btn btn-primary"
-            style="margin:0;padding:6px 12px;font-size:0.9rem;width:auto;flex-shrink:0;">🖨 印刷</button>
+        <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+            <label id="photoToggleLabel" style="display:none;font-size:0.8rem;cursor:pointer;white-space:nowrap;">
+                <input type="checkbox" id="photoToggle" onchange="togglePhotoPrint()" style="margin-right:4px;">📷 写真も印刷
+            </label>
+            <button onclick="window.print()" class="btn btn-primary"
+                style="margin:0;padding:6px 12px;font-size:0.9rem;width:auto;flex-shrink:0;">🖨 印刷</button>
+        </div>
     </div>
 
     <div class="sheet" id="driverSheet">
@@ -304,12 +332,24 @@
 
                 if (Array.isArray(job.photos) && job.photos.length) {
                     document.getElementById('photoSection').style.display = 'block';
+                    document.getElementById('photoSection').classList.add('hidden-for-print');
                     document.getElementById('dsPhotos').innerHTML = job.photos.map(url =>
                         `<img src="${utils.escapeHtml(url)}" alt="現場写真">`
                     ).join('');
+                    document.getElementById('photoToggleLabel').style.display = 'inline-flex';
                 }
             } catch (e) { alert('読み込みエラー: ' + e.message); }
         });
+
+        function togglePhotoPrint() {
+            const section = document.getElementById('photoSection');
+            const checked = document.getElementById('photoToggle').checked;
+            if (checked) {
+                section.classList.remove('hidden-for-print');
+            } else {
+                section.classList.add('hidden-for-print');
+            }
+        }
     </script>
 </body>
 

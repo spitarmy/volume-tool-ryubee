@@ -440,6 +440,7 @@
                     <div class="pc-name">
                         ${utils.escapeHtml(job.job_name || '案件')}
                         ${job.comment_count ? `<span class="pc-comments-badge">💬 ${job.comment_count}</span>` : ''}
+                        ${(Array.isArray(job.photos) ? job.photos.length : 0) > 0 ? `<span class="pc-comments-badge">📷 ${Array.isArray(job.photos) ? job.photos.length : 0}</span>` : ''}
                     </div>
                     <div class="pc-customer">👤 ${utils.escapeHtml(job.customer_name || '未設定')}</div>
                     
@@ -621,7 +622,7 @@
                     <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
                         <h4 style="font-size:0.85rem;color:var(--text-secondary);margin:0;">📸 現場写真</h4>
                         <label class="btn btn-xs btn-primary" style="cursor:pointer;margin:0;">追加
-                            <input type="file" style="display:none;" accept="image/*" onchange="uploadJobPhoto(event, '${jobId}')">
+                            <input type="file" style="display:none;" accept="image/*" multiple onchange="uploadJobPhotos(event, '${jobId}')">
                         </label>
                     </div>
                     <div id="jobPhotosGrid" style="display:flex;gap:8px;overflow-x:auto;">
@@ -800,49 +801,54 @@
             } catch (e) { alert("保存エラー"); }
         }
 
-        async function uploadJobPhoto(event, jobId) {
-            const file = event.target.files[0];
-            if (!file) return;
+        async function uploadJobPhotos(event, jobId) {
+            const files = Array.from(event.target.files);
+            if (!files.length) return;
 
-            // Reduce image size via Canvas
-            const reader = new FileReader();
-            reader.onload = function (e) {
-                const img = new Image();
-                img.onload = async function () {
-                    const canvas = document.createElement('canvas');
-                    const MAX_WIDTH = 800;
-                    const scaleSize = MAX_WIDTH / img.width;
-                    canvas.width = MAX_WIDTH;
-                    canvas.height = img.height * scaleSize;
-                    const ctx = canvas.getContext('2d');
-                    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                    const base64Str = canvas.toDataURL('image/jpeg', 0.8);
+            // Find job to get existing photos
+            let job = null;
+            for (const jobs of Object.values(pipelineData)) {
+                job = jobs.find(j => j.job_id === jobId);
+                if (job) break;
+            }
+            if (!job) return;
 
-                    // Fetch job, update photos array
-                    let job = null;
-                    for (const jobs of Object.values(pipelineData)) {
-                        job = jobs.find(j => j.job_id === jobId);
-                        if (job) break;
-                    }
-                    if (!job) return;
+            let pArr = [];
+            try {
+                pArr = Array.isArray(job.photos) ? [...job.photos] : JSON.parse(job.photos || "[]");
+            } catch (e) { }
 
-                    let pArr = [];
-                    try {
-                        pArr = Array.isArray(job.photos) ? job.photos : JSON.parse(job.photos || "[]");
-                    } catch (e) { }
-                    pArr.push(base64Str);
-                    const photosStr = JSON.stringify(pArr);
+            showToast(`📸 ${files.length}枚の写真を処理中...`);
 
-                    try {
-                        await RyubeeAPI.updateJob(jobId, { photos: photosStr });
-                        showToast("📸 写真を保存しました");
-                        await loadPipeline();
-                        openJobDetail(jobId); // reload drawer
-                    } catch (err) { alert("アップロード失敗: " + err.message); }
+            // Process all files in parallel with canvas resize
+            const processFile = (file) => new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = function (e) {
+                    const img = new Image();
+                    img.onload = function () {
+                        const canvas = document.createElement('canvas');
+                        const MAX_WIDTH = 800;
+                        const scale = Math.min(1, MAX_WIDTH / img.width);
+                        canvas.width = img.width * scale;
+                        canvas.height = img.height * scale;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                        resolve(canvas.toDataURL('image/jpeg', 0.8));
+                    };
+                    img.src = e.target.result;
                 };
-                img.src = e.target.result;
-            };
-            reader.readAsDataURL(file);
+                reader.readAsDataURL(file);
+            });
+
+            try {
+                const base64Results = await Promise.all(files.map(f => processFile(f)));
+                pArr.push(...base64Results);
+                const photosStr = JSON.stringify(pArr);
+                await RyubeeAPI.updateJob(jobId, { photos: photosStr });
+                showToast(`📸 ${files.length}枚の写真を保存しました`);
+                await loadPipeline();
+                openJobDetail(jobId);
+            } catch (err) { alert("アップロード失敗: " + err.message); }
         }
 
         async function deleteJobPhoto(jobId, index) {
