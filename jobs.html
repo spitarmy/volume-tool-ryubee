@@ -322,10 +322,13 @@
     <div class="drawer-header">
       <button class="drawer-back-btn" onclick="closeDetail()"><i style="font-style:normal;">‹ 戻る</i></button>
       <h3 class="drawer-title" id="drawer-title">案件詳細</h3>
-      <button onclick="deleteJob()"
+      <button onclick="deleteJob()" id="delete-btn"
         style="background:none;border:none;color:#ff3b30;font-size:.85rem;font-weight:700;cursor:pointer;">🗑
         削除</button>
     </div>
+    <div id="preview-banner"
+      style="display:none;background:#FEF3C7;padding:10px 16px;text-align:center;font-size:0.85rem;font-weight:600;color:#92400E;border-bottom:1px solid #FDE68A;">
+      👁 プレビューモード（閲覧専用）</div>
     <div class="drawer-content">
       <a href="#" target="_blank" id="pdf-link" class="pdf-btn"><span style="font-size:1.2rem;">📄</span>見積書PDFを出力</a>
       <a href="#" target="_blank" id="driver-sheet-link" class="pdf-btn"
@@ -410,9 +413,27 @@
       await fetchJobList();
       await loadTemplatesDropdown();
       initSignature();
-      const id = new URLSearchParams(location.search).get('id');
-      if (id) openDetail(id);
+      const params = new URLSearchParams(location.search);
+      const id = params.get('id');
+      const isPreview = params.get('mode') === 'preview';
+      if (id) {
+        openDetail(id);
+        if (isPreview) enablePreviewMode();
+      }
     });
+
+    function enablePreviewMode() {
+      document.getElementById('preview-banner').style.display = 'block';
+      document.getElementById('delete-btn').style.display = 'none';
+      document.getElementById('update-btn').style.display = 'none';
+      // Disable all form inputs in drawer
+      document.querySelectorAll('#detail-drawer input, #detail-drawer select, #detail-drawer textarea').forEach(el => {
+        el.disabled = true;
+        el.style.opacity = '0.7';
+      });
+      // Hide signature controls
+      document.querySelectorAll('.signature-controls').forEach(el => el.style.display = 'none');
+    }
 
     let allTemplates = [];
     async function loadTemplatesDropdown() {

@@ -591,7 +591,10 @@
             try { photos = JSON.parse(job.photos || "[]"); } catch (e) { }
 
             body.innerHTML = `
-                <h3 style="font-size:1.2rem;font-weight:700;margin-bottom:4px;">${utils.escapeHtml(job.job_name || '案件')}</h3>
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;">
+                    <h3 style="font-size:1.2rem;font-weight:700;margin-bottom:4px;flex:1;">${utils.escapeHtml(job.job_name || '案件')}</h3>
+                    <a href="jobs.html?id=${jobId}" style="flex-shrink:0;margin-left:8px;padding:4px 10px;font-size:0.72rem;background:#FEE2E2;color:#DC2626;border:1px solid #FECACA;border-radius:8px;text-decoration:none;font-weight:700;white-space:nowrap;">✏️ フル編集</a>
+                </div>
                 <p class="small-text">
                     👤 ${utils.escapeHtml(job.customer_name || '未設定')} | ${TYPE_LABELS[job.job_type] || 'その他'}
                     ${job.address ? `<br>📍 ${utils.escapeHtml(job.address)} <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(job.address)}" target="_blank" style="margin-left:4px;text-decoration:none;font-size:0.75rem;background:#E2E8F0;padding:2px 6px;border-radius:4px;color:var(--text-primary);">🗺 マップ</a>` : ''}
@@ -611,7 +614,7 @@
                 </div>
 
                 <div style="margin-top:16px;">
-                    <a href="jobs.html?id=${jobId}" class="btn btn-sm btn-outline" style="width:100%;text-align:center;padding:12px;display:block;">✏️ 案件情報をフル編集・詳細確認する</a>
+                    <a href="jobs.html?id=${jobId}&mode=preview" class="btn btn-sm btn-outline" style="width:100%;text-align:center;padding:12px;display:block;">👁 案件の詳細を確認する（プレビュー）</a>
                 </div>
 
                 <div style="margin-top:12px;padding:12px;background:var(--bg-secondary);border-radius:var(--r-md);">
@@ -788,12 +791,11 @@
 
             fd.subcontractor_name = document.getElementById('jobSubcontractor').value.trim();
             fd.vehicle_number = document.getElementById('jobVehicleNum').value.trim();
-            job.form_data = JSON.stringify(fd);
+            const newFormData = JSON.stringify(fd);
+            job.form_data = newFormData;
 
             try {
-                await fetch(`${RyubeeAPI.baseUrl}/jobs/${jobId}`, {
-                    method: 'PUT', headers: RyubeeAPI.getHeaders(), body: JSON.stringify(job)
-                });
+                await RyubeeAPI.updateJob(jobId, { form_data: newFormData });
                 showToast("✅ 配車情報を保存しました");
             } catch (e) { alert("保存エラー"); }
         }
@@ -825,17 +827,18 @@
                     if (!job) return;
 
                     let pArr = [];
-                    try { pArr = JSON.parse(job.photos || "[]"); } catch (e) { }
+                    try {
+                        pArr = Array.isArray(job.photos) ? job.photos : JSON.parse(job.photos || "[]");
+                    } catch (e) { }
                     pArr.push(base64Str);
-                    job.photos = JSON.stringify(pArr);
+                    const photosStr = JSON.stringify(pArr);
 
                     try {
-                        await fetch(`${RyubeeAPI.baseUrl}/jobs/${jobId}`, {
-                            method: 'PUT', headers: RyubeeAPI.getHeaders(), body: JSON.stringify(job)
-                        });
+                        await RyubeeAPI.updateJob(jobId, { photos: photosStr });
                         showToast("📸 写真を保存しました");
+                        await loadPipeline();
                         openJobDetail(jobId); // reload drawer
-                    } catch (err) { alert("アップロード失敗"); }
+                    } catch (err) { alert("アップロード失敗: " + err.message); }
                 };
                 img.src = e.target.result;
             };
@@ -852,14 +855,15 @@
             if (!job) return;
 
             let pArr = [];
-            try { pArr = JSON.parse(job.photos || "[]"); } catch (e) { }
+            try {
+                pArr = Array.isArray(job.photos) ? job.photos : JSON.parse(job.photos || "[]");
+            } catch (e) { }
             pArr.splice(index, 1);
-            job.photos = JSON.stringify(pArr);
+            const photosStr = JSON.stringify(pArr);
 
             try {
-                await fetch(`${RyubeeAPI.baseUrl}/jobs/${jobId}`, {
-                    method: 'PUT', headers: RyubeeAPI.getHeaders(), body: JSON.stringify(job)
-                });
+                await RyubeeAPI.updateJob(jobId, { photos: photosStr });
+                await loadPipeline();
                 openJobDetail(jobId); // reload drawer
             } catch (err) { alert("削除失敗"); }
         }
