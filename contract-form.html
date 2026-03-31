@@ -138,7 +138,8 @@
 
 <body>
     <div class="header-bar no-print">
-        <button class="btn" onclick="window.close()">閉じる</button>
+        <button class="btn"
+            onclick="if(document.referrer){history.back();}else{window.location.href='customers.html';}">← 戻る</button>
         <span style="font-weight:bold;">📄 産業廃棄物契約書 自動生成</span>
         <button class="btn" style="background:#34C759;color:#fff;" onclick="window.print()">🖨 印刷・PDF保存</button>
     </div>

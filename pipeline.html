@@ -600,7 +600,16 @@
                     👤 ${utils.escapeHtml(job.customer_name || '未設定')} | ${TYPE_LABELS[job.job_type] || 'その他'}
                     ${job.address ? `<br>📍 ${utils.escapeHtml(job.address)} <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(job.address)}" target="_blank" style="margin-left:4px;text-decoration:none;font-size:0.75rem;background:#E2E8F0;padding:2px 6px;border-radius:4px;color:var(--text-primary);">🗺 マップ</a>` : ''}
                     ${!job.customer_id ? `
-                        <br><button class="btn btn-sm btn-primary" style="margin-top:8px;padding:4px 10px;font-size:0.75rem;" onclick="registerCustomerFromPipeline('${jobId}', '${utils.escapeHtml(job.customer_name || '')}')">👔 顧客マスタへ本登録</button>
+                        <br><div id="customerLinkSection" style="margin-top:8px;">
+                            <div style="display:flex;gap:6px;align-items:center;">
+                                <select id="customerLinkSelect" style="flex:1;padding:6px;border-radius:6px;border:1px solid var(--border);font-size:0.8rem;">
+                                    <option value="">📋 既存の顧客を選択...</option>
+                                    <option value="__new__">➕ 新規顧客として登録</option>
+                                </select>
+                                <button class="btn btn-xs btn-primary" style="white-space:nowrap;" onclick="linkCustomerToJob('${jobId}')">紐づけ</button>
+                            </div>
+                            <p style="font-size:0.68rem;color:var(--text-tertiary);margin:4px 0 0;">⚠️ 請求書の発行には顧客の紐づけが必要です</p>
+                        </div>
                     ` : `
                         <br><span class="badge badge-success" style="margin-top:8px;display:inline-block;">✅ 顧客登録済</span>
                     `}
@@ -670,36 +679,78 @@
                 </div>
             `;
             drawer.classList.add('show');
+            // Populate customer dropdown if job has no customer_id
+            if (!job.customer_id) {
+                populateCustomerDropdown();
+            }
         }
 
         async function registerCustomerFromPipeline(jobId, custName) {
-            const name = prompt("顧客マスタに登録する「お客様名 / 法人名」を入力してください:", custName);
-            if (!name) return;
+            // Legacy fallback — now handled by linkCustomerToJob
+            await linkCustomerToJob(jobId);
+        }
+
+        let _cachedCustomers = null;
+        async function populateCustomerDropdown() {
+            const sel = document.getElementById('customerLinkSelect');
+            if (!sel) return;
+            if (!_cachedCustomers) {
+                try { _cachedCustomers = await RyubeeAPI.fetchCustomers(); } catch (e) { _cachedCustomers = []; }
+            }
+            _cachedCustomers.forEach(c => {
+                const opt = document.createElement('option');
+                opt.value = c.id;
+                opt.textContent = `${c.name}${c.address ? ' — ' + c.address : ''}`;
+                sel.appendChild(opt);
+            });
+        }
+
+        async function linkCustomerToJob(jobId) {
+            const sel = document.getElementById('customerLinkSelect');
+            const val = sel ? sel.value : '';
+
+            if (!val) {
+                alert('顧客を選択してください');
+                return;
+            }
 
             try {
-                // 1. Create customer
-                const cPayload = {
-                    name: name,
-                    address: "",
-                    phone: "",
-                    email: "",
-                    form_data: JSON.stringify({ source: "パイプラインからの本登録" })
-                };
-                const newCus = await RyubeeAPI.createCustomer(cPayload);
-                if (!newCus || !newCus.id) throw new Error("顧客作成に失敗しました");
+                if (val === '__new__') {
+                    // Find current job name for default
+                    let job = null;
+                    for (const jobs of Object.values(pipelineData)) {
+                        job = jobs.find(j => j.job_id === jobId);
+                        if (job) break;
+                    }
+                    const custName = job ? job.customer_name : '';
+                    const name = prompt('新規顧客の「お客様名 / 法人名」を入力してください:', custName);
+                    if (!name) return;
 
-                // 2. Link customer to job
-                await fetch(`${RyubeeAPI.baseUrl}/jobs/${jobId}`, {
-                    method: 'PUT',
-                    headers: RyubeeAPI.getHeaders(),
-                    body: JSON.stringify({ customer_id: newCus.id, customer_name: name })
-                });
+                    const cPayload = {
+                        name: name,
+                        address: '',
+                        phone: '',
+                        email: '',
+                        form_data: JSON.stringify({ source: 'パイプラインからの本登録' })
+                    };
+                    const newCus = await RyubeeAPI.createCustomer(cPayload);
+                    if (!newCus || !newCus.id) throw new Error('顧客作成に失敗しました');
 
-                showToast(`✅ "${name}" 様を顧客マスタに登録しました`);
+                    await RyubeeAPI.updateJob(jobId, { customer_id: newCus.id, customer_name: name });
+                    showToast(`✅ "${name}" 様を登録して紐づけました`);
+                } else {
+                    // Link to existing customer
+                    const cust = _cachedCustomers.find(c => c.id === val);
+                    const custName = cust ? cust.name : '';
+                    await RyubeeAPI.updateJob(jobId, { customer_id: val, customer_name: custName });
+                    showToast(`✅ "${custName}" 様を紐づけました`);
+                }
+
+                _cachedCustomers = null; // clear cache
                 document.getElementById('drawerOverlay').classList.remove('show');
                 loadPipeline();
             } catch (e) {
-                alert("エラーが発生しました: " + e.message);
+                alert('エラーが発生しました: ' + e.message);
             }
         }
 
