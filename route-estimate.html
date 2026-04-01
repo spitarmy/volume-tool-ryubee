@@ -313,21 +313,8 @@
             <span style="font-size:0.85rem;font-weight:700;color:var(--text-secondary);">🗑 廃棄物の種類と数量</span>
         </div>
 
-        <div class="waste-grid" id="wasteGrid">
+        <div id="wasteGrid" style="display:flex;flex-direction:column;gap:12px;margin-bottom:24px;">
             <!-- Filled by JS -->
-        </div>
-
-        <!-- Frequency -->
-        <div class="freq-bar">
-            <label>📅 回収頻度</label>
-            <div class="freq-options">
-                <button class="freq-chip" data-freq="daily" onclick="selectFreq(this)">毎日</button>
-                <button class="freq-chip active" data-freq="2x-week" onclick="selectFreq(this)">週2回</button>
-                <button class="freq-chip" data-freq="weekly" onclick="selectFreq(this)">週1回</button>
-                <button class="freq-chip" data-freq="biweekly" onclick="selectFreq(this)">隔週</button>
-                <button class="freq-chip" data-freq="monthly" onclick="selectFreq(this)">月1回</button>
-                <button class="freq-chip" data-freq="spot" onclick="selectFreq(this)">スポット</button>
-            </div>
         </div>
 
         <!-- Notes -->
@@ -360,25 +347,48 @@
     <script>
         if (!RyubeeAPI.requireAuth()) throw new Error("Not authenticated");
 
-        // ── Waste Categories with default unit prices ──
+        // ── Waste Categories ──
         const WASTE_TYPES = [
-            { id: 'burnable', icon: '🔥', name: '燃えるゴミ', unit: '袋', defaultPrice: 300 },
-            { id: 'recyclable', icon: '♻️', name: '資源ごみ', unit: '袋', defaultPrice: 200 },
-            { id: 'plastic', icon: '🧴', name: 'プラ包装容器', unit: '袋', defaultPrice: 350 },
-            { id: 'cardboard', icon: '📦', name: '雑紙・ダンボール', unit: '束', defaultPrice: 250 },
+            {
+                id: 'burnable', icon: '🔥', name: '燃えるゴミ', unit: '袋', defaultPrice: 300,
+                freqOptions: [
+                    { value: 'daily', label: '毎日' },
+                    { value: '2x-week', label: '週2回' },
+                    { value: 'weekly', label: '週1回' },
+                    { value: 'biweekly', label: '隔週' },
+                    { value: 'monthly', label: '月1回' },
+                    { value: 'spot', label: 'スポット' },
+                ],
+                defaultFreq: '2x-week'
+            },
+            {
+                id: 'recyclable', icon: '♻️', name: '資源ごみ', unit: '袋', defaultPrice: 200,
+                freqOptions: [{ value: 'weekly', label: '週1回' }, { value: '2x-week', label: '週2回' }],
+                defaultFreq: 'weekly'
+            },
+            {
+                id: 'plastic', icon: '🧴', name: 'プラ包装容器', unit: '袋', defaultPrice: 350,
+                freqOptions: [{ value: 'weekly', label: '週1回' }, { value: '2x-week', label: '週2回' }],
+                defaultFreq: 'weekly'
+            },
+            {
+                id: 'cardboard', icon: '📦', name: '雑紙・ダンボール', unit: '束', defaultPrice: 250,
+                freqOptions: [{ value: 'weekly', label: '週1回' }, { value: '2x-week', label: '週2回' }],
+                defaultFreq: 'weekly'
+            },
         ];
 
         const FREQ_MULTIPLIERS = {
-            'daily': 22,    // ~22 working days / month
-            '2x-week': 8.7,  // ~8.7 collections / month
-            'weekly': 4.3,  // ~4.3 weeks / month
+            'daily': 22,
+            '2x-week': 8.7,
+            'weekly': 4.3,
             'biweekly': 2.2,
             'monthly': 1,
             'spot': 1,
         };
 
         let quantities = {};
-        let selectedFreq = '2x-week';
+        let freqSelections = {};
 
         document.addEventListener('DOMContentLoaded', async () => {
             renderWasteGrid();
@@ -389,16 +399,27 @@
             const grid = document.getElementById('wasteGrid');
             grid.innerHTML = WASTE_TYPES.map(w => {
                 quantities[w.id] = 0;
+                freqSelections[w.id] = w.defaultFreq;
+
+                const freqChips = w.freqOptions.map(f =>
+                    `<button class="freq-chip ${f.value === w.defaultFreq ? 'active' : ''}" data-wid="${w.id}" data-freq="${f.value}" onclick="selectItemFreq(this)">${f.label}</button>`
+                ).join('');
+
                 return `
-                    <div class="waste-card" id="card-${w.id}">
-                        <span class="w-icon">${w.icon}</span>
-                        <div class="w-name">${w.name}</div>
-                        <div class="qty-row">
-                            <button class="qty-btn" onclick="event.stopPropagation();changeQty('${w.id}', -1)">−</button>
-                            <span class="qty-value" id="qty-${w.id}">0</span>
-                            <button class="qty-btn" onclick="event.stopPropagation();changeQty('${w.id}', 1)">+</button>
+                    <div class="waste-card" id="card-${w.id}" style="display:flex;align-items:center;gap:14px;text-align:left;padding:16px;">
+                        <span class="w-icon" style="margin:0;font-size:28px;flex-shrink:0;">${w.icon}</span>
+                        <div style="flex:1;min-width:0;">
+                            <div class="w-name" style="margin-bottom:6px;">${w.name}</div>
+                            <div class="freq-options" style="gap:4px;">${freqChips}</div>
                         </div>
-                        <div class="qty-unit">${w.unit} / 回</div>
+                        <div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0;">
+                            <div class="qty-row">
+                                <button class="qty-btn" onclick="event.stopPropagation();changeQty('${w.id}', -1)">−</button>
+                                <span class="qty-value" id="qty-${w.id}">0</span>
+                                <button class="qty-btn" onclick="event.stopPropagation();changeQty('${w.id}', 1)">+</button>
+                            </div>
+                            <div class="qty-unit">${w.unit}/回</div>
+                        </div>
                     </div>
                 `;
             }).join('');
@@ -412,10 +433,13 @@
             else card.classList.remove('selected');
         }
 
-        function selectFreq(el) {
-            document.querySelectorAll('.freq-chip').forEach(c => c.classList.remove('active'));
+        function selectItemFreq(el) {
+            const wid = el.dataset.wid;
+            const freq = el.dataset.freq;
+            // Toggle active within same waste type
+            el.parentElement.querySelectorAll('.freq-chip').forEach(c => c.classList.remove('active'));
             el.classList.add('active');
-            selectedFreq = el.dataset.freq;
+            freqSelections[wid] = freq;
         }
 
         async function loadCustomers() {
@@ -437,37 +461,33 @@
         }
 
         function calculateEstimate() {
-            const mult = FREQ_MULTIPLIERS[selectedFreq] || 1;
-            let perCollection = 0;
+            let totalMonthly = 0;
             let breakdown = [];
+
+            const freqLabels = {
+                'daily': '毎日（月約22回）', '2x-week': '週2回（月約9回）',
+                'weekly': '週1回（月約4回）', 'biweekly': '隔週（月約2回）',
+                'monthly': '月1回', 'spot': 'スポット（1回分）',
+            };
 
             for (const w of WASTE_TYPES) {
                 const q = quantities[w.id] || 0;
                 if (q === 0) continue;
-                const line = q * w.defaultPrice;
-                perCollection += line;
-                breakdown.push(`${w.name}: ${q}${w.unit} × ¥${w.defaultPrice.toLocaleString()} = ¥${line.toLocaleString()}`);
+                const freq = freqSelections[w.id];
+                const mult = FREQ_MULTIPLIERS[freq] || 1;
+                const perCollection = q * w.defaultPrice;
+                const monthly = Math.round(perCollection * mult);
+                totalMonthly += monthly;
+                breakdown.push(`${w.name}: ${q}${w.unit}×¥${w.defaultPrice.toLocaleString()} × ${freqLabels[freq]} = ¥${monthly.toLocaleString()}/月`);
             }
 
-            if (perCollection === 0) {
+            if (totalMonthly === 0) {
                 alert('廃棄物の数量を1つ以上設定してください。');
                 return;
             }
 
-            const monthly = Math.round(perCollection * mult);
-            const freqLabels = {
-                'daily': '毎日（月約22回）',
-                '2x-week': '週2回（月約9回）',
-                'weekly': '週1回（月約4回）',
-                'biweekly': '隔週（月約2回）',
-                'monthly': '月1回',
-                'spot': 'スポット（1回分）',
-            };
-
-            document.getElementById('estPrice').textContent = `¥${monthly.toLocaleString()}`;
-            document.getElementById('estDetail').innerHTML =
-                `1回あたり ¥${perCollection.toLocaleString()} × ${freqLabels[selectedFreq]}<br>` +
-                breakdown.join('<br>');
+            document.getElementById('estPrice').textContent = `¥${totalMonthly.toLocaleString()}`;
+            document.getElementById('estDetail').innerHTML = breakdown.join('<br>');
 
             const result = document.getElementById('estimateResult');
             result.style.display = 'block';
@@ -495,24 +515,23 @@
             const address = document.getElementById('customerAddress').value.trim();
             const notes = document.getElementById('estNotes').value.trim();
 
-            // Build items list for notes
-            let items = [];
-            for (const w of WASTE_TYPES) {
-                const q = quantities[w.id] || 0;
-                if (q > 0) items.push(`${w.name}: ${q}${w.unit}`);
-            }
-
-            const mult = FREQ_MULTIPLIERS[selectedFreq] || 1;
-            let perCollection = 0;
-            for (const w of WASTE_TYPES) {
-                perCollection += (quantities[w.id] || 0) * w.defaultPrice;
-            }
-            const monthly = Math.round(perCollection * mult);
-
-            const freqLabels = {
+            const freqLabelsShort = {
                 'daily': '毎日', '2x-week': '週2回', 'weekly': '週1回',
                 'biweekly': '隔週', 'monthly': '月1回', 'spot': 'スポット',
             };
+
+            let items = [];
+            let totalMonthly = 0;
+            for (const w of WASTE_TYPES) {
+                const q = quantities[w.id] || 0;
+                if (q > 0) {
+                    const freq = freqSelections[w.id];
+                    const mult = FREQ_MULTIPLIERS[freq] || 1;
+                    const monthly = Math.round(q * w.defaultPrice * mult);
+                    totalMonthly += monthly;
+                    items.push(`${w.name}: ${q}${w.unit} (${freqLabelsShort[freq]}) → ¥${monthly.toLocaleString()}/月`);
+                }
+            }
 
             const jobPayload = {
                 job_name: `一般廃棄物ルート回収 — ${custName}`,
@@ -520,9 +539,9 @@
                 customer_id: custId || undefined,
                 address: address,
                 job_type: 'general_waste',
-                price_total: monthly,
-                estimated_price: monthly,
-                notes: `【一般廃棄物ルート見積り】\n回収頻度: ${freqLabels[selectedFreq]}\n${items.join('\n')}\n1回あたり: ¥${perCollection.toLocaleString()}\n月額: ¥${monthly.toLocaleString()}\n${notes ? '\n備考: ' + notes : ''}`,
+                price_total: totalMonthly,
+                estimated_price: totalMonthly,
+                notes: `【一般廃棄物ルート見積り】\n${items.join('\n')}\n月額合計: ¥${totalMonthly.toLocaleString()}\n${notes ? '\n備考: ' + notes : ''}`,
             };
 
             try {
