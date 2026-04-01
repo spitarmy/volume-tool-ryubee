@@ -116,9 +116,11 @@
         <div style="display:flex; gap:8px; margin-top:12px;">
             <button class="btn btn-primary" id="btn-tab-all" style="flex:1" onclick="setCustTab('all')">全て</button>
             <button class="btn btn-secondary" id="btn-tab-a" style="flex:1"
-                onclick="setCustTab('group_a')">10・15・25日</button>
-            <button class="btn btn-secondary" id="btn-tab-b" style="flex:1"
-                onclick="setCustTab('group_b')">20・末日</button>
+                onclick="setCustTab('group_a')">10・15・25</button>
+            <button class="btn btn-secondary" id="btn-tab-20" style="flex:1"
+                onclick="setCustTab('group_20')">20日</button>
+            <button class="btn btn-secondary" id="btn-tab-end" style="flex:1"
+                onclick="setCustTab('group_end')">末日</button>
             <button class="btn btn-secondary" id="btn-tab-auto" style="flex:1"
                 onclick="setCustTab('auto')">自動振替</button>
         </div>
@@ -365,9 +367,11 @@
         let currentCustTab = 'all';
         function setCustTab(tab) {
             currentCustTab = tab;
-            ['all', 'a', 'b', 'auto'].forEach(k => {
+            ['all', 'a', '20', 'end', 'auto'].forEach(k => {
                 const el = document.getElementById('btn-tab-' + k);
-                if (el) el.className = 'btn ' + (tab === (k === 'a' ? 'group_a' : k === 'b' ? 'group_b' : k) ? 'btn-primary' : 'btn-secondary');
+                if (!el) return;
+                const tabKey = k === 'a' ? 'group_a' : k === '20' ? 'group_20' : k === 'end' ? 'group_end' : k;
+                el.className = 'btn ' + (tab === tabKey ? 'btn-primary' : 'btn-secondary');
             });
             filterCustomers();
         }
@@ -394,8 +398,10 @@
 
                 if (currentCustTab === 'group_a') {
                     matchT = [10, 15, 25].includes(closingDay);
-                } else if (currentCustTab === 'group_b') {
-                    matchT = [20, 31].includes(closingDay);
+                } else if (currentCustTab === 'group_20') {
+                    matchT = closingDay === 20;
+                } else if (currentCustTab === 'group_end') {
+                    matchT = closingDay === 31;
                 } else if (currentCustTab === 'auto') {
                     matchT = payMethod === '自動引落し';
                 }
