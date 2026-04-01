@@ -303,6 +303,12 @@
             white-space: nowrap;
         }
     </style>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#1A237E">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Ryu兵衛">
+    <link rel="apple-touch-icon" href="assets/icons/icon-192.png">
 </head>
 
 <body>
@@ -996,6 +1002,11 @@
                 await loadPipeline();
                 openJobDetail(jobId); // reload drawer
             } catch (err) { alert("削除失敗"); }
+        }
+    </script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js').catch(e => console.log('SW registration failed:', e));
         }
     </script>
 </body>

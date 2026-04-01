@@ -381,6 +381,12 @@
             }
         }
     </style>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#1A237E">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Ryu兵衛">
+    <link rel="apple-touch-icon" href="assets/icons/icon-192.png">
 </head>
 
 <body>
@@ -1222,6 +1228,11 @@
             t.style.cssText = 'position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#34C759;color:#fff;padding:10px 20px;border-radius:20px;font-weight:600;z-index:9999;';
             document.body.appendChild(t);
             setTimeout(() => t.remove(), 2500);
+        }
+    </script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js').catch(e => console.log('SW registration failed:', e));
         }
     </script>
 </body>

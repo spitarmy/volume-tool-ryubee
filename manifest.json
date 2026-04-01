@@ -1,21 +1,25 @@
 {
-  "name": "立米AI Ryu兵衛",
+  "name": "Ryu兵衛 for 山文",
   "short_name": "Ryu兵衛",
-  "start_url": "./index.html",
+  "description": "山文専用 産業廃棄物管理・請求・CRMプラットフォーム",
+  "start_url": "/volume-tool-ryubee/index.html",
+  "scope": "/volume-tool-ryubee/",
   "display": "standalone",
-  "background_color": "#F2F2F7",
-  "theme_color": "#0A84FF",
-  "description": "不用品回収・現場見積もりAIアシスタント",
+  "background_color": "#ffffff",
+  "theme_color": "#1A237E",
+  "orientation": "any",
   "icons": [
     {
-      "src": "assets/icons/icon-192x192.png",
+      "src": "assets/icons/icon-192.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     },
     {
-      "src": "assets/icons/icon-512x512.png",
+      "src": "assets/icons/icon-512.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     }
   ]
 }
