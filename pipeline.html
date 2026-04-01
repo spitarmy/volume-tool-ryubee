@@ -400,12 +400,18 @@
         };
 
         let pipelineData = {};
+        let allCustomers = [];
 
         document.addEventListener('DOMContentLoaded', loadPipeline);
 
         async function loadPipeline() {
             try {
-                pipelineData = await RyubeeAPI.fetchPipeline();
+                const [pData, cData] = await Promise.all([
+                    RyubeeAPI.fetchPipeline(),
+                    RyubeeAPI.fetchCustomers()
+                ]);
+                pipelineData = pData;
+                allCustomers = cData;
                 renderPipeline();
             } catch (e) {
                 document.getElementById('pipelineContainer').innerHTML =
@@ -450,6 +456,11 @@
             const createdText = job.created_at ? new Date(job.created_at).toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
             const updatedText = job.updated_at ? new Date(job.updated_at).toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
 
+            const cust = allCustomers.find(c => c.id === job.customer_id) || {};
+            let fd = {};
+            try { fd = JSON.parse(cust.form_data || "{}"); } catch (e) { }
+            const yamaNum = fd.yamabun_management_number || '';
+
             return `
                 <div class="pipeline-card" draggable="true" data-job-id="${job.job_id}" data-stage="${currentStage}" onclick="openJobDetail('${job.job_id}')">
                     <div class="pc-name">
@@ -457,6 +468,7 @@
                         ${job.comment_count ? `<span class="pc-comments-badge">💬 ${job.comment_count}</span>` : ''}
                         ${(Array.isArray(job.photos) ? job.photos.length : 0) > 0 ? `<span class="pc-comments-badge">📷 ${Array.isArray(job.photos) ? job.photos.length : 0}</span>` : ''}
                     </div>
+                    ${yamaNum ? `<div style="font-size:0.75rem; font-weight:700; color:var(--primary); margin:2px 0 4px;">🎫 管理番号: ${utils.escapeHtml(yamaNum)}</div>` : ''}
                     <div class="pc-customer">👤 ${utils.escapeHtml(job.customer_name || '未設定')}</div>
                     
                     <div style="font-size:0.65rem; color:var(--text-tertiary); margin:4px 0;">
