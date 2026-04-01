@@ -374,6 +374,11 @@
             .month-grid {
                 display: none !important;
             }
+
+            /* 印刷時に非表示: 入金状況・備考（内部メモ）・ステータスバッジ */
+            .print-hide {
+                display: none !important;
+            }
         }
     </style>
 </head>
@@ -836,7 +841,7 @@
             document.getElementById('invDocContent').innerHTML = `
                 <div class="inv-doc-header">
                     <h2 style="background:var(--primary); color:#fff; display:inline-block; padding:4px 20px; font-size:1.1rem; letter-spacing:4px;">御請求書</h2>
-                    <span class="inv-status ${inv.status}" style="font-size:0.85rem;">${statusLabel[inv.status] || inv.status}</span>
+                    <span class="inv-status ${inv.status} print-hide" style="font-size:0.85rem;">${statusLabel[inv.status] || inv.status}</span>
                 </div>
 
                 <div style="font-size:1.05rem; font-weight:700; margin:12px 0 16px; border-bottom:2px solid #333; padding-bottom:6px;">
@@ -889,18 +894,18 @@
                     </tr>
                 </table>
 
-                <!-- 備考 -->
+                <!-- 備考 (印刷時非表示) -->
                 ${notesText ? `
-                <div style="margin-top:16px; border:1px solid #ccc; border-collapse:collapse;">
+                <div class="print-hide" style="margin-top:16px; border:1px solid #ccc; border-collapse:collapse;">
                     <div style="padding:6px 12px; font-weight:700; background:#f8f9fa; border-bottom:1px solid #ccc; font-size:0.85rem;">備考</div>
                     <div style="padding:10px 12px; font-size:0.85rem; white-space:pre-wrap;">${utils.escapeHtml(notesText)}</div>
                 </div>
                 ` : ''}
 
-                ${paymentsHtml}
+                <div class="print-hide">${paymentsHtml}</div>
 
-                <!-- 入金状況 -->
-                <div style="margin-top:16px; display:flex; gap:12px; font-size:0.85rem;">
+                <!-- 入金状況 (印刷時非表示) -->
+                <div class="print-hide" style="margin-top:16px; display:flex; gap:12px; font-size:0.85rem;">
                     <div style="flex:1; background:#f8f9fa; padding:10px; border-radius:6px; text-align:center;">
                         <div style="font-size:0.75rem; color:var(--text-secondary);">入金済</div>
                         <div style="font-weight:700;">¥${inv.paid_total.toLocaleString()}</div>
