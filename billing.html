@@ -405,6 +405,8 @@
 
             <!-- アクションバー -->
             <div class="action-bar" style="display:grid; grid-template-columns:1fr 1fr; gap:8px; padding:12px 20px;">
+                <button class="btn btn-xs btn-primary" onclick="showOcrModal()"
+                    style="width:100%; grid-column: span 2; font-size: 1.05rem; padding: 12px;">📸 写真から請求書自動作成</button>
                 <button class="btn btn-xs btn-success" onclick="generateInvoices()" style="width:100%;">📄
                     月次一括生成</button>
                 <button class="btn btn-xs btn-secondary" onclick="showPaymentModal()" style="width:100%;">💳
@@ -423,8 +425,8 @@
                         style="flex: 1; padding: 10px 14px; border-radius: var(--r-pill); border: 1px solid var(--border); font-size: 0.95rem;">
                     <select id="sortSelect" onchange="renderInvoices()"
                         style="width: auto; padding: 10px; border-radius: var(--r-pill); border: 1px solid var(--border); font-size: 0.9rem; background: #fff; cursor: pointer; color: var(--text-primary);">
-                        <option value="updated">🔄 更新順</option>
                         <option value="yama_asc">🎫 管理番号順</option>
+                        <option value="updated">🔄 更新順</option>
                     </select>
                 </div>
                 <div style="display:flex; gap:8px;">
@@ -512,6 +514,28 @@
                     <button class="btn btn-secondary mt-1" onclick="closeBankUpload()">閉じる</button>
                 </div>
             </div>
+
+            <!-- OCR請求書作成モーダル -->
+            <div class="payment-modal-overlay" id="ocrOverlay">
+                <div class="payment-modal">
+                    <div class="modal-drag-handle"></div>
+                    <h3 class="card-title">📸 写真から請求書自動作成</h3>
+                    <p class="small-text mb-2">手書きの集計表や伝票の写真をアップロードすると、AIが「合計(量)」を読み取り、選択した顧客向けに下書き請求書を自動作成します。</p>
+                    <div class="form-group">
+                        <label>顧客を選択</label>
+                        <select id="ocrCustomerId">
+                            <option value="">読込中...</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>写真 (カメラで撮影 または ファイル選択)</label>
+                        <input type="file" id="ocrFile" accept="image/*" capture="environment" style="padding:10px;">
+                    </div>
+                    <button class="btn btn-primary" id="ocrSubmitBtn" onclick="submitOcrInvoice()">📤
+                        AIで読み取って作成</button>
+                    <button class="btn btn-secondary mt-1" onclick="closeOcrModal()">キャンセル</button>
+                </div>
+            </div>
         </div>
     </div><!-- /.billing-content -->
 
@@ -543,6 +567,7 @@
         let allInvoices = [];
         let allCustomers = [];
         let currentInvTab = 'all';
+        let companySettings = {};
 
         document.addEventListener('DOMContentLoaded', async () => {
             const now = new Date();
@@ -551,6 +576,9 @@
             try {
                 allCustomers = await RyubeeAPI.fetchCustomers();
             } catch (e) { console.error('Customers load failed', e); }
+            try {
+                companySettings = await RyubeeAPI.fetchSettings() || {};
+            } catch (e) { console.error('Settings load failed', e); }
             loadAlerts();
             loadInvoices();
         });
@@ -797,7 +825,7 @@
                     <thead>
                         <tr><th>品目</th><th style="width:70px;">数量</th><th style="width:90px;">単価</th><th style="width:100px;">金額</th></tr>
                     </thead>
-                    <tbody>${itemsHtml}</tbody>
+                    <tbody id="invItemsBody">${itemsHtml}</tbody>
                     <tfoot>
                         <tr><td colspan="3" style="text-align:right;">合計</td><td class="num">¥${inv.total_amount.toLocaleString()}</td></tr>
                         <tr><td colspan="3" style="text-align:right;">入金済</td><td class="num">¥${inv.paid_total.toLocaleString()}</td></tr>
@@ -806,12 +834,123 @@
                     </tfoot>
                 </table>
                 ${paymentsHtml}
+                <div style="margin-top:20px; display:flex; gap:16px; font-size:0.85rem;">
+                    <div style="flex:1; border:1px solid #eee; padding:12px; border-radius:8px;">
+                        <div style="font-weight:700; margin-bottom:6px; border-bottom:1px solid #eee; padding-bottom:4px;">お振込先</div>
+                        <div style="white-space:pre-wrap;">${utils.escapeHtml(companySettings.company_bank_info || '設定画面から口座情報を登録してください')}</div>
+                    </div>
+                </div>
+                <div style="margin-top:16px; text-align:right; font-size:0.8rem; color:var(--text-secondary);">
+                    ${utils.escapeHtml(companySettings.company_name || '')}
+                    ${companySettings.company_invoice_no ? '<br>登録番号: ' + utils.escapeHtml(companySettings.company_invoice_no) : ''}
+                </div>
             `;
             document.getElementById('invDetailOverlay').classList.add('show');
+
+            // アクションボタンに編集ボタンを追加
+            const actionsDiv = document.querySelector('.inv-doc-actions');
+            actionsDiv.innerHTML = `
+                <button class="btn btn-xs btn-success" onclick="enterEditMode('${inv.id}')">✏️ 編集</button>
+                <button class="btn btn-xs btn-primary" onclick="window.print()">🖨 印刷</button>
+                <button class="btn btn-xs btn-secondary" onclick="closeInvDetail()">閉じる</button>
+            `;
         }
 
         function closeInvDetail() {
             document.getElementById('invDetailOverlay').classList.remove('show');
+        }
+
+        // ── 請求書編集モード ────────────────────────
+        let editInvoiceId = null;
+
+        function enterEditMode(invId) {
+            editInvoiceId = invId;
+            const inv = allInvoices.find(i => i.id === invId);
+            if (!inv) return;
+
+            const tbody = document.getElementById('invItemsBody');
+            const items = inv.items || [];
+            tbody.innerHTML = items.map((it, idx) => `
+                <tr>
+                    <td><input type="text" value="${utils.escapeHtml(it.description)}" id="edit_desc_${idx}" style="width:100%;padding:4px;border:1px solid var(--border);border-radius:4px;font-size:0.85rem;"></td>
+                    <td><input type="number" value="${it.quantity}" id="edit_qty_${idx}" style="width:60px;padding:4px;border:1px solid var(--border);border-radius:4px;text-align:right;" onchange="recalcRow(${idx})"></td>
+                    <td><input type="number" value="${it.unit_price}" id="edit_price_${idx}" style="width:80px;padding:4px;border:1px solid var(--border);border-radius:4px;text-align:right;" onchange="recalcRow(${idx})"></td>
+                    <td class="num" id="edit_amt_${idx}" style="font-weight:700;">¥${Number(it.amount).toLocaleString()}</td>
+                </tr>
+                <tr><td colspan="4" style="padding:2px 4px;"><input type="text" value="${it.unit || '式'}" id="edit_unit_${idx}" placeholder="単位" style="width:60px;padding:2px 4px;border:1px solid #eee;border-radius:4px;font-size:0.75rem;color:var(--text-secondary);"></td></tr>
+            `).join('') + `
+                <tr><td colspan="4" style="text-align:center;">
+                    <button class="btn btn-xs btn-ghost" onclick="addEditRow()" style="font-size:0.8rem;">➕ 行を追加</button>
+                </td></tr>
+            `;
+
+            // アクションボタン更新
+            const actionsDiv = document.querySelector('.inv-doc-actions');
+            actionsDiv.innerHTML = `
+                <button class="btn btn-xs btn-primary" id="editSaveBtn" onclick="saveEditedInvoice()">💾 保存</button>
+                <button class="btn btn-xs btn-secondary" onclick="viewInvoice('${invId}')">キャンセル</button>
+            `;
+        }
+
+        function recalcRow(idx) {
+            const qty = parseFloat(document.getElementById(`edit_qty_${idx}`).value) || 0;
+            const price = parseFloat(document.getElementById(`edit_price_${idx}`).value) || 0;
+            const amt = Math.round(qty * price);
+            document.getElementById(`edit_amt_${idx}`).textContent = `¥${amt.toLocaleString()}`;
+        }
+
+        function addEditRow() {
+            const tbody = document.getElementById('invItemsBody');
+            const rows = tbody.querySelectorAll('tr');
+            // 編集行は2行1セット（データ行 + 単位行）、最後の1行は「➕行を追加」ボタン
+            const dataRowCount = (rows.length - 1) / 2;
+            const idx = dataRowCount;
+            const addBtnRow = rows[rows.length - 1];
+            const newRow1 = document.createElement('tr');
+            newRow1.innerHTML = `
+                <td><input type="text" value="" id="edit_desc_${idx}" style="width:100%;padding:4px;border:1px solid var(--border);border-radius:4px;font-size:0.85rem;" placeholder="品目名"></td>
+                <td><input type="number" value="0" id="edit_qty_${idx}" style="width:60px;padding:4px;border:1px solid var(--border);border-radius:4px;text-align:right;" onchange="recalcRow(${idx})"></td>
+                <td><input type="number" value="0" id="edit_price_${idx}" style="width:80px;padding:4px;border:1px solid var(--border);border-radius:4px;text-align:right;" onchange="recalcRow(${idx})"></td>
+                <td class="num" id="edit_amt_${idx}" style="font-weight:700;">¥0</td>
+            `;
+            const newRow2 = document.createElement('tr');
+            newRow2.innerHTML = `<td colspan="4" style="padding:2px 4px;"><input type="text" value="式" id="edit_unit_${idx}" placeholder="単位" style="width:60px;padding:2px 4px;border:1px solid #eee;border-radius:4px;font-size:0.75rem;color:var(--text-secondary);"></td>`;
+            tbody.insertBefore(newRow1, addBtnRow);
+            tbody.insertBefore(newRow2, addBtnRow);
+        }
+
+        async function saveEditedInvoice() {
+            if (!editInvoiceId) return;
+            const tbody = document.getElementById('invItemsBody');
+            const descInputs = tbody.querySelectorAll('[id^="edit_desc_"]');
+            const items = [];
+            for (let i = 0; i < descInputs.length; i++) {
+                const desc = document.getElementById(`edit_desc_${i}`)?.value || '';
+                const qty = parseFloat(document.getElementById(`edit_qty_${i}`)?.value) || 0;
+                const price = parseFloat(document.getElementById(`edit_price_${i}`)?.value) || 0;
+                const unit = document.getElementById(`edit_unit_${i}`)?.value || '式';
+                if (!desc && qty === 0 && price === 0) continue; // 空行はスキップ
+                items.push({
+                    description: desc,
+                    quantity: qty,
+                    unit: unit,
+                    unit_price: price,
+                    amount: Math.round(qty * price),
+                });
+            }
+            const btn = document.getElementById('editSaveBtn');
+            btn.disabled = true;
+            btn.innerHTML = '⏳ 保存中...';
+            try {
+                await RyubeeAPI.updateInvoiceFull(editInvoiceId, { items });
+                showToast('✅ 請求書を更新しました');
+                await loadInvoices();
+                viewInvoice(editInvoiceId);
+            } catch (e) {
+                alert('エラー: ' + e.message);
+                btn.disabled = false;
+                btn.innerHTML = '💾 保存';
+            }
         }
 
         async function generateInvoices() {
@@ -855,6 +994,48 @@
                 loadInvoices();
                 loadAlerts();
             } catch (e) { alert('エラー: ' + e.message); }
+        }
+
+        // ── OCR 請求書作成 ──────────────────────────────
+        function showOcrModal() {
+            document.getElementById('ocrOverlay').classList.add('show');
+            const sel = document.getElementById('ocrCustomerId');
+            sel.innerHTML = '<option value="">-- 顧客を選択 --</option>' + allCustomers.map(c => `<option value="${c.id}">${utils.escapeHtml(c.name)}</option>`).join('');
+        }
+        function closeOcrModal() {
+            document.getElementById('ocrOverlay').classList.remove('show');
+            document.getElementById('ocrFile').value = '';
+        }
+
+        async function submitOcrInvoice() {
+            const custId = document.getElementById('ocrCustomerId').value;
+            const file = document.getElementById('ocrFile').files[0];
+            if (!custId) { alert('顧客を選択してください'); return; }
+            if (!file) { alert('写真を選択してください'); return; }
+
+            const btn = document.getElementById('ocrSubmitBtn');
+            btn.disabled = true;
+            btn.innerHTML = '⏳ AI解析中...';
+
+            try {
+                const formData = new FormData();
+                formData.append("customer_id", custId);
+                formData.append("image", file);
+
+                const result = await RyubeeAPI.createOcrInvoice(formData);
+                showToast(`✅ 下書き請求書を作成しました`);
+                closeOcrModal();
+                loadInvoices();
+                // 表示された請求書を自動で開く
+                if (result && result.id) {
+                    setTimeout(() => viewInvoice(result.id), 500);
+                }
+            } catch (e) {
+                alert('エラー: ' + e.message);
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '📤 AIで読み取って作成';
+            }
         }
 
         // ── 銀行入金取込 ──────────────────────────────

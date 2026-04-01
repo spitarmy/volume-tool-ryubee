@@ -219,10 +219,24 @@ const RyubeeAPI = {
     });
   },
 
+  async updateInvoiceFull(invoiceId, body) {
+    return apiFetch(`/v1/invoices/${invoiceId}/full`, {
+      method: "PUT",
+      body: JSON.stringify(body),
+    });
+  },
+
   async generateMonthlyInvoices(month, dueDate = null) {
     return apiFetch("/v1/invoices/generate-monthly", {
       method: "POST",
       body: JSON.stringify({ month, due_date: dueDate }),
+    });
+  },
+
+  async createOcrInvoice(formData) {
+    return apiFetch("/v1/invoices/ocr-create", {
+      method: "POST",
+      body: formData,
     });
   },
 

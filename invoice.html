@@ -52,7 +52,7 @@
         .inv-title {
             font-size: 24px;
             font-weight: bold;
-            letter-spacing: 4px;
+            letter-spacing: 8px;
         }
 
         .inv-date {
@@ -107,7 +107,13 @@
 
         .inv-company h3 {
             font-size: 16px;
+            font-weight: bold;
             margin: 0 0 8px 0;
+        }
+
+        .inv-company div {
+            font-size: 13px;
+            line-height: 1.8;
         }
 
         /* テーブル */
@@ -281,7 +287,7 @@
     <div class="invoice-container" id="invoice-doc">
 
         <div class="inv-header">
-            <div class="inv-title">御見 積 書</div>
+            <div class="inv-title">御見積書</div>
             <div class="inv-date">発行日: <span id="out-date">-</span></div>
         </div>
 
@@ -348,20 +354,34 @@
         const jobId = urlParams.get('id');
 
         document.addEventListener('DOMContentLoaded', async () => {
-            // 1. 会社情報の読み込み（settings.htmlで保存したもの）
-            const savedStr = localStorage.getItem('ryubee_pricing_settings');
-            if (savedStr) {
-                try {
-                    const settings = JSON.parse(savedStr);
+            // 1. 会社情報の読み込み（APIから取得）
+            try {
+                const settings = await RyubeeAPI.fetchSettings();
+                if (settings) {
                     document.getElementById('out-company-name').textContent = settings.company_name || '会社名未設定';
                     document.getElementById('out-company-address').textContent = settings.company_address || '';
                     document.getElementById('out-company-phone').textContent = settings.company_phone || '';
                     document.getElementById('out-company-invoice').textContent = settings.company_invoice_no || '未設定';
-
                     if (settings.company_bank_info) {
                         document.getElementById('out-bank-info').textContent = settings.company_bank_info;
                     }
-                } catch (e) { }
+                }
+            } catch (e) {
+                console.error('Settings load failed', e);
+                // フォールバック: localStorageから
+                const savedStr = localStorage.getItem('ryubee_pricing_settings');
+                if (savedStr) {
+                    try {
+                        const settings = JSON.parse(savedStr);
+                        document.getElementById('out-company-name').textContent = settings.company_name || '会社名未設定';
+                        document.getElementById('out-company-address').textContent = settings.company_address || '';
+                        document.getElementById('out-company-phone').textContent = settings.company_phone || '';
+                        document.getElementById('out-company-invoice').textContent = settings.company_invoice_no || '未設定';
+                        if (settings.company_bank_info) {
+                            document.getElementById('out-bank-info').textContent = settings.company_bank_info;
+                        }
+                    } catch (e) { }
+                }
             }
 
             // 2. 案件データの読み込み
