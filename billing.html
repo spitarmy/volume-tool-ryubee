@@ -255,12 +255,14 @@
     </div>
 
     <!-- アクションバー -->
-    <div class="action-bar" style="flex-wrap:wrap;">
-        <button class="btn btn-xs btn-success" onclick="generateInvoices()">📄 月次一括生成</button>
-        <button class="btn btn-xs btn-secondary" onclick="showPaymentModal()">💳 入金登録</button>
+    <div class="action-bar" style="display:grid; grid-template-columns:1fr 1fr; gap:8px; padding:12px 20px;">
+        <button class="btn btn-xs btn-success" onclick="generateInvoices()" style="width:100%;">📄 月次一括生成</button>
+        <button class="btn btn-xs btn-secondary" onclick="showPaymentModal()" style="width:100%;">💳 入金登録</button>
         <button class="btn btn-xs btn-secondary" onclick="showBankUpload()"
-            style="background:var(--blue-light);color:var(--blue-dark);border-color:var(--blue);">🏦 銀行入金取込</button>
-        <button class="btn btn-xs btn-ghost" onclick="connectFreee()" id="freeeBtn">🔗 freee連携</button>
+            style="width:100%;background:var(--blue-light);color:var(--blue-dark);border-color:var(--blue);">🏦
+            銀行入金取込</button>
+        <button class="btn btn-xs btn-ghost" onclick="connectFreee()" id="freeeBtn" style="width:100%;">🔗
+            freee連携</button>
     </div>
 
     <!-- 月別支払状況 -->
