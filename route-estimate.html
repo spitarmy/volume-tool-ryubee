@@ -1,0 +1,547 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>一般廃棄物 ルート見積り — Ryu兵衛</title>
+    <link rel="stylesheet" href="assets/css/style.css">
+    <style>
+        body {
+            background: #f5f5f7;
+        }
+
+        .page-header {
+            position: sticky;
+            top: 0;
+            z-index: 200;
+            background: var(--glass-bg);
+            backdrop-filter: var(--glass-blur);
+            -webkit-backdrop-filter: var(--glass-blur);
+            border-bottom: 0.5px solid rgba(0, 0, 0, 0.06);
+            padding: 12px 20px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .page-header h2 {
+            font-size: 1.1rem;
+            margin: 0;
+            flex: 1;
+            text-align: center;
+        }
+
+        .form-section {
+            max-width: 600px;
+            margin: 24px auto;
+            padding: 0 20px;
+        }
+
+        .customer-select-bar {
+            background: #fff;
+            border-radius: var(--r-xl);
+            padding: 20px;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--border);
+            margin-bottom: 24px;
+        }
+
+        .customer-select-bar label {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--text-secondary);
+            display: block;
+            margin-bottom: 8px;
+        }
+
+        .customer-select-bar select,
+        .customer-select-bar input {
+            width: 100%;
+            padding: 10px 12px;
+            border-radius: var(--r-md);
+            border: 1px solid var(--border);
+            font-size: 0.95rem;
+            background: #fff;
+            box-sizing: border-box;
+        }
+
+        .waste-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .waste-card {
+            background: #fff;
+            border-radius: var(--r-xl);
+            padding: 20px 16px;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--border);
+            text-align: center;
+            transition: all 0.2s;
+        }
+
+        .waste-card.selected {
+            border-color: var(--blue);
+            background: rgba(14, 165, 233, 0.04);
+        }
+
+        .waste-card .w-icon {
+            font-size: 32px;
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .waste-card .w-name {
+            font-size: 0.9rem;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 10px;
+        }
+
+        .waste-card .qty-row {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+        }
+
+        .waste-card .qty-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: 1.5px solid var(--border);
+            background: #fff;
+            font-size: 1.1rem;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--text-primary);
+            transition: all 0.15s;
+        }
+
+        .waste-card .qty-btn:active {
+            background: var(--blue-light);
+            border-color: var(--blue);
+        }
+
+        .waste-card .qty-value {
+            font-size: 1.4rem;
+            font-weight: 800;
+            color: var(--blue-dark);
+            min-width: 36px;
+        }
+
+        .waste-card .qty-unit {
+            font-size: 0.7rem;
+            color: var(--text-tertiary);
+            margin-top: 4px;
+        }
+
+        .freq-bar {
+            background: #fff;
+            border-radius: var(--r-xl);
+            padding: 20px;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--border);
+            margin-bottom: 24px;
+        }
+
+        .freq-bar label {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--text-secondary);
+            display: block;
+            margin-bottom: 8px;
+        }
+
+        .freq-options {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+        }
+
+        .freq-chip {
+            padding: 8px 16px;
+            border-radius: 50px;
+            border: 1.5px solid var(--border);
+            background: #fff;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        .freq-chip.active {
+            background: var(--blue);
+            color: #fff;
+            border-color: var(--blue);
+        }
+
+        .estimate-result {
+            background: linear-gradient(135deg, #0A84FF 0%, #0066CC 100%);
+            border-radius: var(--r-xl);
+            padding: 28px 24px;
+            color: #fff;
+            text-align: center;
+            margin-bottom: 24px;
+            box-shadow: var(--shadow-float);
+            display: none;
+        }
+
+        .estimate-result .est-label {
+            font-size: 0.85rem;
+            opacity: 0.85;
+            margin-bottom: 6px;
+        }
+
+        .estimate-result .est-price {
+            font-size: 2.4rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+        }
+
+        .estimate-result .est-detail {
+            font-size: 0.8rem;
+            opacity: 0.75;
+            margin-top: 8px;
+            line-height: 1.5;
+        }
+
+        .action-bar {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 80px;
+        }
+
+        .action-bar button {
+            flex: 1;
+            padding: 16px;
+            border-radius: var(--r-xl);
+            font-size: 1rem;
+            font-weight: 700;
+            cursor: pointer;
+            border: none;
+            transition: all 0.15s;
+        }
+
+        .action-bar .btn-calc {
+            background: var(--blue);
+            color: #fff;
+            box-shadow: var(--shadow-md);
+        }
+
+        .action-bar .btn-calc:active {
+            transform: scale(0.97);
+        }
+
+        .action-bar .btn-save {
+            background: #fff;
+            color: var(--text-primary);
+            border: 1.5px solid var(--border);
+        }
+
+        .notes-area {
+            background: #fff;
+            border-radius: var(--r-xl);
+            padding: 20px;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--border);
+            margin-bottom: 24px;
+        }
+
+        .notes-area label {
+            font-size: 0.85rem;
+            font-weight: 700;
+            color: var(--text-secondary);
+            display: block;
+            margin-bottom: 8px;
+        }
+
+        .notes-area textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border-radius: var(--r-md);
+            border: 1px solid var(--border);
+            font-size: 0.9rem;
+            resize: vertical;
+            min-height: 60px;
+            box-sizing: border-box;
+        }
+
+        @media (max-width: 400px) {
+            .waste-grid {
+                grid-template-columns: 1fr 1fr;
+                gap: 8px;
+            }
+
+            .waste-card {
+                padding: 14px 10px;
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <header class="page-header">
+        <button onclick="if(document.referrer){history.back();}else{location.href='index.html';}"
+            style="background:none;border:none;color:var(--primary);font-size:1.1rem;cursor:pointer;flex-shrink:0;">‹
+            戻る</button>
+        <h2>🚛 一般廃棄物 ルート見積り</h2>
+        <div style="width:40px;"></div>
+    </header>
+
+    <div class="form-section">
+
+        <!-- Customer Selection -->
+        <div class="customer-select-bar">
+            <label>📋 お客様 / 排出事業者</label>
+            <select id="customerSelect">
+                <option value="">既存の顧客から選択...</option>
+                <option value="__manual__">✏️ 手動で入力</option>
+            </select>
+            <input type="text" id="customerNameManual" placeholder="お客様名を入力" style="display:none;margin-top:8px;">
+            <input type="text" id="customerAddress" placeholder="住所（任意）" style="margin-top:8px;">
+        </div>
+
+        <!-- Waste Categories -->
+        <div style="margin-bottom:12px;">
+            <span style="font-size:0.85rem;font-weight:700;color:var(--text-secondary);">🗑 廃棄物の種類と数量</span>
+        </div>
+
+        <div class="waste-grid" id="wasteGrid">
+            <!-- Filled by JS -->
+        </div>
+
+        <!-- Frequency -->
+        <div class="freq-bar">
+            <label>📅 回収頻度</label>
+            <div class="freq-options">
+                <button class="freq-chip" data-freq="daily" onclick="selectFreq(this)">毎日</button>
+                <button class="freq-chip active" data-freq="2x-week" onclick="selectFreq(this)">週2回</button>
+                <button class="freq-chip" data-freq="weekly" onclick="selectFreq(this)">週1回</button>
+                <button class="freq-chip" data-freq="biweekly" onclick="selectFreq(this)">隔週</button>
+                <button class="freq-chip" data-freq="monthly" onclick="selectFreq(this)">月1回</button>
+                <button class="freq-chip" data-freq="spot" onclick="selectFreq(this)">スポット</button>
+            </div>
+        </div>
+
+        <!-- Notes -->
+        <div class="notes-area">
+            <label>📝 備考・特記事項</label>
+            <textarea id="estNotes" placeholder="例: 毎週月木の午前中に回収希望、鍵の場所は○○..."></textarea>
+        </div>
+
+        <!-- Actions -->
+        <div class="action-bar">
+            <button class="btn-calc" onclick="calculateEstimate()">💰 見積り計算</button>
+        </div>
+
+        <!-- Result -->
+        <div class="estimate-result" id="estimateResult">
+            <div class="est-label">月額見積り（税抜）</div>
+            <div class="est-price" id="estPrice">–</div>
+            <div class="est-detail" id="estDetail"></div>
+        </div>
+
+        <!-- Save after result -->
+        <div class="action-bar" id="saveBar" style="display:none;">
+            <button class="btn-save" onclick="saveAsJob()">📋 案件として保存</button>
+            <button class="btn-calc" onclick="window.print()">🖨 印刷</button>
+        </div>
+    </div>
+
+    <script src="assets/js/utils.js"></script>
+    <script src="assets/js/api.js"></script>
+    <script>
+        if (!RyubeeAPI.requireAuth()) throw new Error("Not authenticated");
+
+        // ── Waste Categories with default unit prices ──
+        const WASTE_TYPES = [
+            { id: 'burnable', icon: '🔥', name: '燃えるゴミ', unit: '袋', defaultPrice: 300 },
+            { id: 'recyclable', icon: '♻️', name: '資源ゴミ', unit: '袋', defaultPrice: 200 },
+            { id: 'plastic', icon: '🧴', name: 'プラスチック', unit: '袋', defaultPrice: 350 },
+            { id: 'cardboard', icon: '📦', name: 'ダンボール', unit: '束', defaultPrice: 250 },
+            { id: 'cans', icon: '🥫', name: '缶・ビン', unit: '袋', defaultPrice: 200 },
+            { id: 'pet', icon: '🧊', name: 'ペットボトル', unit: '袋', defaultPrice: 200 },
+            { id: 'bulky', icon: '🪑', name: '粗大ゴミ', unit: '点', defaultPrice: 2000 },
+            { id: 'other', icon: '📋', name: 'その他', unit: '袋', defaultPrice: 300 },
+        ];
+
+        const FREQ_MULTIPLIERS = {
+            'daily': 22,    // ~22 working days / month
+            '2x-week': 8.7,  // ~8.7 collections / month
+            'weekly': 4.3,  // ~4.3 weeks / month
+            'biweekly': 2.2,
+            'monthly': 1,
+            'spot': 1,
+        };
+
+        let quantities = {};
+        let selectedFreq = '2x-week';
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            renderWasteGrid();
+            loadCustomers();
+        });
+
+        function renderWasteGrid() {
+            const grid = document.getElementById('wasteGrid');
+            grid.innerHTML = WASTE_TYPES.map(w => {
+                quantities[w.id] = 0;
+                return `
+                    <div class="waste-card" id="card-${w.id}">
+                        <span class="w-icon">${w.icon}</span>
+                        <div class="w-name">${w.name}</div>
+                        <div class="qty-row">
+                            <button class="qty-btn" onclick="event.stopPropagation();changeQty('${w.id}', -1)">−</button>
+                            <span class="qty-value" id="qty-${w.id}">0</span>
+                            <button class="qty-btn" onclick="event.stopPropagation();changeQty('${w.id}', 1)">+</button>
+                        </div>
+                        <div class="qty-unit">${w.unit} / 回</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function changeQty(id, delta) {
+            quantities[id] = Math.max(0, (quantities[id] || 0) + delta);
+            document.getElementById(`qty-${id}`).textContent = quantities[id];
+            const card = document.getElementById(`card-${id}`);
+            if (quantities[id] > 0) card.classList.add('selected');
+            else card.classList.remove('selected');
+        }
+
+        function selectFreq(el) {
+            document.querySelectorAll('.freq-chip').forEach(c => c.classList.remove('active'));
+            el.classList.add('active');
+            selectedFreq = el.dataset.freq;
+        }
+
+        async function loadCustomers() {
+            try {
+                const customers = await RyubeeAPI.fetchCustomers();
+                const sel = document.getElementById('customerSelect');
+                customers.forEach(c => {
+                    const opt = document.createElement('option');
+                    opt.value = c.id;
+                    opt.textContent = `${c.name}${c.address ? ' — ' + c.address : ''}`;
+                    sel.appendChild(opt);
+                });
+            } catch (e) { console.error(e); }
+
+            document.getElementById('customerSelect').addEventListener('change', function () {
+                const manual = document.getElementById('customerNameManual');
+                manual.style.display = this.value === '__manual__' ? 'block' : 'none';
+            });
+        }
+
+        function calculateEstimate() {
+            const mult = FREQ_MULTIPLIERS[selectedFreq] || 1;
+            let perCollection = 0;
+            let breakdown = [];
+
+            for (const w of WASTE_TYPES) {
+                const q = quantities[w.id] || 0;
+                if (q === 0) continue;
+                const line = q * w.defaultPrice;
+                perCollection += line;
+                breakdown.push(`${w.name}: ${q}${w.unit} × ¥${w.defaultPrice.toLocaleString()} = ¥${line.toLocaleString()}`);
+            }
+
+            if (perCollection === 0) {
+                alert('廃棄物の数量を1つ以上設定してください。');
+                return;
+            }
+
+            const monthly = Math.round(perCollection * mult);
+            const freqLabels = {
+                'daily': '毎日（月約22回）',
+                '2x-week': '週2回（月約9回）',
+                'weekly': '週1回（月約4回）',
+                'biweekly': '隔週（月約2回）',
+                'monthly': '月1回',
+                'spot': 'スポット（1回分）',
+            };
+
+            document.getElementById('estPrice').textContent = `¥${monthly.toLocaleString()}`;
+            document.getElementById('estDetail').innerHTML =
+                `1回あたり ¥${perCollection.toLocaleString()} × ${freqLabels[selectedFreq]}<br>` +
+                breakdown.join('<br>');
+
+            const result = document.getElementById('estimateResult');
+            result.style.display = 'block';
+            result.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            document.getElementById('saveBar').style.display = 'flex';
+        }
+
+        async function saveAsJob() {
+            const sel = document.getElementById('customerSelect');
+            let custName = '';
+            let custId = null;
+
+            if (sel.value === '__manual__') {
+                custName = document.getElementById('customerNameManual').value.trim();
+            } else if (sel.value) {
+                custId = sel.value;
+                custName = sel.options[sel.selectedIndex].textContent.split(' — ')[0];
+            }
+
+            if (!custName) {
+                alert('お客様名を入力または選択してください。');
+                return;
+            }
+
+            const address = document.getElementById('customerAddress').value.trim();
+            const notes = document.getElementById('estNotes').value.trim();
+
+            // Build items list for notes
+            let items = [];
+            for (const w of WASTE_TYPES) {
+                const q = quantities[w.id] || 0;
+                if (q > 0) items.push(`${w.name}: ${q}${w.unit}`);
+            }
+
+            const mult = FREQ_MULTIPLIERS[selectedFreq] || 1;
+            let perCollection = 0;
+            for (const w of WASTE_TYPES) {
+                perCollection += (quantities[w.id] || 0) * w.defaultPrice;
+            }
+            const monthly = Math.round(perCollection * mult);
+
+            const freqLabels = {
+                'daily': '毎日', '2x-week': '週2回', 'weekly': '週1回',
+                'biweekly': '隔週', 'monthly': '月1回', 'spot': 'スポット',
+            };
+
+            const jobPayload = {
+                job_name: `一般廃棄物ルート回収 — ${custName}`,
+                customer_name: custName,
+                customer_id: custId || undefined,
+                address: address,
+                job_type: 'general_waste',
+                price_total: monthly,
+                estimated_price: monthly,
+                notes: `【一般廃棄物ルート見積り】\n回収頻度: ${freqLabels[selectedFreq]}\n${items.join('\n')}\n1回あたり: ¥${perCollection.toLocaleString()}\n月額: ¥${monthly.toLocaleString()}\n${notes ? '\n備考: ' + notes : ''}`,
+            };
+
+            try {
+                const created = await RyubeeAPI.createJob(jobPayload);
+                if (created && created.job_id) {
+                    alert('✅ 案件として保存しました！');
+                    window.location.href = `jobs.html?id=${created.job_id}`;
+                } else {
+                    throw new Error('保存に失敗');
+                }
+            } catch (e) {
+                alert('保存エラー: ' + e.message);
+            }
+        }
+    </script>
+</body>
+
+</html>
