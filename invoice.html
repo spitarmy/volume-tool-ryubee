@@ -293,14 +293,31 @@
             <div class="inv-date">発行日: <span id="out-date">-</span></div>
         </div>
 
-        <div class="inv-top-wrapper">
-            <div class="inv-customer">
-                <div class="inv-customer-name"><span id="out-customer-name">〇〇 〇〇</span> 様</div>
+        <div
+            style="font-size:18px; font-weight:700; margin:12px 0 16px; border-bottom:2px solid #333; padding-bottom:6px;">
+            <span id="out-customer-name">〇〇 〇〇</span> 様
+        </div>
 
-                <div class="inv-total-box mt-2">
-                    <div class="inv-total-label">御見積金額 (税込)</div>
+        <div class="inv-top-wrapper">
+            <div class="inv-customer" style="border:1px solid #ccc; padding:16px; border-radius:4px; line-height:1.9;">
+                <div style="margin-bottom:12px; font-size:13px;">平素は格別のお引き立てを賭り厚く御礼申し上げます。下記の通り御見積申し上げます。</div>
+                <table style="width:100%; border:none; font-size:13px;">
+                    <tr>
+                        <td style="border:none; padding:2px 0; width:80px; color:#888;">発行日</td>
+                        <td style="border:none; padding:2px 0;" id="out-issue-date">-</td>
+                    </tr>
+                    <tr>
+                        <td style="border:none; padding:2px 0; color:#888;">有効期限</td>
+                        <td style="border:none; padding:2px 0;">発行日ん30日</td>
+                    </tr>
+                    <tr>
+                        <td style="border:none; padding:2px 0; color:#888;">件名</td>
+                        <td style="border:none; padding:2px 0;" id="out-job-name">-</td>
+                    </tr>
+                </table>
+                <div class="inv-total-box" style="margin-top:12px;">
+                    <div class="inv-total-label">御見積金額（税込）</div>
                     <div class="inv-total-price">￥<span id="out-total-price">0</span>-</div>
-                    <div style="font-size: 11px; margin-top: 4px;">下記の通り御見積申し上げます。</div>
                 </div>
             </div>
 
@@ -316,30 +333,35 @@
             </div>
         </div>
 
-        <div style="margin-bottom: 8px; font-weight: bold;">■ 御見積内容</div>
-        <div style="margin-bottom: 12px; font-size: 13px;">件名: <span id="out-job-name">-</span></div>
-
         <table class="inv-table">
             <thead>
                 <tr>
-                    <th style="width: 50%;">項目・品目</th>
+                    <th style="width: 40%;">項目・品目</th>
                     <th style="width: 15%;">数量</th>
-                    <th style="width: 35%;">金額 (円)</th>
+                    <th style="width: 15%;">単価</th>
+                    <th style="width: 20%;">金額 (円)</th>
                 </tr>
             </thead>
-            <tbody id="out-table-body">
-                <!-- JSで明細を挿入 -->
-            </tbody>
+            <tbody id="out-table-body"></tbody>
         </table>
 
-        <div class="inv-footer-info">
-            <div class="inv-info-box">
-                <div class="inv-info-title">備考・作業環境等</div>
-                <div id="out-notes">特になし</div>
-            </div>
-            <div class="inv-info-box">
-                <div class="inv-info-title">お振込先</div>
-                <div id="out-bank-info">設定画面から振込口座を登録してください。</div>
+        <!-- 小計・消費税・合計 -->
+        <table class="inv-table" style="width:50%; margin-left:auto; margin-top:0;">
+            <tbody id="out-summary-body"></tbody>
+        </table>
+
+        <div style="margin-top:16px; border:1px solid #ccc;">
+            <div
+                style="padding:6px 12px; font-weight:bold; background:#f8f9fa; border-bottom:1px solid #ccc; font-size:13px;">
+                備考・作業環境等</div>
+            <div style="padding:10px 12px; font-size:13px; min-height:30px;" id="out-notes">特になし</div>
+        </div>
+
+        <div style="margin-top:16px; font-size:13px;">
+            <div>お支払いは下記銀行口座へ振り込みくださいますようお願い申し上げます。</div>
+            <div style="margin-top:8px; border:1px solid #ccc; padding:12px; border-radius:4px;">
+                <div style="font-weight:bold; margin-bottom:4px;">【振込先】</div>
+                <div id="out-bank-info" style="white-space:pre-wrap;">設定画面から振込口座を登録してください。</div>
             </div>
         </div>
 
@@ -412,24 +434,54 @@
                 // ヘッダー・宛名情報
                 const today = new Date().toLocaleDateString('ja-JP');
                 document.getElementById('out-date').textContent = today;
+                if (document.getElementById('out-issue-date')) {
+                    document.getElementById('out-issue-date').textContent = today;
+                }
                 document.getElementById('out-customer-name').textContent = job.customer_name || 'お客様';
                 document.getElementById('out-job-name').textContent = job.job_name || '不用品回収作業';
-                document.getElementById('out-total-price').textContent = (job.price_total || 0).toLocaleString();
                 document.getElementById('out-notes').textContent = job.notes || '-';
 
-                // 明細テーブル作成 (簡易的に1行に合計を入れるか、可能ならAI結果をパースする)
+                // 明細テーブル作成
                 const tbody = document.getElementById('out-table-body');
+                const priceTotal = job.price_total || 0;
+                const subtotal = Math.round(priceTotal / 1.1);
+                const taxAmt = priceTotal - subtotal;
 
                 let tr = document.createElement('tr');
                 tr.innerHTML = `
-          <td>不用品回収・運搬費一式</td>
-          <td class="qty">1 式</td>
-          <td class="price">${(job.price_total || 0).toLocaleString()}</td>
-        `;
+                    <td>不用品回収・運搬費一式</td>
+                    <td class="qty">1 式</td>
+                    <td class="price">${subtotal.toLocaleString()}</td>
+                    <td class="price">${subtotal.toLocaleString()}</td>
+                `;
                 tbody.appendChild(tr);
 
-                // もしDB側（job_notesやmetadata）にAIの「5.2立米」などが残っていれば詳細行を追加したいが、
-                // 現状は一式として出力する。
+                // 合計金額表示
+                document.getElementById('out-total-price').textContent = priceTotal.toLocaleString();
+
+                // 小計・消費税・合計テーブル
+                const summaryBody = document.getElementById('out-summary-body');
+                if (summaryBody) {
+                    summaryBody.innerHTML = `
+                        <tr>
+                            <td style="padding:8px; font-weight:700; background:#f8f9fa; border:1px solid #ccc;">小計</td>
+                            <td style="padding:8px; text-align:right; border:1px solid #ccc;">¥${subtotal.toLocaleString()}円</td>
+                        </tr>
+                        <tr>
+                            <td style="padding:8px; font-weight:700; background:#f8f9fa; border:1px solid #ccc;">消費税</td>
+                            <td style="padding:8px; text-align:right; border:1px solid #ccc;">¥${taxAmt.toLocaleString()}円</td>
+                        </tr>
+                        <tr>
+                            <td style="padding:8px; font-weight:800; background:#f0f4ff; border:1px solid #ccc;">合計</td>
+                            <td style="padding:8px; text-align:right; font-weight:800; font-size:15px; border:1px solid #ccc;">¥${priceTotal.toLocaleString()}円</td>
+                        </tr>
+                        <tr>
+                            <td colspan="2" style="padding:4px 8px; font-size:11px; color:#888; border:1px solid #eee;">
+                                10%対象 ¥${subtotal.toLocaleString()}円 ／ 消費税額 ¥${taxAmt.toLocaleString()}円
+                            </td>
+                        </tr>
+                    `;
+                }
 
                 // サインの反映
                 if (job.signature_data) {

@@ -827,6 +827,12 @@
                 companyHtml += `</div>`;
             }
 
+            // 小計・消費税・合計の計算
+            const subtotal = inv.total_amount - (inv.tax_amount || 0);
+            const taxAmt = inv.tax_amount || Math.round(subtotal * 0.1);
+            const totalWithTax = subtotal + taxAmt;
+            const notesText = inv.notes || '';
+
             document.getElementById('invDocContent').innerHTML = `
                 <div class="inv-doc-header">
                     <h2 style="background:var(--primary); color:#fff; display:inline-block; padding:4px 20px; font-size:1.1rem; letter-spacing:4px;">御請求書</h2>
@@ -847,34 +853,71 @@
                             <tr><td style="border:none; padding:2px 0; color:var(--text-secondary);">請求月</td><td style="border:none; padding:2px 0;">${inv.month || '-'}</td></tr>
                         </table>
                         <div style="margin-top:12px; font-size:1.1rem; font-weight:800; text-align:center; background:#f0f4ff; padding:10px; border-radius:6px;">
-                            御請求金額（税込）<br>¥${inv.total_amount.toLocaleString()}-
+                            御請求金額（税込）<br>¥${totalWithTax.toLocaleString()}-
                         </div>
                     </div>
                     <!-- 右: 会社情報 -->
                     ${companyHtml}
                 </div>
+
+                <!-- 明細テーブル -->
                 <table>
                     <thead>
                         <tr><th>品目</th><th style="width:70px;">数量</th><th style="width:90px;">単価</th><th style="width:100px;">金額</th></tr>
                     </thead>
                     <tbody id="invItemsBody">${itemsHtml}</tbody>
-                    <tfoot>
-                        <tr><td colspan="3" style="text-align:right;">合計</td><td class="num">¥${inv.total_amount.toLocaleString()}</td></tr>
-                        <tr><td colspan="3" style="text-align:right;">入金済</td><td class="num">¥${inv.paid_total.toLocaleString()}</td></tr>
-                        <tr><td colspan="3" style="text-align:right;font-weight:800;color:${remaining > 0 ? 'var(--red)' : 'var(--green-dark)'};">残額</td>
-                            <td class="num" style="font-weight:800;color:${remaining > 0 ? 'var(--red)' : 'var(--green-dark)'};">¥${remaining.toLocaleString()}</td></tr>
-                    </tfoot>
                 </table>
+
+                <!-- 小計・消費税・合計 -->
+                <table style="width:50%; margin-left:auto; margin-top:0; border-collapse:collapse;">
+                    <tr style="border-bottom:1px solid #ccc;">
+                        <td style="padding:8px; font-weight:700; background:#f8f9fa; border:1px solid #ccc;">小計</td>
+                        <td style="padding:8px; text-align:right; border:1px solid #ccc;">¥${subtotal.toLocaleString()}円</td>
+                    </tr>
+                    <tr style="border-bottom:1px solid #ccc;">
+                        <td style="padding:8px; font-weight:700; background:#f8f9fa; border:1px solid #ccc;">消費税</td>
+                        <td style="padding:8px; text-align:right; border:1px solid #ccc;">¥${taxAmt.toLocaleString()}円</td>
+                    </tr>
+                    <tr style="border-bottom:2px solid #333;">
+                        <td style="padding:8px; font-weight:800; background:#f0f4ff; border:1px solid #ccc;">合計</td>
+                        <td style="padding:8px; text-align:right; font-weight:800; font-size:1.05rem; border:1px solid #ccc;">¥${totalWithTax.toLocaleString()}円</td>
+                    </tr>
+                    <tr>
+                        <td colspan="2" style="padding:4px 8px; font-size:0.75rem; color:var(--text-secondary); border:1px solid #eee;">
+                            10%対象 ¥${subtotal.toLocaleString()}円 ／ 消費税額 ¥${taxAmt.toLocaleString()}円
+                        </td>
+                    </tr>
+                </table>
+
+                <!-- 備考 -->
+                ${notesText ? `
+                <div style="margin-top:16px; border:1px solid #ccc; border-collapse:collapse;">
+                    <div style="padding:6px 12px; font-weight:700; background:#f8f9fa; border-bottom:1px solid #ccc; font-size:0.85rem;">備考</div>
+                    <div style="padding:10px 12px; font-size:0.85rem; white-space:pre-wrap;">${utils.escapeHtml(notesText)}</div>
+                </div>
+                ` : ''}
+
                 ${paymentsHtml}
-                <div style="margin-top:20px; display:flex; gap:16px; font-size:0.85rem;">
-                    <div style="flex:1; border:1px solid #eee; padding:12px; border-radius:8px;">
-                        <div style="font-weight:700; margin-bottom:6px; border-bottom:1px solid #eee; padding-bottom:4px;">お振込先</div>
-                        <div style="white-space:pre-wrap;">${utils.escapeHtml(companySettings.company_bank_info || '設定画面から口座情報を登録してください')}</div>
+
+                <!-- 入金状況 -->
+                <div style="margin-top:16px; display:flex; gap:12px; font-size:0.85rem;">
+                    <div style="flex:1; background:#f8f9fa; padding:10px; border-radius:6px; text-align:center;">
+                        <div style="font-size:0.75rem; color:var(--text-secondary);">入金済</div>
+                        <div style="font-weight:700;">¥${inv.paid_total.toLocaleString()}</div>
+                    </div>
+                    <div style="flex:1; background:${remaining > 0 ? '#fef2f2' : '#f0fdf4'}; padding:10px; border-radius:6px; text-align:center;">
+                        <div style="font-size:0.75rem; color:var(--text-secondary);">残額</div>
+                        <div style="font-weight:700; color:${remaining > 0 ? 'var(--red)' : 'var(--green-dark)'};">¥${remaining.toLocaleString()}</div>
                     </div>
                 </div>
-                <div style="margin-top:16px; text-align:right; font-size:0.8rem; color:var(--text-secondary);">
-                    ${utils.escapeHtml(companySettings.company_name || '')}
-                    ${companySettings.company_invoice_no ? '<br>登録番号: ' + utils.escapeHtml(companySettings.company_invoice_no) : ''}
+
+                <!-- 振込先 -->
+                <div style="margin-top:16px; font-size:0.85rem;">
+                    <div>お支払いは下記銀行口座へ振り込みくださいますようお願い申し上げます。</div>
+                    <div style="margin-top:8px; border:1px solid #ccc; padding:12px; border-radius:4px;">
+                        <div style="font-weight:700; margin-bottom:4px;">【振込先】</div>
+                        <div style="white-space:pre-wrap;">${utils.escapeHtml(companySettings.company_bank_info || '設定画面から口座情報を登録してください')}</div>
+                    </div>
                 </div>
             `;
             document.getElementById('invDetailOverlay').classList.add('show');
