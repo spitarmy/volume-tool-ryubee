@@ -353,11 +353,10 @@
                 id: 'burnable', icon: '🔥', name: '燃えるゴミ', unit: '袋', defaultPrice: 300,
                 freqOptions: [
                     { value: 'daily', label: '毎日' },
-                    { value: '2x-week', label: '週2回' },
-                    { value: 'weekly', label: '週1回' },
-                    { value: 'biweekly', label: '隔週' },
-                    { value: 'monthly', label: '月1回' },
-                    { value: 'spot', label: 'スポット' },
+                    { value: '6x-week', label: '週6' },
+                    { value: '3x-week', label: '週3' },
+                    { value: '2x-week', label: '週2' },
+                    { value: 'weekly', label: '週1' },
                 ],
                 defaultFreq: '2x-week'
             },
@@ -380,6 +379,8 @@
 
         const FREQ_MULTIPLIERS = {
             'daily': 22,
+            '6x-week': 26,
+            '3x-week': 13,
             '2x-week': 8.7,
             'weekly': 4.3,
             'biweekly': 2.2,
@@ -465,8 +466,9 @@
             let breakdown = [];
 
             const freqLabels = {
-                'daily': '毎日（月約22回）', '2x-week': '週2回（月約9回）',
-                'weekly': '週1回（月約4回）', 'biweekly': '隔週（月約2回）',
+                'daily': '毎日（月約22回）', '6x-week': '週6（月約26回）',
+                '3x-week': '週3（月約13回）', '2x-week': '週2（月約9回）',
+                'weekly': '週1（月約4回）', 'biweekly': '隔週（月約2回）',
                 'monthly': '月1回', 'spot': 'スポット（1回分）',
             };
 
@@ -516,7 +518,8 @@
             const notes = document.getElementById('estNotes').value.trim();
 
             const freqLabelsShort = {
-                'daily': '毎日', '2x-week': '週2回', 'weekly': '週1回',
+                'daily': '毎日', '6x-week': '週6', '3x-week': '週3',
+                '2x-week': '週2', 'weekly': '週1',
                 'biweekly': '隔週', 'monthly': '月1回', 'spot': 'スポット',
             };
 
