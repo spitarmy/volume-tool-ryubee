@@ -242,7 +242,10 @@
                         placeholder="9:00 - 18:00"></div>
                 <div class="form-group"><label>定休日</label><input type="text" id="custHoliday" placeholder="土日祝"></div>
             </div>
-            <div class="form-group"><label>回収開始予定日</label><input type="date" id="custStartDate"></div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                <div class="form-group"><label>回収開始予定日</label><input type="date" id="custStartDate"></div>
+                <div class="form-group"><label>終了日/解約日</label><input type="date" id="custEndDate"></div>
+            </div>
 
             <h4 class="section-title">💰 請求・契約情報</h4>
             <div class="form-group">
@@ -499,6 +502,7 @@
             document.getElementById('custBusinessHours').value = fd.business_hours || '';
             document.getElementById('custHoliday').value = fd.regular_holiday || '';
             document.getElementById('custStartDate').value = fd.collection_start_date || '';
+            document.getElementById('custEndDate').value = fd.collection_end_date || '';
             document.getElementById('custPaymentMethod').value = fd.payment_method || '振込';
             document.getElementById('custBillingAddress').value = fd.billing_address || '';
             document.getElementById('custBillingEmail').value = fd.billing_email || '';
@@ -560,6 +564,7 @@
                 
                 <div style="background:var(--bg-secondary); padding:16px; border-radius:12px; margin-bottom:16px; font-size:0.95rem; line-height:1.6;">
                     📝 <strong style="margin-left:4px;">回収・契約情報</strong><br>
+                    <span style="display:inline-block;width:70px;color:var(--text-tertiary);font-size:0.85rem;">開始予定:</span> ${utils.escapeHtml(fd.collection_start_date || '-')} <span style="margin-left:8px;color:var(--text-tertiary);font-size:0.85rem;">解約日:</span> <strong style="color:var(--danger);">${utils.escapeHtml(fd.collection_end_date || '-')}</strong><br>
                     <span style="display:inline-block;width:70px;color:var(--text-tertiary);font-size:0.85rem;">平均量:</span> ${utils.escapeHtml(fd.average_volume || '-')} <span style="color:var(--text-tertiary);font-size:0.75rem;">(※実績推移は今後実装)</span><br>
                     <span style="display:inline-block;width:70px;color:var(--text-tertiary);font-size:0.85rem;">一般ごみ:</span> ${utils.escapeHtml(fd.collection_general || '-')} <span style="margin-left:8px;color:var(--text-tertiary);font-size:0.85rem;">資源:</span> ${utils.escapeHtml(fd.collection_recycle || '-')}<br>
                     <span style="display:inline-block;width:70px;color:var(--text-tertiary);font-size:0.85rem;">支払締:</span> ${utils.escapeHtml(fd.payment_method || '振込')} / ${c.billing_closing_day === 31 ? '月末' : c.billing_closing_day + '日'}締め
@@ -642,6 +647,7 @@
                 business_hours: document.getElementById('custBusinessHours').value.trim(),
                 regular_holiday: document.getElementById('custHoliday').value.trim(),
                 collection_start_date: document.getElementById('custStartDate').value,
+                collection_end_date: document.getElementById('custEndDate').value,
                 payment_method: document.getElementById('custPaymentMethod').value,
                 billing_address: document.getElementById('custBillingAddress').value.trim(),
                 billing_email: document.getElementById('custBillingEmail').value.trim(),
