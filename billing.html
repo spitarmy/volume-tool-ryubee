@@ -418,8 +418,15 @@
 
             <!-- 検索・フィルター -->
             <div style="padding: 16px 20px 0;">
-                <input type="text" id="searchInput" placeholder="🔍 顧客名・管理番号で検索..." oninput="renderInvoices()"
-                    style="width: 100%; padding: 10px 14px; border-radius: var(--r-pill); border: 1px solid var(--border); font-size: 0.95rem; margin-bottom: 12px;">
+                <div style="display:flex; gap:8px; margin-bottom: 12px;">
+                    <input type="text" id="searchInput" placeholder="🔍 顧客名・管理番号で検索..." oninput="renderInvoices()"
+                        style="flex: 1; padding: 10px 14px; border-radius: var(--r-pill); border: 1px solid var(--border); font-size: 0.95rem;">
+                    <select id="sortSelect" onchange="renderInvoices()"
+                        style="width: auto; padding: 10px; border-radius: var(--r-pill); border: 1px solid var(--border); font-size: 0.9rem; background: #fff; cursor: pointer; color: var(--text-primary);">
+                        <option value="updated">🔄 更新順</option>
+                        <option value="yama_asc">🎫 管理番号順</option>
+                    </select>
+                </div>
                 <div style="display:flex; gap:8px;">
                     <button class="btn btn-xs btn-primary" id="btn-tab-all" style="flex:1"
                         onclick="setInvTab('all')">全て</button>
@@ -697,10 +704,20 @@
                 return;
             }
 
+            const sortVal = document.getElementById('sortSelect').value;
             filtered.sort((a, b) => {
-                const numA = a._yamaNum || "";
-                const numB = b._yamaNum || "";
-                return numA.localeCompare(numB);
+                if (sortVal === 'yama_asc') {
+                    const numA = a._yamaNum || "";
+                    const numB = b._yamaNum || "";
+                    return numA.localeCompare(numB);
+                } else {
+                    const dateA = new Date(a.updated_at || a.created_at || 0).getTime();
+                    const dateB = new Date(b.updated_at || b.created_at || 0).getTime();
+                    if (dateA !== dateB) return dateB - dateA;
+                    const idA = (a.id || "").toString();
+                    const idB = (b.id || "").toString();
+                    return idB.localeCompare(idA);
+                }
             });
 
             const statusLabel = { draft: '下書き', sent: '送付済', paid: '入金済', partial: '一部入金', overdue: '期限超過' };
