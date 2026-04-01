@@ -115,12 +115,12 @@
         <input type="text" id="searchInput" placeholder="🔍 顧客名・住所・電話で検索..." oninput="filterCustomers()">
         <div style="display:flex; gap:8px; margin-top:12px;">
             <button class="btn btn-primary" id="btn-tab-all" style="flex:1" onclick="setCustTab('all')">全て</button>
-            <button class="btn btn-secondary" id="btn-tab-ind" style="flex:1"
-                onclick="setCustTab('industrial')">産廃</button>
-            <button class="btn btn-secondary" id="btn-tab-gen" style="flex:1"
-                onclick="setCustTab('general')">一般</button>
-            <button class="btn btn-secondary" id="btn-tab-large" style="flex:1"
-                onclick="setCustTab('large')">大型</button>
+            <button class="btn btn-secondary" id="btn-tab-a" style="flex:1"
+                onclick="setCustTab('group_a')">10・15・25日</button>
+            <button class="btn btn-secondary" id="btn-tab-b" style="flex:1"
+                onclick="setCustTab('group_b')">20・末日</button>
+            <button class="btn btn-secondary" id="btn-tab-auto" style="flex:1"
+                onclick="setCustTab('auto')">自動振替</button>
         </div>
     </div>
 
@@ -365,10 +365,10 @@
         let currentCustTab = 'all';
         function setCustTab(tab) {
             currentCustTab = tab;
-            document.getElementById('btn-tab-all').className = 'btn ' + (tab === 'all' ? 'btn-primary' : 'btn-secondary');
-            document.getElementById('btn-tab-ind').className = 'btn ' + (tab === 'industrial' ? 'btn-primary' : 'btn-secondary');
-            document.getElementById('btn-tab-gen').className = 'btn ' + (tab === 'general' ? 'btn-primary' : 'btn-secondary');
-            document.getElementById('btn-tab-large').className = 'btn ' + (tab === 'large' ? 'btn-primary' : 'btn-secondary');
+            ['all', 'a', 'b', 'auto'].forEach(k => {
+                const el = document.getElementById('btn-tab-' + k);
+                if (el) el.className = 'btn ' + (tab === (k === 'a' ? 'group_a' : k === 'b' ? 'group_b' : k) ? 'btn-primary' : 'btn-secondary');
+            });
             filterCustomers();
         }
 
@@ -389,10 +389,16 @@
 
                 const matchQ = text.includes(q);
                 let matchT = true;
-                const wc = fd.waste_category || 'general';
-                if (currentCustTab === 'industrial' && wc !== 'industrial') matchT = false;
-                if (currentCustTab === 'general' && wc !== 'general') matchT = false;
-                if (currentCustTab === 'large' && wc !== 'large') matchT = false;
+                const closingDay = c.billing_closing_day || 31;
+                const payMethod = fd.payment_method || '振込';
+
+                if (currentCustTab === 'group_a') {
+                    matchT = [10, 15, 25].includes(closingDay);
+                } else if (currentCustTab === 'group_b') {
+                    matchT = [20, 31].includes(closingDay);
+                } else if (currentCustTab === 'auto') {
+                    matchT = payMethod === '自動引落し';
+                }
                 return matchQ && matchT;
             });
             // 締め日順 -> 管理番号順にソート (Phase 5)
