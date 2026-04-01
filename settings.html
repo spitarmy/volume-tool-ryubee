@@ -174,6 +174,26 @@
                     <textarea id="company_bank_info"
                         placeholder="〇〇銀行 〇〇支店&#13;&#10;普通 1234567&#13;&#10;カ）マルマル"></textarea>
                 </div>
+                <div class="form-group" style="margin-top:16px;">
+                    <label>🎨 会社ロゴ（見積書・請求書に表示）</label>
+                    <div style="display:flex; align-items:center; gap:12px;">
+                        <img id="logoPreview" src="" alt=""
+                            style="max-width:100px; max-height:60px; border:1px solid #eee; border-radius:4px; display:none;">
+                        <input type="file" accept="image/*"
+                            onchange="handleImageUpload(this, 'company_logo', 'logoPreview')" style="padding:6px;">
+                    </div>
+                    <p class="small-text" style="margin-top:4px;">推奨: 透過PNG, 200x100px程度</p>
+                </div>
+                <div class="form-group" style="margin-top:8px;">
+                    <label>🔴 電子角印（見積書・請求書に表示）</label>
+                    <div style="display:flex; align-items:center; gap:12px;">
+                        <img id="stampPreview" src="" alt=""
+                            style="max-width:80px; max-height:80px; border:1px solid #eee; border-radius:4px; display:none;">
+                        <input type="file" accept="image/*"
+                            onchange="handleImageUpload(this, 'company_stamp', 'stampPreview')" style="padding:6px;">
+                    </div>
+                    <p class="small-text" style="margin-top:4px;">推奨: 透過PNG, 正方形 100x100px程度</p>
+                </div>
             </div>
 
             <!-- ── 基本立米単価 ──────────────── -->
@@ -507,6 +527,20 @@
         };
 
         let customAiItems = [];
+        let uploadedImages = { company_logo: '', company_stamp: '' };
+
+        function handleImageUpload(input, fieldName, previewId) {
+            const file = input.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                uploadedImages[fieldName] = e.target.result;
+                const preview = document.getElementById(previewId);
+                preview.src = e.target.result;
+                preview.style.display = 'block';
+            };
+            reader.readAsDataURL(file);
+        }
 
         function renderCustomAiItems() {
             const list = document.getElementById('custom-ai-items-list');
@@ -585,6 +619,17 @@
             } else {
                 customAiItems = [];
             }
+            // ロゴ・角印の反映
+            if (saved.company_logo) {
+                uploadedImages.company_logo = saved.company_logo;
+                document.getElementById('logoPreview').src = saved.company_logo;
+                document.getElementById('logoPreview').style.display = 'block';
+            }
+            if (saved.company_stamp) {
+                uploadedImages.company_stamp = saved.company_stamp;
+                document.getElementById('stampPreview').src = saved.company_stamp;
+                document.getElementById('stampPreview').style.display = 'block';
+            }
             renderCustomAiItems();
         }
 
@@ -601,6 +646,8 @@
             }
 
             data.custom_ai_items = customAiItems.filter(item => item.name.trim() !== '');
+            data.company_logo = uploadedImages.company_logo || '';
+            data.company_stamp = uploadedImages.company_stamp || '';
 
             try {
                 // RyubeeAPI.updateSettings internally calls RyubeeAPI.saveSettings if aliased, but we made updateSettings

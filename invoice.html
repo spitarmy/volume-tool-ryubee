@@ -287,7 +287,9 @@
     <div class="invoice-container" id="invoice-doc">
 
         <div class="inv-header">
-            <div class="inv-title">御見積書</div>
+            <div class="inv-title"
+                style="background:#2563eb; color:#fff; display:inline-block; padding:4px 20px; letter-spacing:8px;">御見積書
+            </div>
             <div class="inv-date">発行日: <span id="out-date">-</span></div>
         </div>
 
@@ -303,10 +305,14 @@
             </div>
 
             <div class="inv-company">
+                <img id="out-company-logo" src="" alt=""
+                    style="max-width:120px; max-height:60px; margin-bottom:8px; display:none;">
                 <h3 id="out-company-name">株式会社未設定</h3>
                 <div id="out-company-address">住所未設定</div>
                 <div>TEL: <span id="out-company-phone">-</span></div>
                 <div style="margin-top: 4px;">登録番号: <span id="out-company-invoice">-</span></div>
+                <img id="out-company-stamp" src="" alt=""
+                    style="max-width:80px; max-height:80px; margin-top:8px; opacity:0.85; display:none;">
             </div>
         </div>
 
@@ -364,6 +370,16 @@
                     document.getElementById('out-company-invoice').textContent = settings.company_invoice_no || '未設定';
                     if (settings.company_bank_info) {
                         document.getElementById('out-bank-info').textContent = settings.company_bank_info;
+                    }
+                    if (settings.company_logo) {
+                        const logoEl = document.getElementById('out-company-logo');
+                        logoEl.src = settings.company_logo;
+                        logoEl.style.display = 'block';
+                    }
+                    if (settings.company_stamp) {
+                        const stampEl = document.getElementById('out-company-stamp');
+                        stampEl.src = settings.company_stamp;
+                        stampEl.style.display = 'block';
                     }
                 }
             } catch (e) {

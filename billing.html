@@ -522,9 +522,14 @@
                     <h3 class="card-title">📸 写真から請求書自動作成</h3>
                     <p class="small-text mb-2">手書きの集計表や伝票の写真をアップロードすると、AIが「合計(量)」を読み取り、選択した顧客向けに下書き請求書を自動作成します。</p>
                     <div class="form-group">
-                        <label>顧客を選択</label>
-                        <select id="ocrCustomerId">
-                            <option value="">読込中...</option>
+                        <label>顧客を検索（名前または管理番号）</label>
+                        <input type="text" id="ocrCustomerSearch" list="ocrCustomerList" placeholder="🔍 名前・管理番号で検索..."
+                            oninput="filterOcrCustomers()" autocomplete="off"
+                            style="padding:10px 14px; border-radius:var(--r-pill); border:1px solid var(--border);">
+                        <datalist id="ocrCustomerList"></datalist>
+                        <select id="ocrCustomerId" size="4"
+                            style="width:100%; margin-top:8px; border:1px solid var(--border); border-radius:var(--r-sm); font-size:0.9rem;">
+                            <option value="">↑ 上の検索欄で絞り込み</option>
                         </select>
                     </div>
                     <div class="form-group">
@@ -804,19 +809,34 @@
                 `;
             }
 
+            let companyHtml = '';
+            if (companySettings.company_logo || companySettings.company_name) {
+                companyHtml = `<div style="text-align:right; margin-bottom:12px; position:relative;">`;
+                if (companySettings.company_logo) {
+                    companyHtml += `<img src="${companySettings.company_logo}" alt="ロゴ" style="max-width:120px; max-height:60px; margin-bottom:8px;">`;
+                }
+                companyHtml += `<div style="font-size:0.85rem; line-height:1.7;">`;
+                companyHtml += `<strong>${utils.escapeHtml(companySettings.company_name || '')}</strong><br>`;
+                if (companySettings.company_address) companyHtml += `${utils.escapeHtml(companySettings.company_address)}<br>`;
+                if (companySettings.company_phone) companyHtml += `TEL: ${utils.escapeHtml(companySettings.company_phone)}<br>`;
+                if (companySettings.company_invoice_no) companyHtml += `登録番号: ${utils.escapeHtml(companySettings.company_invoice_no)}`;
+                companyHtml += `</div>`;
+                if (companySettings.company_stamp) {
+                    companyHtml += `<img src="${companySettings.company_stamp}" alt="角印" style="max-width:80px; max-height:80px; position:absolute; right:0; bottom:-10px; opacity:0.85;">`;
+                }
+                companyHtml += `</div>`;
+            }
+
             document.getElementById('invDocContent').innerHTML = `
                 <div class="inv-doc-header">
-                    <h2>請 求 書</h2>
+                    <h2 style="background:var(--primary); color:#fff; display:inline-block; padding:4px 20px; font-size:1.1rem; letter-spacing:4px;">請 求 書</h2>
                     <span class="inv-status ${inv.status}" style="font-size:0.85rem;">${statusLabel[inv.status] || inv.status}</span>
                 </div>
                 <div class="inv-doc-meta">
                     <div>
-                        <div class="inv-doc-to">${utils.escapeHtml(inv.customer_name || '顧客')} 御中</div>
+                        <div class="inv-doc-to" style="font-size:1.1rem;">${utils.escapeHtml(inv.customer_name || '顧客')} <span style="font-size:0.9rem;">御中</span></div>
                     </div>
-                    <div style="text-align:right;">
-                        <div style="font-size:0.85rem;color:var(--text-secondary);">請求月: ${inv.month}</div>
-                        ${inv.due_date ? `<div style="font-size:0.85rem;color:var(--text-secondary);">支払期限: ${inv.due_date}</div>` : ''}
-                    </div>
+                    ${companyHtml}
                 </div>
                 <div style="font-size:1.3rem;font-weight:800;text-align:center;margin-bottom:20px;padding:12px;background:#f0f4ff;border-radius:8px;">
                     ご請求金額: ¥${inv.total_amount.toLocaleString()}
@@ -999,9 +1019,37 @@
         // ── OCR 請求書作成 ──────────────────────────────
         function showOcrModal() {
             document.getElementById('ocrOverlay').classList.add('show');
-            const sel = document.getElementById('ocrCustomerId');
-            sel.innerHTML = '<option value="">-- 顧客を選択 --</option>' + allCustomers.map(c => `<option value="${c.id}">${utils.escapeHtml(c.name)}</option>`).join('');
+            document.getElementById('ocrCustomerSearch').value = '';
+            populateOcrCustomerList();
         }
+
+        function populateOcrCustomerList() {
+            const sel = document.getElementById('ocrCustomerId');
+            const dl = document.getElementById('ocrCustomerList');
+            const opts = allCustomers.map(c => {
+                const yNum = c.yamabun_number || '';
+                const label = yNum ? `[${yNum}] ${c.name}` : c.name;
+                return { id: c.id, label, name: c.name, yNum };
+            });
+            sel.innerHTML = opts.map(o => `<option value="${o.id}">${utils.escapeHtml(o.label)}</option>`).join('') || '<option value="">顧客がありません</option>';
+            dl.innerHTML = opts.map(o => `<option value="${utils.escapeHtml(o.label)}">`).join('');
+        }
+
+        function filterOcrCustomers() {
+            const q = document.getElementById('ocrCustomerSearch').value.toLowerCase();
+            const sel = document.getElementById('ocrCustomerId');
+            const filtered = allCustomers.filter(c => {
+                const name = (c.name || '').toLowerCase();
+                const yNum = (c.yamabun_number || '').toLowerCase();
+                return name.includes(q) || yNum.includes(q);
+            });
+            sel.innerHTML = filtered.map(c => {
+                const yNum = c.yamabun_number || '';
+                const label = yNum ? `[${yNum}] ${c.name}` : c.name;
+                return `<option value="${c.id}">${utils.escapeHtml(label)}</option>`;
+            }).join('') || '<option value="">該当なし</option>';
+        }
+
         function closeOcrModal() {
             document.getElementById('ocrOverlay').classList.remove('show');
             document.getElementById('ocrFile').value = '';
