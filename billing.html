@@ -9,6 +9,11 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <link rel="stylesheet" href="assets/css/style.css">
     <style>
+        .billing-page {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
         .billing-header {
             background: #FFFFFF;
             padding: 30px 24px 20px;
@@ -85,7 +90,7 @@
         }
 
         .invoice-list {
-            padding: 0 20px 120px;
+            padding: 0 20px 30px;
         }
 
         .invoice-card {
@@ -230,111 +235,269 @@
             color: #C06000;
             border-color: var(--orange);
         }
+
+        /* 請求書詳細モーダル */
+        .inv-detail-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(8px);
+            display: none;
+            z-index: 3000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .inv-detail-overlay.show {
+            display: flex;
+        }
+
+        .inv-detail-modal {
+            background: #fff;
+            border-radius: 12px;
+            width: 100%;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
+            animation: sheetUp 0.25s ease-out;
+        }
+
+        .inv-doc {
+            padding: 32px 28px;
+        }
+
+        .inv-doc-header {
+            text-align: center;
+            border-bottom: 3px double #333;
+            padding-bottom: 16px;
+            margin-bottom: 20px;
+        }
+
+        .inv-doc-header h2 {
+            font-size: 1.6rem;
+            letter-spacing: 0.15em;
+            margin: 0 0 6px;
+        }
+
+        .inv-doc-meta {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 20px;
+            font-size: 0.9rem;
+        }
+
+        .inv-doc-to {
+            font-size: 1.15rem;
+            font-weight: 700;
+            border-bottom: 1px solid #333;
+            display: inline-block;
+            padding-bottom: 2px;
+            margin-bottom: 16px;
+        }
+
+        .inv-doc table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 16px;
+            font-size: 0.9rem;
+        }
+
+        .inv-doc table th,
+        .inv-doc table td {
+            border: 1px solid #ddd;
+            padding: 8px 10px;
+            text-align: left;
+        }
+
+        .inv-doc table th {
+            background: #f5f5f7;
+            font-weight: 700;
+            font-size: 0.8rem;
+        }
+
+        .inv-doc table td.num {
+            text-align: right;
+            font-variant-numeric: tabular-nums;
+        }
+
+        .inv-doc table tfoot td {
+            font-weight: 800;
+            background: #f0f4ff;
+        }
+
+        .inv-doc-payments {
+            margin-top: 16px;
+            padding-top: 12px;
+            border-top: 1px solid #eee;
+        }
+
+        .inv-doc-payments h4 {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+        }
+
+        .inv-doc-pay-row {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            padding: 4px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .inv-doc-actions {
+            display: flex;
+            gap: 8px;
+            padding: 16px 28px;
+            border-top: 1px solid #eee;
+            background: #fafafa;
+            border-radius: 0 0 12px 12px;
+        }
+
+        .inv-doc-actions button {
+            flex: 1;
+        }
+
+        @media print {
+            .inv-detail-overlay {
+                position: static;
+                background: none;
+                padding: 0;
+            }
+
+            .inv-doc-actions {
+                display: none;
+            }
+
+            .bottom-nav,
+            .billing-header,
+            .action-bar,
+            .alert-panel,
+            .invoice-list,
+            .month-grid {
+                display: none !important;
+            }
+        }
     </style>
 </head>
 
 <body>
 
-    <!-- Header -->
-    <header class="billing-header">
-        <h1>💰 請求・入金管理</h1>
-        <p style="color: var(--text-secondary); font-size: 0.9rem;">請求書の発行・入金消し込み・未入金アラート</p>
-        <div class="month-picker">
-            <input type="month" id="monthFilter" />
-            <button class="btn btn-xs btn-primary" onclick="loadInvoices()">表示</button>
+    <div class="billing-page">
+        <!-- Header -->
+        <header class="billing-header">
+            <h1>💰 請求・入金管理</h1>
+            <p style="color: var(--text-secondary); font-size: 0.9rem;">請求書の発行・入金消し込み・未入金アラート</p>
+            <div class="month-picker">
+                <input type="month" id="monthFilter" />
+                <button class="btn btn-xs btn-primary" onclick="loadInvoices()">表示</button>
+            </div>
+        </header>
+
+        <!-- 未入金アラートパネル -->
+        <div class="alert-panel" id="alertPanel" style="display:none;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+                <h3 style="margin:0;">🔴 未入金アラート</h3>
+                <button class="btn btn-xs btn-primary" onclick="sendReminders()">✉️ リマインド一斉送信</button>
+            </div>
+            <div id="alertList"></div>
         </div>
-    </header>
 
-    <!-- 未入金アラートパネル -->
-    <div class="alert-panel" id="alertPanel" style="display:none;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-            <h3 style="margin:0;">🔴 未入金アラート</h3>
-            <button class="btn btn-xs btn-primary" onclick="sendReminders()">✉️ リマインド一斉送信</button>
+        <!-- アクションバー -->
+        <div class="action-bar" style="display:grid; grid-template-columns:1fr 1fr; gap:8px; padding:12px 20px;">
+            <button class="btn btn-xs btn-success" onclick="generateInvoices()" style="width:100%;">📄 月次一括生成</button>
+            <button class="btn btn-xs btn-secondary" onclick="showPaymentModal()" style="width:100%;">💳 入金登録</button>
+            <button class="btn btn-xs btn-secondary" onclick="showBankUpload()"
+                style="width:100%;background:var(--blue-light);color:var(--blue-dark);border-color:var(--blue);">🏦
+                銀行入金取込</button>
+            <button class="btn btn-xs btn-ghost" onclick="connectFreee()" id="freeeBtn" style="width:100%;">🔗
+                freee連携</button>
         </div>
-        <div id="alertList"></div>
-    </div>
 
-    <!-- アクションバー -->
-    <div class="action-bar" style="display:grid; grid-template-columns:1fr 1fr; gap:8px; padding:12px 20px;">
-        <button class="btn btn-xs btn-success" onclick="generateInvoices()" style="width:100%;">📄 月次一括生成</button>
-        <button class="btn btn-xs btn-secondary" onclick="showPaymentModal()" style="width:100%;">💳 入金登録</button>
-        <button class="btn btn-xs btn-secondary" onclick="showBankUpload()"
-            style="width:100%;background:var(--blue-light);color:var(--blue-dark);border-color:var(--blue);">🏦
-            銀行入金取込</button>
-        <button class="btn btn-xs btn-ghost" onclick="connectFreee()" id="freeeBtn" style="width:100%;">🔗
-            freee連携</button>
-    </div>
-
-    <!-- 月別支払状況 -->
-    <div style="padding: 16px 20px;">
-        <h3 style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 4px;">📅 月別入金状況</h3>
-        <div class="month-grid" id="monthGrid"></div>
-    </div>
-
-    <!-- ドライバー実績集計 -->
-    <div style="padding: 0 20px 16px;">
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-            <h3 style="font-size: 0.9rem; color: var(--text-secondary); margin: 0;">📊 今月のドライバー回収実績</h3>
-            <button class="btn btn-xs btn-outline" onclick="loadDriverTally()">🔄 集計を取得</button>
+        <!-- 月別支払状況 -->
+        <div style="padding: 16px 20px;">
+            <h3 style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 4px;">📅 月別入金状況</h3>
+            <div class="month-grid" id="monthGrid"></div>
         </div>
-        <div id="driverTallyList"
-            style="display:none; background:#fff; padding:12px; border-radius:var(--r-md); box-shadow:var(--shadow-sm); margin-top:8px;">
+
+        <!-- ドライバー実績集計 -->
+        <div style="padding: 0 20px 16px;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <h3 style="font-size: 0.9rem; color: var(--text-secondary); margin: 0;">📊 今月のドライバー回収実績</h3>
+                <button class="btn btn-xs btn-outline" onclick="loadDriverTally()">🔄 集計を取得</button>
+            </div>
+            <div id="driverTallyList"
+                style="display:none; background:#fff; padding:12px; border-radius:var(--r-md); box-shadow:var(--shadow-sm); margin-top:8px;">
+            </div>
         </div>
-    </div>
 
-    <!-- 請求書一覧 -->
-    <div class="invoice-list" id="invoiceList">
-        <p style="text-align:center; color: var(--text-tertiary); margin-top: 20px;">読み込み中...</p>
-    </div>
-
-    <!-- 入金モーダル -->
-    <div class="payment-modal-overlay" id="paymentOverlay">
-        <div class="payment-modal">
-            <div class="modal-drag-handle"></div>
-            <h3 class="card-title">💳 入金を登録（消し込み）</h3>
-            <div class="form-group">
-                <label>請求書を選択</label>
-                <select id="payInvoiceId"></select>
-            </div>
-            <div class="form-group">
-                <label>入金額 (円)</label>
-                <input type="number" id="payAmount" placeholder="30000">
-            </div>
-            <div class="form-group">
-                <label>入金日</label>
-                <input type="date" id="payDate">
-            </div>
-            <div class="form-group">
-                <label>支払方法</label>
-                <select id="payMethod">
-                    <option value="bank_transfer">銀行振込</option>
-                    <option value="cash">現金</option>
-                    <option value="other">その他</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label>備考</label>
-                <input type="text" id="payNotes" placeholder="任意">
-            </div>
-            <button class="btn btn-primary" onclick="submitPayment()">入金を登録</button>
-            <button class="btn btn-secondary mt-1" onclick="closePaymentModal()">キャンセル</button>
+        <!-- 請求書一覧 -->
+        <div class="invoice-list" id="invoiceList">
+            <p style="text-align:center; color: var(--text-tertiary); margin-top: 20px;">読み込み中...</p>
         </div>
-    </div>
 
-    <!-- 銀行入金取込モーダル -->
-    <div class="payment-modal-overlay" id="bankOverlay">
-        <div class="payment-modal">
-            <div class="modal-drag-handle"></div>
-            <h3 class="card-title">🏦 京都銀行 入金データ取込</h3>
-            <p class="small-text mb-2">CSVファイルをアップロードして入金データを取り込みます。<br>フォーマット: 日付, 振込人名義, 入金額</p>
-            <div class="form-group">
-                <label>CSVファイル</label>
-                <input type="file" id="bankFile" accept=".csv" style="padding:10px;">
+        <!-- 入金モーダル -->
+        <div class="payment-modal-overlay" id="paymentOverlay">
+            <div class="payment-modal">
+                <div class="modal-drag-handle"></div>
+                <h3 class="card-title">💳 入金を登録（消し込み）</h3>
+                <div class="form-group">
+                    <label>請求書を選択</label>
+                    <select id="payInvoiceId"></select>
+                </div>
+                <div class="form-group">
+                    <label>入金額 (円)</label>
+                    <input type="number" id="payAmount" placeholder="30000">
+                </div>
+                <div class="form-group">
+                    <label>入金日</label>
+                    <input type="date" id="payDate">
+                </div>
+                <div class="form-group">
+                    <label>支払方法</label>
+                    <select id="payMethod">
+                        <option value="bank_transfer">銀行振込</option>
+                        <option value="cash">現金</option>
+                        <option value="other">その他</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>備考</label>
+                    <input type="text" id="payNotes" placeholder="任意">
+                </div>
+                <button class="btn btn-primary" onclick="submitPayment()">入金を登録</button>
+                <button class="btn btn-secondary mt-1" onclick="closePaymentModal()">キャンセル</button>
             </div>
-            <button class="btn btn-primary" onclick="uploadBankCSV()">📤 アップロード</button>
-            <button class="btn btn-success mt-1" onclick="runAutoMatch()">🔍 自動マッチング実行</button>
-            <div id="matchResults" style="margin-top:16px;"></div>
-            <button class="btn btn-secondary mt-1" onclick="closeBankUpload()">閉じる</button>
+        </div>
+
+        <!-- 銀行入金取込モーダル -->
+        <div class="payment-modal-overlay" id="bankOverlay">
+            <div class="payment-modal">
+                <div class="modal-drag-handle"></div>
+                <h3 class="card-title">🏦 京都銀行 入金データ取込</h3>
+                <p class="small-text mb-2">CSVファイルをアップロードして入金データを取り込みます。<br>フォーマット: 日付, 振込人名義, 入金額</p>
+                <div class="form-group">
+                    <label>CSVファイル</label>
+                    <input type="file" id="bankFile" accept=".csv" style="padding:10px;">
+                </div>
+                <button class="btn btn-primary" onclick="uploadBankCSV()">📤 アップロード</button>
+                <button class="btn btn-success mt-1" onclick="runAutoMatch()">🔍 自動マッチング実行</button>
+                <div id="matchResults" style="margin-top:16px;"></div>
+                <button class="btn btn-secondary mt-1" onclick="closeBankUpload()">閉じる</button>
+            </div>
+        </div>
+    </div><!-- /.billing-page -->
+
+    <!-- 請求書詳細モーダル -->
+    <div class="inv-detail-overlay" id="invDetailOverlay" onclick="if(event.target===this)closeInvDetail()">
+        <div class="inv-detail-modal">
+            <div class="inv-doc" id="invDocContent"></div>
+            <div class="inv-doc-actions">
+                <button class="btn btn-xs btn-primary" onclick="window.print()">🖨 印刷</button>
+                <button class="btn btn-xs btn-secondary" onclick="closeInvDetail()">閉じる</button>
+            </div>
         </div>
     </div>
 
@@ -494,21 +657,75 @@
         function viewInvoice(id) {
             const inv = allInvoices.find(i => i.id === id);
             if (!inv) return;
-            let detail = `請求書: ${inv.customer_name}\n月: ${inv.month}\n金額: ¥${inv.total_amount.toLocaleString()}\n入金済: ¥${inv.paid_total.toLocaleString()}\nステータス: ${inv.status}`;
-            if (inv.items.length) {
-                detail += '\n\n--- 明細 ---';
-                inv.items.forEach(it => {
-                    detail += `\n${it.description}: ${it.quantity}${it.unit} × ¥${it.unit_price} = ¥${it.amount.toLocaleString()}`;
-                });
+            const statusLabel = { draft: '下書き', sent: '送付済', paid: '入金済', partial: '一部入金', overdue: '期限超過' };
+            const methodLabels = { bank_transfer: '銀行振込', cash: '現金', other: 'その他' };
+            const remaining = inv.total_amount - inv.paid_total;
+
+            let itemsHtml = '';
+            if (inv.items && inv.items.length) {
+                itemsHtml = inv.items.map(it => `
+                    <tr>
+                        <td>${utils.escapeHtml(it.description)}</td>
+                        <td class="num">${it.quantity} ${it.unit || '式'}</td>
+                        <td class="num">¥${Number(it.unit_price).toLocaleString()}</td>
+                        <td class="num">¥${Number(it.amount).toLocaleString()}</td>
+                    </tr>
+                `).join('');
+            } else {
+                itemsHtml = `<tr><td colspan="4" style="text-align:center;color:var(--text-tertiary);">明細なし</td></tr>`;
             }
+
+            let paymentsHtml = '';
             if (inv.payments && inv.payments.length) {
-                const methodLabels = { bank_transfer: '銀行振込', cash: '現金', other: 'その他' };
-                detail += '\n\n--- 入金履歴 ---';
-                inv.payments.forEach(p => {
-                    detail += `\n${p.payment_date}: ¥${p.amount.toLocaleString()} (${methodLabels[p.payment_method] || p.payment_method}) ${p.notes ? '- ' + p.notes : ''}`;
-                });
+                paymentsHtml = `
+                    <div class="inv-doc-payments">
+                        <h4>💳 入金履歴</h4>
+                        ${inv.payments.map(p => `
+                            <div class="inv-doc-pay-row">
+                                <span>${p.payment_date} (${methodLabels[p.payment_method] || p.payment_method})</span>
+                                <span style="font-weight:700;">¥${Number(p.amount).toLocaleString()}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                `;
             }
-            alert(detail);
+
+            document.getElementById('invDocContent').innerHTML = `
+                <div class="inv-doc-header">
+                    <h2>請 求 書</h2>
+                    <span class="inv-status ${inv.status}" style="font-size:0.85rem;">${statusLabel[inv.status] || inv.status}</span>
+                </div>
+                <div class="inv-doc-meta">
+                    <div>
+                        <div class="inv-doc-to">${utils.escapeHtml(inv.customer_name || '顧客')} 御中</div>
+                    </div>
+                    <div style="text-align:right;">
+                        <div style="font-size:0.85rem;color:var(--text-secondary);">請求月: ${inv.month}</div>
+                        ${inv.due_date ? `<div style="font-size:0.85rem;color:var(--text-secondary);">支払期限: ${inv.due_date}</div>` : ''}
+                    </div>
+                </div>
+                <div style="font-size:1.3rem;font-weight:800;text-align:center;margin-bottom:20px;padding:12px;background:#f0f4ff;border-radius:8px;">
+                    ご請求金額: ¥${inv.total_amount.toLocaleString()}
+                </div>
+                <table>
+                    <thead>
+                        <tr><th>品目</th><th style="width:70px;">数量</th><th style="width:90px;">単価</th><th style="width:100px;">金額</th></tr>
+                    </thead>
+                    <tbody>${itemsHtml}</tbody>
+                    <tfoot>
+                        <tr><td colspan="3" style="text-align:right;">合計</td><td class="num">¥${inv.total_amount.toLocaleString()}</td></tr>
+                        <tr><td colspan="3" style="text-align:right;">入金済</td><td class="num">¥${inv.paid_total.toLocaleString()}</td></tr>
+                        <tr><td colspan="3" style="text-align:right;font-weight:800;color:${remaining > 0 ? 'var(--red)' : 'var(--green-dark)'};">残額</td>
+                            <td class="num" style="font-weight:800;color:${remaining > 0 ? 'var(--red)' : 'var(--green-dark)'};">¥${remaining.toLocaleString()}</td></tr>
+                    </tfoot>
+                </table>
+                ${paymentsHtml}
+            `;
+            document.getElementById('invDetailOverlay').classList.add('show');
+        }
+
+        function closeInvDetail() {
+            document.getElementById('invDetailOverlay').classList.remove('show');
         }
 
         async function generateInvoices() {
