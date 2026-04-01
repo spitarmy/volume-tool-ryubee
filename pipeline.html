@@ -317,9 +317,16 @@
             新規追加</button>
     </header>
 
-    <div style="padding: 10px 20px; background:var(--glass-bg); border-bottom: 0.5px solid rgba(0, 0, 0, 0.06);">
+    <div
+        style="padding: 10px 20px 0px 20px; background:var(--glass-bg); border-bottom: 0.5px solid rgba(0, 0, 0, 0.06);">
         <input type="text" id="plSearch" placeholder="🔍 案件名・お客様名でスキャン..." oninput="filterPipeline()"
-            style="width:100%; padding:10px 14px; border-radius:10px; border:1px solid var(--border); font-size:0.95rem; background:#fff;">
+            style="width:100%; padding:10px 14px; border-radius:10px; border:1px solid var(--border); font-size:0.95rem; background:#fff; margin-bottom: 12px;">
+
+        <!-- スタッフ絞り込みタブ -->
+        <div id="staffTabs"
+            style="display:flex; gap:8px; overflow-x:auto; padding-bottom:10px; -webkit-overflow-scrolling: touch; scrollbar-width: none;">
+            <button class="btn btn-xs btn-primary" style="flex-shrink:0;" onclick="filterByStaff('all')">全て</button>
+        </div>
     </div>
     <div class="pipeline-container" id="pipelineContainer">
         <p style="text-align:center; width:100%; color:var(--text-tertiary); margin-top:40px;">読み込み中...</p>
@@ -401,6 +408,36 @@
 
         let pipelineData = {};
         let allCustomers = [];
+        let currentStaffFilter = 'all';
+
+        function renderStaffTabs() {
+            const allNames = new Set();
+            for (const stage of Object.values(pipelineData)) {
+                for (const job of stage) {
+                    if (job.created_by_name && job.created_by_name.trim() !== 'Unknown') allNames.add(job.created_by_name.trim());
+                    if (job.assigned_to_name && job.assigned_to_name.trim() !== 'Unknown') allNames.add(job.assigned_to_name.trim());
+                }
+            }
+
+            const staffList = Array.from(allNames).sort();
+            const tabsDiv = document.getElementById('staffTabs');
+
+            let html = `<button class="btn btn-xs ${currentStaffFilter === 'all' ? 'btn-primary' : 'btn-secondary'}" style="flex-shrink:0;" onclick="filterByStaff('all')">全て</button>`;
+
+            staffList.forEach(name => {
+                const isActive = currentStaffFilter === name;
+                html += `<button class="btn btn-xs ${isActive ? 'btn-primary' : 'btn-secondary'}" style="flex-shrink:0;" onclick="filterByStaff('${utils.escapeHtml(name).replace(/'/g, "\\'")}')">${utils.escapeHtml(name)}</button>`;
+            });
+
+            tabsDiv.innerHTML = html;
+        }
+
+        function filterByStaff(name) {
+            currentStaffFilter = name;
+            renderStaffTabs();
+            renderPipeline();
+            filterPipeline();
+        }
 
         document.addEventListener('DOMContentLoaded', loadPipeline);
 
@@ -412,6 +449,7 @@
                 ]);
                 pipelineData = pData;
                 allCustomers = cData;
+                renderStaffTabs();
                 renderPipeline();
             } catch (e) {
                 document.getElementById('pipelineContainer').innerHTML =
@@ -424,7 +462,15 @@
             container.innerHTML = '';
 
             STAGES.forEach(stage => {
-                const jobs = pipelineData[stage.key] || [];
+                let jobs = pipelineData[stage.key] || [];
+
+                if (currentStaffFilter !== 'all') {
+                    jobs = jobs.filter(j =>
+                        (j.created_by_name || '').trim() === currentStaffFilter ||
+                        (j.assigned_to_name || '').trim() === currentStaffFilter
+                    );
+                }
+
                 const col = document.createElement('div');
                 col.className = 'pipeline-column';
                 col.dataset.stage = stage.key;
