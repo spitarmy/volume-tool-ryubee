@@ -675,9 +675,9 @@
                 const cust = allCustomers.find(c => c.id === inv.customer_id) || {};
                 let fd = {};
                 try { fd = JSON.parse(cust.form_data || "{}"); } catch (e) { }
-                const yamaNum = fd.yamabun_management_number || '';
+                inv._yamaNum = fd.yamabun_management_number || '';
 
-                const text = (inv.customer_name + ' ' + yamaNum).toLowerCase();
+                const text = (inv.customer_name + ' ' + inv._yamaNum).toLowerCase();
                 const matchQ = text.includes(q);
 
                 let matchT = true;
@@ -697,6 +697,12 @@
                 return;
             }
 
+            filtered.sort((a, b) => {
+                const numA = a._yamaNum || "";
+                const numB = b._yamaNum || "";
+                return numA.localeCompare(numB);
+            });
+
             const statusLabel = { draft: '下書き', sent: '送付済', paid: '入金済', partial: '一部入金', overdue: '期限超過' };
             list.innerHTML = filtered.map(inv => `
                 <div class="invoice-card" onclick="viewInvoice('${inv.id}')">
@@ -704,7 +710,8 @@
                         <span class="inv-customer">${utils.escapeHtml(inv.customer_name || '顧客')}</span>
                         <span class="inv-status ${inv.status}">${statusLabel[inv.status] || inv.status}</span>
                     </div>
-                    <div class="inv-top">
+                    ${inv._yamaNum ? `<div class="inv-meta" style="font-weight:700; color:var(--primary); margin-top:2px; font-size:13px;">🎫 山文管理番号: ${utils.escapeHtml(inv._yamaNum)}</div>` : ''}
+                    <div class="inv-top" style="margin-top:6px;">
                         <span class="inv-amount">¥${inv.total_amount.toLocaleString()}</span>
                         <span class="inv-meta">${inv.month}</span>
                     </div>
