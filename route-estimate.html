@@ -350,7 +350,8 @@
         // ── Waste Categories ──
         const WASTE_TYPES = [
             {
-                id: 'burnable', icon: '🔥', name: '燃えるゴミ', unit: '袋', defaultPrice: 300,
+                id: 'burnable', icon: '🔥', name: '燃えるゴミ', unit: 'kg', defaultPrice: 30,
+                weightBased: true, step: 50, minPrice: 4500,
                 freqOptions: [
                     { value: 'daily', label: '毎日' },
                     { value: '6x-week', label: '週6' },
@@ -406,20 +407,24 @@
                     `<button class="freq-chip ${f.value === w.defaultFreq ? 'active' : ''}" data-wid="${w.id}" data-freq="${f.value}" onclick="selectItemFreq(this)">${f.label}</button>`
                 ).join('');
 
+                const step = w.step || 1;
+                const unitLabel = w.weightBased ? 'kg/月' : `${w.unit}/回`;
+
                 return `
                     <div class="waste-card" id="card-${w.id}" style="display:flex;align-items:center;gap:14px;text-align:left;padding:16px;">
                         <span class="w-icon" style="margin:0;font-size:28px;flex-shrink:0;">${w.icon}</span>
                         <div style="flex:1;min-width:0;">
                             <div class="w-name" style="margin-bottom:6px;">${w.name}</div>
                             <div class="freq-options" style="gap:4px;">${freqChips}</div>
+                            ${w.weightBased ? '<div style="font-size:0.68rem;color:var(--text-tertiary);margin-top:4px;">※ kg×30 (最低¥4,500)</div>' : ''}
                         </div>
                         <div style="display:flex;flex-direction:column;align-items:center;flex-shrink:0;">
                             <div class="qty-row">
-                                <button class="qty-btn" onclick="event.stopPropagation();changeQty('${w.id}', -1)">−</button>
+                                <button class="qty-btn" onclick="event.stopPropagation();changeQty('${w.id}', -${step})">−</button>
                                 <span class="qty-value" id="qty-${w.id}">0</span>
-                                <button class="qty-btn" onclick="event.stopPropagation();changeQty('${w.id}', 1)">+</button>
+                                <button class="qty-btn" onclick="event.stopPropagation();changeQty('${w.id}', ${step})">+</button>
                             </div>
-                            <div class="qty-unit">${w.unit}/回</div>
+                            <div class="qty-unit">${unitLabel}</div>
                         </div>
                     </div>
                 `;
@@ -476,11 +481,17 @@
                 const q = quantities[w.id] || 0;
                 if (q === 0) continue;
                 const freq = freqSelections[w.id];
-                const mult = FREQ_MULTIPLIERS[freq] || 1;
-                const perCollection = q * w.defaultPrice;
-                const monthly = Math.round(perCollection * mult);
+                let monthly;
+                if (w.weightBased) {
+                    monthly = Math.max(q * w.defaultPrice, w.minPrice);
+                    breakdown.push(`${w.name}: ${q}kg × ¥${w.defaultPrice} = ¥${monthly.toLocaleString()}/月 (${freqLabels[freq]})`);
+                } else {
+                    const mult = FREQ_MULTIPLIERS[freq] || 1;
+                    const perCollection = q * w.defaultPrice;
+                    monthly = Math.round(perCollection * mult);
+                    breakdown.push(`${w.name}: ${q}${w.unit}×¥${w.defaultPrice.toLocaleString()} × ${freqLabels[freq]} = ¥${monthly.toLocaleString()}/月`);
+                }
                 totalMonthly += monthly;
-                breakdown.push(`${w.name}: ${q}${w.unit}×¥${w.defaultPrice.toLocaleString()} × ${freqLabels[freq]} = ¥${monthly.toLocaleString()}/月`);
             }
 
             if (totalMonthly === 0) {
@@ -529,8 +540,13 @@
                 const q = quantities[w.id] || 0;
                 if (q > 0) {
                     const freq = freqSelections[w.id];
-                    const mult = FREQ_MULTIPLIERS[freq] || 1;
-                    const monthly = Math.round(q * w.defaultPrice * mult);
+                    let monthly;
+                    if (w.weightBased) {
+                        monthly = Math.max(q * w.defaultPrice, w.minPrice);
+                    } else {
+                        const mult = FREQ_MULTIPLIERS[freq] || 1;
+                        monthly = Math.round(q * w.defaultPrice * mult);
+                    }
                     totalMonthly += monthly;
                     items.push(`${w.name}: ${q}${w.unit} (${freqLabelsShort[freq]}) → ¥${monthly.toLocaleString()}/月`);
                 }
