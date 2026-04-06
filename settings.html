@@ -142,9 +142,10 @@
     </header>
 
     <div class="tabs">
-        <div class="tab active" onclick="switchTab('ai')">💴 AI立米・料金マスタ</div>
-        <div class="tab" onclick="switchTab('items')">📋 手動明細・単価マスタ</div>
-        <div class="tab" onclick="switchTab('email')">✉️ メール・リマインド</div>
+        <div class="tab active" onclick="switchTab('ai')">💴 AI立米</div>
+        <div class="tab" onclick="switchTab('waste')">🗑 一般廃棄物</div>
+        <div class="tab" onclick="switchTab('items')">📋 単価マスタ</div>
+        <div class="tab" onclick="switchTab('email')">✉️ メール</div>
     </div>
 
     <div class="container pb-5" style="padding-top:16px;">
@@ -419,6 +420,50 @@
             </button>
         </div> <!-- End of tab-ai -->
 
+        <!-- ── TAB: 一般廃棄物単価マスタ ── -->
+        <div id="tab-waste" class="tab-content">
+            <div class="alert alert-info" style="font-size:0.88rem;">
+                一般廃棄物の<strong>ジャンル×頻度ごとの月額単価（1袋あたり）</strong>を設定します。<br>
+                ここで設定した単価は、顧客登録時に自動で適用されます。
+            </div>
+
+            <div class="card">
+                <div class="card-title">🗑 一般廃棄物 月額単価テーブル</div>
+                <p class="small-text mb-2">各ジャンルの「1袋あたりの月額単価」を、回収頻度ごとに設定してください。</p>
+
+                <div style="overflow-x:auto; -webkit-overflow-scrolling:touch;">
+                    <table style="width:100%; border-collapse:collapse; font-size:0.85rem; min-width:500px;">
+                        <thead>
+                            <tr style="background:var(--primary); color:#fff;">
+                                <th style="padding:10px 8px; text-align:left; border:1px solid #ccc;">ジャンル</th>
+                                <th style="padding:10px 6px; text-align:center; border:1px solid #ccc;">毎日</th>
+                                <th style="padding:10px 6px; text-align:center; border:1px solid #ccc;">週3回</th>
+                                <th style="padding:10px 6px; text-align:center; border:1px solid #ccc;">週2回</th>
+                                <th style="padding:10px 6px; text-align:center; border:1px solid #ccc;">週1回</th>
+                                <th style="padding:10px 6px; text-align:center; border:1px solid #ccc;">月2回</th>
+                                <th style="padding:10px 6px; text-align:center; border:1px solid #ccc;">月1回</th>
+                            </tr>
+                        </thead>
+                        <tbody id="wastePricingBody">
+                        </tbody>
+                    </table>
+                </div>
+                <p class="small-text" style="margin-top:8px; color:var(--text-secondary);">※ 請求額＝単価 × 袋数 で自動計算されます</p>
+            </div>
+
+            <div class="card">
+                <div class="card-title">➕ ジャンルを追加</div>
+                <div style="display:flex; gap:8px;">
+                    <input type="text" id="newWasteGenre" placeholder="例: 機密文書" style="flex:1;">
+                    <button class="btn btn-secondary btn-sm" onclick="addWasteGenreRow()">追加</button>
+                </div>
+            </div>
+
+            <button class="btn btn-primary" onclick="saveSettings()" style="margin-top:8px; margin-bottom:48px;">
+                💾 一般廃棄物単価を保存する
+            </button>
+        </div> <!-- End of tab-waste -->
+
         <!-- ── TAB 2: 手動明細・単価マスタ ── -->
         <div id="tab-items" class="tab-content">
             <div class="card">
@@ -535,6 +580,63 @@
         let customAiItems = [];
         let uploadedImages = { company_logo: '', company_stamp: '' };
 
+        // 一般廃棄物単価マスタ
+        const WASTE_FREQUENCIES = ['毎日', '週3回', '週2回', '週1回', '月2回', '月1回'];
+        const DEFAULT_WASTE_GENRES = ['一般ごみ（可燃）', '資源（缶ビンペット）', 'プラ産廃（包装）', 'ダンボール・雑紙'];
+        let wastePricingData = {};  // { genreName: { frequency: price, ... }, ... }
+
+        function renderWastePricing() {
+            const tbody = document.getElementById('wastePricingBody');
+            if (!tbody) return;
+            const genres = Object.keys(wastePricingData);
+            if (genres.length === 0) {
+                // デフォルトジャンルを追加
+                DEFAULT_WASTE_GENRES.forEach(g => { wastePricingData[g] = {}; });
+            }
+            tbody.innerHTML = Object.entries(wastePricingData).map(([genre, freqs]) => {
+                const cells = WASTE_FREQUENCIES.map(f =>
+                    `<td style="padding:4px; border:1px solid #ccc; text-align:center;">
+                        <input type="number" value="${freqs[f] || ''}" placeholder="0" 
+                            data-genre="${utils.escapeHtml(genre)}" data-freq="${f}"
+                            onchange="updateWastePrice(this)"
+                            style="width:70px; text-align:right; padding:6px 4px; font-weight:700; color:var(--blue); border:1px solid var(--border); border-radius:6px;">
+                    </td>`
+                ).join('');
+                return `<tr>
+                    <td style="padding:8px; border:1px solid #ccc; font-weight:700; background:#f8f9fa; white-space:nowrap;">
+                        ${utils.escapeHtml(genre)}
+                        <button onclick="removeWasteGenre('${utils.escapeHtml(genre)}')" 
+                            style="background:none; border:none; color:var(--danger); cursor:pointer; font-size:12px; margin-left:4px;" title="削除">✖</button>
+                    </td>
+                    ${cells}
+                </tr>`;
+            }).join('');
+        }
+
+        function updateWastePrice(input) {
+            const genre = input.dataset.genre;
+            const freq = input.dataset.freq;
+            const val = parseInt(input.value) || 0;
+            if (!wastePricingData[genre]) wastePricingData[genre] = {};
+            wastePricingData[genre][freq] = val;
+        }
+
+        function addWasteGenreRow() {
+            const nameInput = document.getElementById('newWasteGenre');
+            const name = nameInput.value.trim();
+            if (!name) { alert('ジャンル名を入力してください'); return; }
+            if (wastePricingData[name]) { alert('そのジャンルは既に存在します'); return; }
+            wastePricingData[name] = {};
+            nameInput.value = '';
+            renderWastePricing();
+        }
+
+        function removeWasteGenre(genre) {
+            if (!confirm(`「${genre}」を削除しますか？`)) return;
+            delete wastePricingData[genre];
+            renderWastePricing();
+        }
+
         function handleImageUpload(input, fieldName, previewId) {
             const file = input.files[0];
             if (!file) return;
@@ -637,6 +739,14 @@
                 document.getElementById('stampPreview').style.display = 'block';
             }
             renderCustomAiItems();
+
+            // 一般廃棄物単価マスタ
+            if (saved.general_waste_pricing && typeof saved.general_waste_pricing === 'object') {
+                wastePricingData = saved.general_waste_pricing;
+            } else {
+                wastePricingData = {};
+            }
+            renderWastePricing();
         }
 
         async function saveSettings() {
@@ -654,6 +764,7 @@
             data.custom_ai_items = customAiItems.filter(item => item.name.trim() !== '');
             data.company_logo = uploadedImages.company_logo || '';
             data.company_stamp = uploadedImages.company_stamp || '';
+            data.general_waste_pricing = wastePricingData;
 
             try {
                 // RyubeeAPI.updateSettings internally calls RyubeeAPI.saveSettings if aliased, but we made updateSettings
