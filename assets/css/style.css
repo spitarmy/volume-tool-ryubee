@@ -881,7 +881,11 @@ textarea {
   .sheet,
   #alert-widgets,
   .calendar-header,
-  .cal-wrapper {
+  .cal-wrapper,
+  .data-header,
+  .main-tabs,
+  .tab-panel,
+  #alertArea {
     margin-left: 220px;
   }
 
@@ -919,7 +923,9 @@ textarea {
   .cust-modal-overlay,
   .mf-modal-overlay,
   .pay-modal-overlay,
-  .billing-modal-overlay {
+  .billing-modal-overlay,
+  .cd-modal-overlay,
+  .fax-overlay {
     align-items: center;
   }
 
@@ -927,7 +933,9 @@ textarea {
   .cust-modal,
   .mf-modal,
   .pay-modal,
-  .billing-modal {
+  .billing-modal,
+  .cd-modal,
+  .fax-modal {
     border-radius: var(--r-xl);
     max-width: 560px;
     max-height: 85vh;
@@ -1038,7 +1046,11 @@ textarea {
   .sheet,
   #alert-widgets,
   .calendar-header,
-  .cal-wrapper {
+  .cal-wrapper,
+  .data-header,
+  .main-tabs,
+  .tab-panel,
+  #alertArea {
     margin-left: 260px;
   }
 }

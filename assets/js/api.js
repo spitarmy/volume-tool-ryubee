@@ -463,6 +463,89 @@ const RyubeeAPI = {
   // ── Automated Reminders (未入金メール) ─────────────────
   async sendUnpaidReminders() {
     return apiFetch("/v1/invoices/send-reminders", { method: "POST" });
+  },
+
+  // ── Vehicles (車両管理) ──────────────────────────────────
+  async fetchVehicles() {
+    return apiFetch("/v1/vehicles");
+  },
+  async createVehicle(body) {
+    return apiFetch("/v1/vehicles", { method: "POST", body: JSON.stringify(body) });
+  },
+  async updateVehicle(id, body) {
+    return apiFetch(`/v1/vehicles/${id}`, { method: "PUT", body: JSON.stringify(body) });
+  },
+  async deleteVehicle(id) {
+    return apiFetch(`/v1/vehicles/${id}`, { method: "DELETE" });
+  },
+
+  // ── Permits (許可証管理) ─────────────────────────────────
+  async fetchPermits() {
+    return apiFetch("/v1/permits");
+  },
+  async createPermit(body) {
+    return apiFetch("/v1/permits", { method: "POST", body: JSON.stringify(body) });
+  },
+  async updatePermit(id, body) {
+    return apiFetch(`/v1/permits/${id}`, { method: "PUT", body: JSON.stringify(body) });
+  },
+  async deletePermit(id) {
+    return apiFetch(`/v1/permits/${id}`, { method: "DELETE" });
+  },
+
+  // ── Waste Contracts (産廃3社契約) ────────────────────────
+  async fetchWasteContracts() {
+    return apiFetch("/v1/waste-contracts");
+  },
+  async createWasteContract(body) {
+    return apiFetch("/v1/waste-contracts", { method: "POST", body: JSON.stringify(body) });
+  },
+  async updateWasteContract(id, body) {
+    return apiFetch(`/v1/waste-contracts/${id}`, { method: "PUT", body: JSON.stringify(body) });
+  },
+  async deleteWasteContract(id) {
+    return apiFetch(`/v1/waste-contracts/${id}`, { method: "DELETE" });
+  },
+
+  // ── Company Data Alerts (更新期限アラート) ───────────────
+  async fetchCompanyDataAlerts() {
+    return apiFetch("/v1/company-data/alerts");
+  },
+
+  // ── Vehicle Records (車両履歴: 修理/事故/車検) ──────────
+  async fetchVehicleRecords(vehicleId) {
+    return apiFetch(`/v1/vehicles/${vehicleId}/records`);
+  },
+  async createVehicleRecord(vehicleId, formData) {
+    const token = localStorage.getItem("ryubee_token");
+    const res = await fetch(`${API_BASE}/v1/vehicles/${vehicleId}/records`, {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${token}` },
+      body: formData,  // FormData (not JSON)
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  },
+  async deleteVehicleRecord(vehicleId, recordId) {
+    return apiFetch(`/v1/vehicles/${vehicleId}/records/${recordId}`, { method: "DELETE" });
+  },
+
+  // ── Training Materials (研修資料) ────────────────────────
+  async fetchTrainingMaterials() {
+    return apiFetch("/v1/training-materials");
+  },
+  async createTrainingMaterial(formData) {
+    const token = localStorage.getItem("ryubee_token");
+    const res = await fetch(`${API_BASE}/v1/training-materials`, {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${token}` },
+      body: formData,
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  },
+  async deleteTrainingMaterial(id) {
+    return apiFetch(`/v1/training-materials/${id}`, { method: "DELETE" });
   }
 };
 
