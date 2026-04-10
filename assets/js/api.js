@@ -233,6 +233,13 @@ const RyubeeAPI = {
     });
   },
 
+  async generateSubscriptionsCustom(body) {
+    return apiFetch("/v1/invoices/generate-subscriptions-custom", {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+  },
+
   async createOcrInvoice(formData) {
     return apiFetch("/v1/invoices/ocr-create", {
       method: "POST",

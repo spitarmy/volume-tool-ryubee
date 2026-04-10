@@ -1,0 +1,1178 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport"
+        content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>データ管理 — Ryu兵衛</title>
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <link rel="stylesheet" href="assets/css/style.css">
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#1A237E">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Ryu兵衛">
+    <style>
+        .data-header {
+            background: #FFFFFF;
+            padding: 30px 24px 20px;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .data-header h1 {
+            font-size: 1.8rem;
+            margin-bottom: 6px;
+        }
+
+        /* ── Main tab bar ─── */
+        .main-tabs {
+            display: flex;
+            gap: 6px;
+            padding: 12px 20px 0;
+            background: #fff;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .main-tab {
+            flex: 1;
+            padding: 12px 8px;
+            border: none;
+            background: transparent;
+            font-weight: 700;
+            font-size: 0.85rem;
+            cursor: pointer;
+            color: var(--text-secondary);
+            border-bottom: 3px solid transparent;
+            transition: all 0.2s;
+            text-align: center;
+            font-family: inherit;
+        }
+
+        .main-tab.active {
+            color: var(--blue);
+            border-bottom-color: var(--blue);
+        }
+
+        /* ── Alert banner ─── */
+        .alert-banner {
+            margin: 12px 20px;
+            padding: 14px 16px;
+            border-radius: var(--r-md);
+            font-weight: 600;
+            font-size: 0.88rem;
+        }
+
+        .alert-banner.expired {
+            background: var(--red-light);
+            color: #B00B06;
+            border: 1px solid rgba(239, 68, 68, 0.2);
+        }
+
+        .alert-banner.urgent {
+            background: var(--orange-light);
+            color: #C06000;
+            border: 1px solid rgba(245, 158, 11, 0.2);
+        }
+
+        .alert-banner.warning {
+            background: var(--blue-light);
+            color: var(--blue-dark);
+            border: 1px solid rgba(14, 165, 233, 0.2);
+        }
+
+        /* ── Data list ─── */
+        .data-list {
+            padding: 12px 20px 120px;
+        }
+
+        .data-card {
+            background: #fff;
+            border-radius: var(--r-xl);
+            padding: 20px;
+            margin-bottom: 12px;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--border);
+            cursor: pointer;
+            transition: transform 0.15s;
+        }
+
+        .data-card:active {
+            transform: scale(0.98);
+        }
+
+        .dc-top {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 8px;
+        }
+
+        .dc-title {
+            font-weight: 700;
+            font-size: 1.05rem;
+        }
+
+        .dc-meta {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 3px;
+        }
+
+        .dc-badge {
+            padding: 3px 10px;
+            border-radius: 50px;
+            font-size: 0.75rem;
+            font-weight: 700;
+        }
+
+        .dc-badge.ok {
+            background: var(--green-light);
+            color: var(--green-dark);
+        }
+
+        .dc-badge.warn {
+            background: var(--orange-light);
+            color: #C06000;
+        }
+
+        .dc-badge.danger {
+            background: var(--red-light);
+            color: var(--red);
+        }
+
+        /* ── Plate display ─── */
+        .plate-display {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            background: #F0FDF4;
+            border: 2px solid #86EFAC;
+            border-radius: 8px;
+            padding: 4px 10px;
+            font-weight: 800;
+            font-size: 0.9rem;
+            color: #166534;
+            letter-spacing: 0.02em;
+        }
+
+        /* ── Actions row ─── */
+        .card-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid var(--border);
+        }
+
+        .card-actions .btn-xs {
+            flex: 1;
+        }
+
+        /* ── FAX Modal ─── */
+        .fax-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.36);
+            backdrop-filter: blur(10px);
+            display: none;
+            z-index: 3500;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .fax-overlay.show {
+            display: flex;
+        }
+
+        .fax-modal {
+            background: #fff;
+            border-radius: var(--r-xl);
+            width: 90%;
+            max-width: 400px;
+            padding: 28px 24px;
+            animation: sheetUp 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+
+        .fax-modal h3 {
+            font-size: 1.1rem;
+            margin-bottom: 16px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        /* ── Modal ─── */
+        .cd-modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.36);
+            backdrop-filter: blur(10px);
+            display: none;
+            z-index: 3000;
+            align-items: flex-end;
+            justify-content: center;
+        }
+
+        .cd-modal-overlay.show {
+            display: flex;
+        }
+
+        .cd-modal {
+            background: #fff;
+            border-radius: var(--r-xl) var(--r-xl) 0 0;
+            width: 100%;
+            max-width: 600px;
+            padding: 24px 20px 40px;
+            max-height: 90vh;
+            overflow-y: auto;
+            animation: sheetUp 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+
+        /* Tab panel visibility */
+        .tab-panel {
+            display: none;
+        }
+
+        .tab-panel.active {
+            display: block;
+        }
+
+        .empty-msg {
+            text-align: center;
+            color: var(--text-tertiary);
+            margin-top: 30px;
+            font-size: 0.95rem;
+        }
+
+        /* ── Vehicle detail modal ── */
+        .vd-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, .4);
+            backdrop-filter: blur(8px);
+            display: none;
+            z-index: 3100;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .vd-overlay.show {
+            display: flex;
+        }
+
+        .vd-modal {
+            background: #fff;
+            border-radius: 12px;
+            width: 100%;
+            max-width: 600px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, .2);
+            animation: sheetUp .25s ease-out;
+            padding: 24px;
+        }
+
+        .vd-record {
+            background: var(--bg-secondary);
+            padding: 12px;
+            border-left: 3px solid var(--blue);
+            border-radius: 0 8px 8px 0;
+            margin-bottom: 10px;
+            font-size: 0.85rem;
+        }
+
+        .vd-record img {
+            max-width: 100%;
+            border-radius: 8px;
+            margin-top: 8px;
+        }
+
+        .record-type-tabs {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 16px;
+        }
+
+        .record-type-tabs button {
+            flex: 1;
+            padding: 8px;
+            border: 1px solid var(--border);
+            background: #fff;
+            border-radius: 8px;
+            font-weight: 600;
+            font-size: 0.8rem;
+            cursor: pointer;
+            transition: all .15s;
+            font-family: inherit;
+        }
+
+        .record-type-tabs button.active {
+            background: var(--blue-light);
+            border-color: var(--blue);
+            color: var(--blue-dark);
+        }
+
+        /* ── Training material card ── */
+        .training-card {
+            background: #fff;
+            border-radius: var(--r-xl);
+            padding: 20px;
+            margin-bottom: 12px;
+            box-shadow: var(--shadow-sm);
+            border: 1px solid var(--border);
+            display: flex;
+            gap: 16px;
+            align-items: center;
+        }
+
+        .training-card .t-icon {
+            font-size: 2rem;
+            width: 48px;
+            text-align: center;
+        }
+
+        .training-card .t-info {
+            flex: 1;
+        }
+
+        .training-card .t-title {
+            font-weight: 700;
+            font-size: 1rem;
+            margin-bottom: 4px;
+        }
+
+        .training-card .t-meta {
+            font-size: 0.82rem;
+            color: var(--text-secondary);
+        }
+    </style>
+</head>
+
+<body>
+
+    <header class="data-header" style="display:flex; justify-content:space-between; align-items:flex-end;">
+        <div>
+            <h1 style="margin-bottom:0;">📁 データ管理</h1>
+            <p style="color: var(--text-secondary); font-size: 0.9rem; margin-top:4px; margin-bottom:0;">
+                車両・許可証・産廃3社契約の管理</p>
+        </div>
+    </header>
+
+    <!-- Alert area -->
+    <div id="alertArea"></div>
+
+    <!-- Main sub-tabs -->
+    <div class="main-tabs">
+        <button class="main-tab active" data-tab="vehicles" onclick="switchTab('vehicles', this)">🚛 車両</button>
+        <button class="main-tab" data-tab="permits" onclick="switchTab('permits', this)">📋 許可証</button>
+        <button class="main-tab" data-tab="contracts" onclick="switchTab('contracts', this)">📄 3社契約</button>
+        <button class="main-tab" data-tab="training" onclick="switchTab('training', this)">📚 研修</button>
+    </div>
+
+    <!-- ━━ Vehicles Panel ━━ -->
+    <div class="tab-panel active" id="panel-vehicles">
+        <div class="data-list" id="vehicleList">
+            <p class="empty-msg">読み込み中...</p>
+        </div>
+    </div>
+
+    <!-- ━━ Permits Panel ━━ -->
+    <div class="tab-panel" id="panel-permits">
+        <div class="data-list" id="permitList">
+            <p class="empty-msg">読み込み中...</p>
+        </div>
+    </div>
+
+    <!-- ━━ Contracts Panel ━━ -->
+    <div class="tab-panel" id="panel-contracts">
+        <div class="data-list" id="contractList">
+            <p class="empty-msg">読み込み中...</p>
+        </div>
+    </div>
+
+    <!-- ━━ Training Panel ━━ -->
+    <div class="tab-panel" id="panel-training">
+        <div class="data-list">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                <h3 style="font-size:1.1rem; margin:0;">📚 研修資料</h3>
+                <button class="btn btn-xs btn-primary" onclick="openTrainingUpload()">📤 資料をアップロード</button>
+            </div>
+            <div id="trainingList">
+                <p class="empty-msg">読み込み中...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- FAB (add button) -->
+    <button class="fab" id="fabBtn" onclick="openAddModal()">+</button>
+
+    <!-- ━━ Vehicle Modal ━━ -->
+    <div class="cd-modal-overlay" id="vehicleOverlay">
+        <div class="cd-modal">
+            <div class="modal-drag-handle"></div>
+            <h3 class="card-title" id="vehicleModalTitle">🚛 車両登録</h3>
+            <input type="hidden" id="vEditId">
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+                <div class="form-group"><label>地域名</label><input type="text" id="vPlateArea" placeholder="京都">
+                </div>
+                <div class="form-group"><label>分類番号</label><input type="text" id="vPlateClass" placeholder="831">
+                </div>
+                <div class="form-group"><label>かな</label><input type="text" id="vPlateKana" placeholder="の"></div>
+                <div class="form-group"><label>一連番号</label><input type="text" id="vPlateNumber" placeholder="9">
+                </div>
+            </div>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+                <div class="form-group"><label>号車</label><input type="text" id="vVehicleNumber" placeholder="19-1">
+                </div>
+                <div class="form-group"><label>コード</label><input type="text" id="vCode" placeholder="A"></div>
+            </div>
+            <div class="form-group"><label>メーカー</label><input type="text" id="vMaker" placeholder="日野"></div>
+            <div class="form-group"><label>車種</label><input type="text" id="vVehicleType" placeholder="パッカー車">
+            </div>
+            <div class="form-group"><label>最大積載量 (kg)</label><input type="number" id="vMaxCapacity" placeholder="2800">
+            </div>
+            <div class="form-group"><label>担当</label><input type="text" id="vDriverName" placeholder="宮城・菅升">
+            </div>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+                <div class="form-group"><label>初年度登録</label><input type="text" id="vFirstReg" placeholder="R5/4">
+                </div>
+                <div class="form-group"><label>車検満了日</label><input type="date" id="vInspExpiry"></div>
+            </div>
+            <div class="form-group"><label>タイヤ交換日</label><input type="date" id="vTireDate"></div>
+            <div class="form-group"><label>備考</label><textarea id="vNotes" rows="2" placeholder="リース車、予備車など"></textarea>
+            </div>
+            <button class="btn btn-primary" onclick="saveVehicle()">保存する</button>
+            <button class="btn btn-secondary mt-1"
+                onclick="document.getElementById('vehicleOverlay').classList.remove('show')">キャンセル</button>
+            <button class="btn btn-danger mt-1" id="vDeleteBtn" style="display:none"
+                onclick="deleteVehicle()">削除する</button>
+        </div>
+    </div>
+
+    <!-- ━━ Permit Modal ━━ -->
+    <div class="cd-modal-overlay" id="permitOverlay">
+        <div class="cd-modal">
+            <div class="modal-drag-handle"></div>
+            <h3 class="card-title" id="permitModalTitle">📋 許可証登録</h3>
+            <input type="hidden" id="pEditId">
+            <div class="form-group"><label>自治体</label><input type="text" id="pPrefecture" placeholder="京都府"></div>
+            <div class="form-group"><label>許可種類</label>
+                <select id="pPermitType">
+                    <option value="産廃">産廃</option>
+                    <option value="特管">特管</option>
+                    <option value="収集運搬課程修了証">収集運搬課程修了証</option>
+                    <option value="入札参加資格">入札参加資格</option>
+                    <option value="その他">その他</option>
+                </select>
+            </div>
+            <div class="form-group"><label>許可番号</label><input type="text" id="pPermitNumber" placeholder="2600002617">
+            </div>
+            <div class="form-group"><label>許可有効年月日</label><input type="date" id="pExpiryDate"></div>
+            <div class="form-group"><label>申請月</label><input type="text" id="pAppMonth" placeholder="9月"></div>
+            <div class="form-group"><label>備考</label><textarea id="pNotes" rows="2" placeholder="葉書、ネット申請など"></textarea>
+            </div>
+            <button class="btn btn-primary" onclick="savePermit()">保存する</button>
+            <button class="btn btn-secondary mt-1"
+                onclick="document.getElementById('permitOverlay').classList.remove('show')">キャンセル</button>
+            <button class="btn btn-danger mt-1" id="pDeleteBtn" style="display:none"
+                onclick="deletePermit()">削除する</button>
+        </div>
+    </div>
+
+    <!-- ━━ Contract Modal ━━ -->
+    <div class="cd-modal-overlay" id="contractOverlay">
+        <div class="cd-modal">
+            <div class="modal-drag-handle"></div>
+            <h3 class="card-title" id="contractModalTitle">📄 3社契約登録</h3>
+            <input type="hidden" id="cEditId">
+            <div class="form-group"><label>契約名</label><input type="text" id="cContractName" placeholder="○○処分場 3社契約">
+            </div>
+            <div class="form-group"><label>排出事業者</label><input type="text" id="cContractor" placeholder="排出事業者名">
+            </div>
+            <div class="form-group"><label>処分業者</label><input type="text" id="cDisposal" placeholder="処分業者名"></div>
+            <div class="form-group"><label>運搬業者</label><input type="text" id="cTransport" placeholder="運搬業者名">
+            </div>
+            <div class="form-group"><label>廃棄物種類</label><input type="text" id="cWasteType" placeholder="廃プラスチック類"></div>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:12px;">
+                <div class="form-group"><label>契約日</label><input type="date" id="cContractDate"></div>
+                <div class="form-group"><label>有効期限</label><input type="date" id="cExpiryDate"></div>
+            </div>
+            <div class="form-group"><label>備考</label><textarea id="cNotes" rows="2"></textarea></div>
+            <button class="btn btn-primary" onclick="saveContract()">保存する</button>
+            <button class="btn btn-secondary mt-1"
+                onclick="document.getElementById('contractOverlay').classList.remove('show')">キャンセル</button>
+            <button class="btn btn-danger mt-1" id="cDeleteBtn" style="display:none"
+                onclick="deleteContract()">削除する</button>
+        </div>
+    </div>
+
+    <!-- ━━ FAX Modal ━━ -->
+    <div class="fax-overlay" id="faxOverlay">
+        <div class="fax-modal">
+            <h3>📠 FAX送信</h3>
+            <div class="form-group"><label>FAX番号</label><input type="tel" id="faxNumber" placeholder="075-XXX-XXXX">
+            </div>
+            <div class="form-group"><label>送信内容</label>
+                <div id="faxPreview"
+                    style="background:var(--bg-secondary);padding:12px;border-radius:var(--r-md);font-size:0.85rem;max-height:200px;overflow-y:auto;">
+                </div>
+            </div>
+            <button class="btn btn-primary" onclick="confirmFax()">📠 送信する</button>
+            <button class="btn btn-secondary mt-1"
+                onclick="document.getElementById('faxOverlay').classList.remove('show')">キャンセル</button>
+        </div>
+    </div>
+
+    <!-- ━━ Vehicle Records Detail Modal ━━ -->
+    <div class="vd-overlay" id="vdOverlay" onclick="if(event.target===this)this.classList.remove('show')">
+        <div class="vd-modal">
+            <h3 id="vdTitle" style="font-size:1.2rem;margin-bottom:16px;">🚛 車両履歴</h3>
+            <div class="record-type-tabs">
+                <button class="active" onclick="filterRecords('all',this)">📋 全て</button>
+                <button onclick="filterRecords('repair',this)">🔧 修理</button>
+                <button onclick="filterRecords('accident',this)">🚨 事故</button>
+                <button onclick="filterRecords('inspection',this)">📄 車検証</button>
+            </div>
+            <div id="vdRecords"></div>
+            <hr style="margin:16px 0;">
+            <h4 style="font-size:0.95rem;margin-bottom:12px;">📤 履歴を追加</h4>
+            <div class="form-group">
+                <label>種別</label>
+                <select id="vrType">
+                    <option value="repair">🔧 修理歴</option>
+                    <option value="accident">🚨 事故歴</option>
+                    <option value="inspection">📄 車検証</option>
+                </select>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                <div class="form-group"><label>日付</label><input type="date" id="vrDate"></div>
+                <div class="form-group"><label>費用 (円)</label><input type="number" id="vrCost" placeholder="0"></div>
+            </div>
+            <div class="form-group"><label>タイトル</label><input type="text" id="vrTitle" placeholder="例: エンジンオイル交換"></div>
+            <div class="form-group"><label>内容</label><textarea id="vrDesc" rows="2" placeholder="詳細内容..."></textarea>
+            </div>
+            <div class="form-group"><label>写真・PDFアップロード</label><input type="file" id="vrFile" accept="image/*,.pdf"
+                    capture="environment" style="padding:8px;"></div>
+            <button class="btn btn-primary" onclick="addVehicleRecord()">📤 履歴を追加</button>
+            <button class="btn btn-secondary mt-1"
+                onclick="document.getElementById('vdOverlay').classList.remove('show')">閉じる</button>
+        </div>
+    </div>
+
+    <!-- ━━ Training Upload Modal ━━ -->
+    <div class="cd-modal-overlay" id="trainingOverlay">
+        <div class="cd-modal">
+            <div class="modal-drag-handle"></div>
+            <h3 class="card-title">📚 研修資料アップロード</h3>
+            <div class="form-group"><label>タイトル</label><input type="text" id="tTitle" placeholder="例: 新人研修マニュアル"></div>
+            <div class="form-group"><label>ファイル（PDF・画像）</label><input type="file" id="tFile" accept="image/*,.pdf"
+                    style="padding:8px;"></div>
+            <div class="form-group"><label>メモ</label><textarea id="tNotes" rows="2" placeholder="任意"></textarea></div>
+            <button class="btn btn-primary" onclick="uploadTraining()">アップロード</button>
+            <button class="btn btn-secondary mt-1"
+                onclick="document.getElementById('trainingOverlay').classList.remove('show')">キャンセル</button>
+        </div>
+    </div>
+
+    <!-- Bottom Nav -->
+        <nav class="bottom-nav">
+        <a href="index.html" class="nav-item"><span class="nav-icon">🏠</span><span>ホーム</span></a>
+        <a href="pipeline.html" class="nav-item"><span class="nav-icon">📊</span><span>パイプライン</span></a>
+        <a href="billing.html" class="nav-item"><span class="nav-icon">💰</span><span>請求</span></a>
+        <a href="customers.html" class="nav-item"><span class="nav-icon">🏢</span><span>顧客</span></a>
+        <a href="company-data.html" class="nav-item active"><span class="nav-icon">📁</span><span>データ</span></a>
+    </nav>
+
+    <script src="assets/js/utils.js"></script>
+    <script src="assets/js/api.js"></script>
+    <script>
+        if (!RyubeeAPI.requireAuth()) throw new Error("Not authenticated");
+
+        let allVehicles = [];
+        let allPermits = [];
+        let allContracts = [];
+        let currentTab = 'vehicles';
+        let editingId = null;
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            await Promise.all([loadVehicles(), loadPermits(), loadContracts(), loadAlerts()]);
+        });
+
+        // ── Tab switching ────────────────────────
+        function switchTab(tab, btn) {
+            currentTab = tab;
+            document.querySelectorAll('.main-tab').forEach(t => t.classList.remove('active'));
+            btn.classList.add('active');
+            document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+            document.getElementById(`panel-${tab}`).classList.add('active');
+        }
+
+        // ── Alerts ───────────────────────────────
+        async function loadAlerts() {
+            try {
+                const alerts = await RyubeeAPI.fetchCompanyDataAlerts();
+                const area = document.getElementById('alertArea');
+                if (!alerts.length) { area.innerHTML = ''; return; }
+
+                const expired = alerts.filter(a => a.level === 'expired');
+                const urgent = alerts.filter(a => a.level === 'urgent');
+                const warning = alerts.filter(a => a.level === 'warning');
+
+                let html = '';
+                if (expired.length) {
+                    html += `<div class="alert-banner expired">🔴 期限切れ ${expired.length}件: ${expired.map(a => a.label).join(', ')}</div>`;
+                }
+                if (urgent.length) {
+                    html += `<div class="alert-banner urgent">⚠️ 30日以内 ${urgent.length}件: ${urgent.map(a => a.label).join(', ')}</div>`;
+                }
+                if (warning.length) {
+                    html += `<div class="alert-banner warning">📌 60日以内 ${warning.length}件: ${warning.map(a => a.label).join(', ')}</div>`;
+                }
+                area.innerHTML = html;
+            } catch (e) { console.error(e); }
+        }
+
+        // ── Date helper ──────────────────────────
+        function getExpiryBadge(dateStr) {
+            if (!dateStr) return '<span class="dc-badge ok">–</span>';
+            const d = new Date(dateStr);
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const diff = Math.ceil((d - today) / (1000 * 60 * 60 * 24));
+            if (diff < 0) return `<span class="dc-badge danger">期限切れ</span>`;
+            if (diff <= 30) return `<span class="dc-badge danger">${diff}日後</span>`;
+            if (diff <= 60) return `<span class="dc-badge warn">${diff}日後</span>`;
+            return `<span class="dc-badge ok">有効</span>`;
+        }
+
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        //  VEHICLES
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+        async function loadVehicles() {
+            try {
+                allVehicles = await RyubeeAPI.fetchVehicles();
+                renderVehicles();
+            } catch (e) {
+                document.getElementById('vehicleList').innerHTML = `<div class="alert alert-danger">${e.message}</div>`;
+            }
+        }
+
+        function renderVehicles() {
+            const list = document.getElementById('vehicleList');
+            if (!allVehicles.length) {
+                list.innerHTML = '<p class="empty-msg">🚛 車両データなし。＋ボタンで登録してください。</p>';
+                return;
+            }
+            list.innerHTML = allVehicles.map(v => {
+                const plate = `${v.plate_area} ${v.plate_class} ${v.plate_kana} ${v.plate_number}`;
+                return `
+                    <div class="data-card" onclick="editVehicle('${v.id}')">
+                        <div class="dc-top">
+                            <div class="plate-display">${utils.escapeHtml(plate)}</div>
+                            ${getExpiryBadge(v.inspection_expiry)}
+                        </div>
+                        <div class="dc-meta">🔢 号車: ${v.vehicle_number || '–'} | コード: ${v.code || '–'}</div>
+                        <div class="dc-meta">🏭 ${v.maker || '–'} | ${v.vehicle_type || '–'}</div>
+                        <div class="dc-meta">⚖️ 積載: ${v.max_capacity_kg ? v.max_capacity_kg.toLocaleString() + ' kg' : '–'} | 👤 ${v.driver_name || '–'}</div>
+                        <div class="dc-meta">🔧 車検: ${v.inspection_expiry || '未設定'} | 🛞 タイヤ: ${v.tire_replacement_date || '未設定'}</div>
+                        ${v.notes ? `<div class="dc-meta" style="color:var(--text-tertiary);font-size:0.8rem;">📝 ${utils.escapeHtml(v.notes)}</div>` : ''}
+                        <div class="card-actions">
+                            <button class="btn btn-xs btn-secondary" onclick="event.stopPropagation();openFax('vehicle','${v.id}')">📠 FAX</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function editVehicle(id) {
+            const v = allVehicles.find(x => x.id === id);
+            if (!v) return;
+            editingId = id;
+            document.getElementById('vehicleModalTitle').textContent = '🚛 車両編集';
+            document.getElementById('vEditId').value = id;
+            document.getElementById('vPlateArea').value = v.plate_area || '';
+            document.getElementById('vPlateClass').value = v.plate_class || '';
+            document.getElementById('vPlateKana').value = v.plate_kana || '';
+            document.getElementById('vPlateNumber').value = v.plate_number || '';
+            document.getElementById('vVehicleNumber').value = v.vehicle_number || '';
+            document.getElementById('vCode').value = v.code || '';
+            document.getElementById('vMaker').value = v.maker || '';
+            document.getElementById('vVehicleType').value = v.vehicle_type || '';
+            document.getElementById('vMaxCapacity').value = v.max_capacity_kg || '';
+            document.getElementById('vDriverName').value = v.driver_name || '';
+            document.getElementById('vFirstReg').value = v.first_registration || '';
+            document.getElementById('vInspExpiry').value = v.inspection_expiry || '';
+            document.getElementById('vTireDate').value = v.tire_replacement_date || '';
+            document.getElementById('vNotes').value = v.notes || '';
+            document.getElementById('vDeleteBtn').style.display = 'block';
+            document.getElementById('vehicleOverlay').classList.add('show');
+        }
+
+        function openAddVehicle() {
+            editingId = null;
+            document.getElementById('vehicleModalTitle').textContent = '🚛 車両登録';
+            document.getElementById('vEditId').value = '';
+            ['vPlateArea', 'vPlateClass', 'vPlateKana', 'vPlateNumber', 'vVehicleNumber', 'vCode', 'vMaker', 'vVehicleType', 'vMaxCapacity', 'vDriverName', 'vFirstReg', 'vInspExpiry', 'vTireDate', 'vNotes'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el.tagName === 'TEXTAREA') el.value = '';
+                else el.value = '';
+            });
+            document.getElementById('vDeleteBtn').style.display = 'none';
+            document.getElementById('vehicleOverlay').classList.add('show');
+        }
+
+        async function saveVehicle() {
+            const body = {
+                plate_area: document.getElementById('vPlateArea').value.trim(),
+                plate_class: document.getElementById('vPlateClass').value.trim(),
+                plate_kana: document.getElementById('vPlateKana').value.trim(),
+                plate_number: document.getElementById('vPlateNumber').value.trim(),
+                vehicle_number: document.getElementById('vVehicleNumber').value.trim(),
+                code: document.getElementById('vCode').value.trim(),
+                maker: document.getElementById('vMaker').value.trim(),
+                vehicle_type: document.getElementById('vVehicleType').value.trim(),
+                max_capacity_kg: parseInt(document.getElementById('vMaxCapacity').value) || null,
+                driver_name: document.getElementById('vDriverName').value.trim(),
+                first_registration: document.getElementById('vFirstReg').value.trim() || null,
+                inspection_expiry: document.getElementById('vInspExpiry').value || null,
+                tire_replacement_date: document.getElementById('vTireDate').value || null,
+                notes: document.getElementById('vNotes').value.trim(),
+            };
+            try {
+                const editId = document.getElementById('vEditId').value;
+                if (editId) {
+                    await RyubeeAPI.updateVehicle(editId, body);
+                    showToast('✅ 車両を更新しました');
+                } else {
+                    await RyubeeAPI.createVehicle(body);
+                    showToast('✅ 車両を登録しました');
+                }
+                document.getElementById('vehicleOverlay').classList.remove('show');
+                await loadVehicles();
+                await loadAlerts();
+            } catch (e) { alert('エラー: ' + e.message); }
+        }
+
+        async function deleteVehicle() {
+            if (!confirm('この車両を削除しますか？')) return;
+            const id = document.getElementById('vEditId').value;
+            try {
+                await RyubeeAPI.deleteVehicle(id);
+                showToast('🗑️ 削除しました');
+                document.getElementById('vehicleOverlay').classList.remove('show');
+                await loadVehicles();
+                await loadAlerts();
+            } catch (e) { alert('エラー: ' + e.message); }
+        }
+
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        //  PERMITS
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+        async function loadPermits() {
+            try {
+                allPermits = await RyubeeAPI.fetchPermits();
+                renderPermits();
+            } catch (e) {
+                document.getElementById('permitList').innerHTML = `<div class="alert alert-danger">${e.message}</div>`;
+            }
+        }
+
+        function renderPermits() {
+            const list = document.getElementById('permitList');
+            if (!allPermits.length) {
+                list.innerHTML = '<p class="empty-msg">📋 許可証データなし。＋ボタンで登録してください。</p>';
+                return;
+            }
+            list.innerHTML = allPermits.map(p => `
+                <div class="data-card" onclick="editPermit('${p.id}')">
+                    <div class="dc-top">
+                        <span class="dc-title">${utils.escapeHtml(p.prefecture || '–')} — ${utils.escapeHtml(p.permit_type || '–')}</span>
+                        ${getExpiryBadge(p.expiry_date)}
+                    </div>
+                    ${p.permit_number ? `<div class="dc-meta">🔖 許可番号: ${utils.escapeHtml(p.permit_number)}</div>` : ''}
+                    <div class="dc-meta">📅 有効期限: ${p.expiry_date || '未設定'}</div>
+                    <div class="dc-meta">📝 申請月: ${p.application_month || '–'}</div>
+                    ${p.notes ? `<div class="dc-meta" style="color:var(--text-tertiary);font-size:0.8rem;">💬 ${utils.escapeHtml(p.notes)}</div>` : ''}
+                    <div class="card-actions">
+                        <button class="btn btn-xs btn-secondary" onclick="event.stopPropagation();openFax('permit','${p.id}')">📠 FAX</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function editPermit(id) {
+            const p = allPermits.find(x => x.id === id);
+            if (!p) return;
+            document.getElementById('permitModalTitle').textContent = '📋 許可証編集';
+            document.getElementById('pEditId').value = id;
+            document.getElementById('pPrefecture').value = p.prefecture || '';
+            document.getElementById('pPermitType').value = p.permit_type || '産廃';
+            document.getElementById('pPermitNumber').value = p.permit_number || '';
+            document.getElementById('pExpiryDate').value = p.expiry_date || '';
+            document.getElementById('pAppMonth').value = p.application_month || '';
+            document.getElementById('pNotes').value = p.notes || '';
+            document.getElementById('pDeleteBtn').style.display = 'block';
+            document.getElementById('permitOverlay').classList.add('show');
+        }
+
+        function openAddPermit() {
+            document.getElementById('permitModalTitle').textContent = '📋 許可証登録';
+            document.getElementById('pEditId').value = '';
+            ['pPrefecture', 'pPermitNumber', 'pExpiryDate', 'pAppMonth', 'pNotes'].forEach(id => document.getElementById(id).value = '');
+            document.getElementById('pPermitType').value = '産廃';
+            document.getElementById('pDeleteBtn').style.display = 'none';
+            document.getElementById('permitOverlay').classList.add('show');
+        }
+
+        async function savePermit() {
+            const body = {
+                prefecture: document.getElementById('pPrefecture').value.trim(),
+                permit_type: document.getElementById('pPermitType').value,
+                permit_number: document.getElementById('pPermitNumber').value.trim(),
+                expiry_date: document.getElementById('pExpiryDate').value || null,
+                application_month: document.getElementById('pAppMonth').value.trim(),
+                notes: document.getElementById('pNotes').value.trim(),
+            };
+            try {
+                const editId = document.getElementById('pEditId').value;
+                if (editId) {
+                    await RyubeeAPI.updatePermit(editId, body);
+                    showToast('✅ 許可証を更新しました');
+                } else {
+                    await RyubeeAPI.createPermit(body);
+                    showToast('✅ 許可証を登録しました');
+                }
+                document.getElementById('permitOverlay').classList.remove('show');
+                await loadPermits();
+                await loadAlerts();
+            } catch (e) { alert('エラー: ' + e.message); }
+        }
+
+        async function deletePermit() {
+            if (!confirm('この許可証を削除しますか？')) return;
+            const id = document.getElementById('pEditId').value;
+            try {
+                await RyubeeAPI.deletePermit(id);
+                showToast('🗑️ 削除しました');
+                document.getElementById('permitOverlay').classList.remove('show');
+                await loadPermits();
+                await loadAlerts();
+            } catch (e) { alert('エラー: ' + e.message); }
+        }
+
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        //  CONTRACTS
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+        async function loadContracts() {
+            try {
+                allContracts = await RyubeeAPI.fetchWasteContracts();
+                renderContracts();
+            } catch (e) {
+                document.getElementById('contractList').innerHTML = `<div class="alert alert-danger">${e.message}</div>`;
+            }
+        }
+
+        function renderContracts() {
+            const list = document.getElementById('contractList');
+            if (!allContracts.length) {
+                list.innerHTML = '<p class="empty-msg">📄 3社契約データなし。＋ボタンで登録してください。</p>';
+                return;
+            }
+            list.innerHTML = allContracts.map(c => `
+                <div class="data-card" onclick="editContract('${c.id}')">
+                    <div class="dc-top">
+                        <span class="dc-title">${utils.escapeHtml(c.contract_name || '名称未設定')}</span>
+                        ${getExpiryBadge(c.expiry_date)}
+                    </div>
+                    <div class="dc-meta">🏭 排出: ${utils.escapeHtml(c.contractor_name || '–')}</div>
+                    <div class="dc-meta">🏗️ 処分: ${utils.escapeHtml(c.disposal_company || '–')}</div>
+                    <div class="dc-meta">🚛 運搬: ${utils.escapeHtml(c.transport_company || '–')}</div>
+                    <div class="dc-meta">♻️ ${utils.escapeHtml(c.waste_type || '–')}</div>
+                    <div class="dc-meta">📅 契約: ${c.contract_date || '–'} ～ ${c.expiry_date || '–'}</div>
+                    ${c.notes ? `<div class="dc-meta" style="color:var(--text-tertiary);font-size:0.8rem;">💬 ${utils.escapeHtml(c.notes)}</div>` : ''}
+                    <div class="card-actions">
+                        <button class="btn btn-xs btn-secondary" onclick="event.stopPropagation();openFax('contract','${c.id}')">📠 FAX</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function editContract(id) {
+            const c = allContracts.find(x => x.id === id);
+            if (!c) return;
+            document.getElementById('contractModalTitle').textContent = '📄 3社契約編集';
+            document.getElementById('cEditId').value = id;
+            document.getElementById('cContractName').value = c.contract_name || '';
+            document.getElementById('cContractor').value = c.contractor_name || '';
+            document.getElementById('cDisposal').value = c.disposal_company || '';
+            document.getElementById('cTransport').value = c.transport_company || '';
+            document.getElementById('cWasteType').value = c.waste_type || '';
+            document.getElementById('cContractDate').value = c.contract_date || '';
+            document.getElementById('cExpiryDate').value = c.expiry_date || '';
+            document.getElementById('cNotes').value = c.notes || '';
+            document.getElementById('cDeleteBtn').style.display = 'block';
+            document.getElementById('contractOverlay').classList.add('show');
+        }
+
+        function openAddContract() {
+            document.getElementById('contractModalTitle').textContent = '📄 3社契約登録';
+            document.getElementById('cEditId').value = '';
+            ['cContractName', 'cContractor', 'cDisposal', 'cTransport', 'cWasteType', 'cContractDate', 'cExpiryDate', 'cNotes'].forEach(id => document.getElementById(id).value = '');
+            document.getElementById('cDeleteBtn').style.display = 'none';
+            document.getElementById('contractOverlay').classList.add('show');
+        }
+
+        async function saveContract() {
+            const body = {
+                contract_name: document.getElementById('cContractName').value.trim(),
+                contractor_name: document.getElementById('cContractor').value.trim(),
+                disposal_company: document.getElementById('cDisposal').value.trim(),
+                transport_company: document.getElementById('cTransport').value.trim(),
+                waste_type: document.getElementById('cWasteType').value.trim(),
+                contract_date: document.getElementById('cContractDate').value || null,
+                expiry_date: document.getElementById('cExpiryDate').value || null,
+                notes: document.getElementById('cNotes').value.trim(),
+            };
+            try {
+                const editId = document.getElementById('cEditId').value;
+                if (editId) {
+                    await RyubeeAPI.updateWasteContract(editId, body);
+                    showToast('✅ 契約を更新しました');
+                } else {
+                    await RyubeeAPI.createWasteContract(body);
+                    showToast('✅ 契約を登録しました');
+                }
+                document.getElementById('contractOverlay').classList.remove('show');
+                await loadContracts();
+                await loadAlerts();
+            } catch (e) { alert('エラー: ' + e.message); }
+        }
+
+        async function deleteContract() {
+            if (!confirm('この契約を削除しますか？')) return;
+            const id = document.getElementById('cEditId').value;
+            try {
+                await RyubeeAPI.deleteWasteContract(id);
+                showToast('🗑️ 削除しました');
+                document.getElementById('contractOverlay').classList.remove('show');
+                await loadContracts();
+                await loadAlerts();
+            } catch (e) { alert('エラー: ' + e.message); }
+        }
+
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        //  FAX
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+        let faxContext = {};
+
+        function openFax(type, id) {
+            faxContext = { type, id };
+            let preview = '';
+            if (type === 'vehicle') {
+                const v = allVehicles.find(x => x.id === id);
+                if (v) preview = `<strong>車両情報</strong><br>ナンバー: ${v.plate_area} ${v.plate_class} ${v.plate_kana} ${v.plate_number}<br>メーカー: ${v.maker}<br>車種: ${v.vehicle_type}<br>積載: ${v.max_capacity_kg ? v.max_capacity_kg + 'kg' : '–'}<br>車検: ${v.inspection_expiry || '–'}`;
+            } else if (type === 'permit') {
+                const p = allPermits.find(x => x.id === id);
+                if (p) preview = `<strong>許可証情報</strong><br>自治体: ${p.prefecture}<br>種類: ${p.permit_type}<br>番号: ${p.permit_number}<br>有効期限: ${p.expiry_date || '–'}`;
+            } else if (type === 'contract') {
+                const c = allContracts.find(x => x.id === id);
+                if (c) preview = `<strong>3社契約情報</strong><br>契約名: ${c.contract_name}<br>排出: ${c.contractor_name}<br>処分: ${c.disposal_company}<br>運搬: ${c.transport_company}<br>期限: ${c.expiry_date || '–'}`;
+            }
+            document.getElementById('faxPreview').innerHTML = preview;
+            document.getElementById('faxNumber').value = '';
+            document.getElementById('faxOverlay').classList.add('show');
+        }
+
+        function confirmFax() {
+            const num = document.getElementById('faxNumber').value.trim();
+            if (!num) { alert('FAX番号を入力してください'); return; }
+            if (!confirm(`${num} にFAXを送信しますか？`)) return;
+            showToast(`📠 FAX送信リクエストを送りました: ${num}`);
+            document.getElementById('faxOverlay').classList.remove('show');
+        }
+
+        // ── Common ───────────────────────────────
+        function openAddModal() {
+            if (currentTab === 'vehicles') openAddVehicle();
+            else if (currentTab === 'permits') openAddPermit();
+            else if (currentTab === 'contracts') openAddContract();
+            else if (currentTab === 'training') openTrainingUpload();
+        }
+
+        // ── Vehicle Records ─────────────────────
+        let currentVehicleId = null;
+        let allRecords = [];
+        let recordFilter = 'all';
+
+        async function openVehicleDetail(id) {
+            currentVehicleId = id;
+            const v = allVehicles.find(x => x.id === id);
+            if (!v) return;
+            const plate = `${v.plate_area} ${v.plate_class} ${v.plate_kana} ${v.plate_number}`;
+            document.getElementById('vdTitle').textContent = `🚛 ${plate} 履歴`;
+            recordFilter = 'all';
+            document.querySelectorAll('.record-type-tabs button').forEach((b, i) => b.classList.toggle('active', i === 0));
+            try {
+                allRecords = await RyubeeAPI.fetchVehicleRecords(id);
+            } catch (e) { allRecords = []; console.error(e); }
+            renderRecords();
+            // Reset form
+            ['vrDate', 'vrCost', 'vrTitle', 'vrDesc'].forEach(id => document.getElementById(id).value = '');
+            document.getElementById('vrType').value = 'repair';
+            document.getElementById('vrFile').value = '';
+            document.getElementById('vdOverlay').classList.add('show');
+        }
+
+        function filterRecords(type, btn) {
+            recordFilter = type;
+            document.querySelectorAll('.record-type-tabs button').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            renderRecords();
+        }
+
+        function renderRecords() {
+            const area = document.getElementById('vdRecords');
+            const filtered = recordFilter === 'all' ? allRecords : allRecords.filter(r => r.record_type === recordFilter);
+            if (!filtered.length) {
+                area.innerHTML = '<p class="empty-msg" style="margin:16px 0;">履歴データなし</p>';
+                return;
+            }
+            const typeLabels = { repair: '🔧 修理', accident: '🚨 事故', inspection: '📄 車検証' };
+            const API_BASE = localStorage.getItem('ryubee_api_base') || 'http://localhost:8000';
+            area.innerHTML = filtered.map(r => {
+                let fileHtml = '';
+                if (r.file_url) {
+                    if (r.file_url.toLowerCase().endsWith('.pdf')) {
+                        fileHtml = `<a href="${API_BASE}${r.file_url}" target="_blank" style="color:var(--blue);font-size:0.85rem;">📄 PDFを表示</a>`;
+                    } else {
+                        fileHtml = `<img src="${API_BASE}${r.file_url}" alt="添付画像">`;
+                    }
+                }
+                return `
+                    <div class="vd-record">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+                            <span style="font-weight:700;">${typeLabels[r.record_type] || r.record_type} ${utils.escapeHtml(r.title || '')}</span>
+                            <button class="btn btn-xs" style="font-size:0.7rem;padding:2px 8px;color:var(--red);" onclick="deleteRecord('${r.id}')">🗑</button>
+                        </div>
+                        <div style="font-size:0.75rem;color:var(--text-tertiary);margin-bottom:4px;">📅 ${r.record_date || '日付未設定'} ${r.cost ? '| 💰 ¥' + r.cost.toLocaleString() : ''}</div>
+                        ${r.description ? `<div style="white-space:pre-wrap;margin-bottom:4px;">${utils.escapeHtml(r.description)}</div>` : ''}
+                        ${fileHtml}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function addVehicleRecord() {
+            if (!currentVehicleId) return;
+            const fd = new FormData();
+            fd.append('record_type', document.getElementById('vrType').value);
+            fd.append('record_date', document.getElementById('vrDate').value);
+            fd.append('title', document.getElementById('vrTitle').value.trim());
+            fd.append('description', document.getElementById('vrDesc').value.trim());
+            fd.append('cost', document.getElementById('vrCost').value || '0');
+            const fileInput = document.getElementById('vrFile');
+            if (fileInput.files.length) fd.append('file', fileInput.files[0]);
+            try {
+                await RyubeeAPI.createVehicleRecord(currentVehicleId, fd);
+                showToast('✅ 履歴を追加しました');
+                allRecords = await RyubeeAPI.fetchVehicleRecords(currentVehicleId);
+                renderRecords();
+                ['vrDate', 'vrCost', 'vrTitle', 'vrDesc'].forEach(id => document.getElementById(id).value = '');
+                document.getElementById('vrFile').value = '';
+            } catch (e) { alert('エラー: ' + e.message); }
+        }
+
+        async function deleteRecord(rid) {
+            if (!confirm('この履歴を削除しますか？')) return;
+            try {
+                await RyubeeAPI.deleteVehicleRecord(currentVehicleId, rid);
+                showToast('🗑️ 削除しました');
+                allRecords = await RyubeeAPI.fetchVehicleRecords(currentVehicleId);
+                renderRecords();
+            } catch (e) { alert('エラー: ' + e.message); }
+        }
+
+        // ── Training Materials ───────────────────
+        let allTraining = [];
+
+        async function loadTraining() {
+            try {
+                allTraining = await RyubeeAPI.fetchTrainingMaterials();
+                renderTraining();
+            } catch (e) { console.error(e); }
+        }
+
+        function renderTraining() {
+            const list = document.getElementById('trainingList');
+            if (!allTraining.length) {
+                list.innerHTML = '<p class="empty-msg">📚 研修資料なし。「📤 資料をアップロード」から登録してください。</p>';
+                return;
+            }
+            const API_BASE = localStorage.getItem('ryubee_api_base') || 'http://localhost:8000';
+            list.innerHTML = allTraining.map(t => `
+                <div class="training-card">
+                    <div class="t-icon">${t.file_type === 'pdf' ? '📄' : '🖼️'}</div>
+                    <div class="t-info">
+                        <div class="t-title">${utils.escapeHtml(t.title)}</div>
+                        <div class="t-meta">${t.notes ? utils.escapeHtml(t.notes) + ' | ' : ''}${new Date(t.created_at).toLocaleDateString('ja-JP')}</div>
+                    </div>
+                    <div style="display:flex;gap:8px;">
+                        <a href="${API_BASE}${t.file_url}" target="_blank" class="btn btn-xs btn-primary" style="text-decoration:none;">📖 表示</a>
+                        <button class="btn btn-xs btn-danger" onclick="deleteTraining('${t.id}')">🗑</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function openTrainingUpload() {
+            document.getElementById('tTitle').value = '';
+            document.getElementById('tFile').value = '';
+            document.getElementById('tNotes').value = '';
+            document.getElementById('trainingOverlay').classList.add('show');
+        }
+
+        async function uploadTraining() {
+            const fileInput = document.getElementById('tFile');
+            if (!fileInput.files.length) { alert('ファイルを選択してください'); return; }
+            const fd = new FormData();
+            fd.append('title', document.getElementById('tTitle').value.trim());
+            fd.append('notes', document.getElementById('tNotes').value.trim());
+            fd.append('file', fileInput.files[0]);
+            try {
+                await RyubeeAPI.createTrainingMaterial(fd);
+                showToast('✅ 研修資料をアップロードしました');
+                document.getElementById('trainingOverlay').classList.remove('show');
+                await loadTraining();
+            } catch (e) { alert('エラー: ' + e.message); }
+        }
+
+        async function deleteTraining(id) {
+            if (!confirm('この研修資料を削除しますか？')) return;
+            try {
+                await RyubeeAPI.deleteTrainingMaterial(id);
+                showToast('🗑️ 削除しました');
+                await loadTraining();
+            } catch (e) { alert('エラー: ' + e.message); }
+        }
+
+        function showToast(msg) {
+            const t = document.createElement('div');
+            t.textContent = msg;
+            t.style.cssText = 'position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#34C759;color:#fff;padding:10px 20px;border-radius:20px;font-weight:600;z-index:9999;white-space:nowrap;';
+            document.body.appendChild(t);
+            setTimeout(() => t.remove(), 2500);
+        }
+    </script>
+    <script>
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.register('sw.js').catch(e => console.log('SW registration failed:', e));
+        }
+    </script>
+</body>
+
+</html>

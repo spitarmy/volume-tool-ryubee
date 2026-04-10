@@ -252,7 +252,7 @@
             background: #fff;
             border-radius: 12px;
             width: 100%;
-            max-width: 600px;
+            max-width: 900px;
             max-height: 90vh;
             overflow-y: auto;
             box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
@@ -420,6 +420,9 @@
                     style="width:100%; grid-column: span 2; font-size: 1.05rem; padding: 12px;">📸 写真から請求書自動作成</button>
                 <button class="btn btn-xs btn-success" onclick="generateInvoices()" style="width:100%;">📄
                     月次一括生成</button>
+                <button class="btn btn-xs btn-success" onclick="showRegularBulkModal()"
+                    style="width:100%; border-color:var(--green); background:var(--green-light); color:var(--green-dark);">📅
+                    定期カスタム生成</button>
                 <button class="btn btn-xs btn-secondary" onclick="showPaymentModal()" style="width:100%;">💳
                     入金登録</button>
                 <button class="btn btn-xs btn-secondary" onclick="showBankUpload()"
@@ -552,6 +555,57 @@
                     <button class="btn btn-secondary mt-1" onclick="closeOcrModal()">キャンセル</button>
                 </div>
             </div>
+
+            <!-- 定期一括請求作成モーダル -->
+            <div class="payment-modal-overlay" id="regularBulkOverlay">
+                <div class="payment-modal" style="max-width: 800px;">
+                    <div class="modal-drag-handle"></div>
+                    <h3 class="card-title">📅 定期請求 一括生成</h3>
+                    <div class="form-group" style="display:flex; gap:12px; align-items:flex-end;">
+                        <div style="flex:1;">
+                            <label>対象の締日</label>
+                            <select id="rbClosingDay" onchange="renderRegularBulkList()">
+                                <option value="31">月末 (31日)</option>
+                                <option value="10">10日</option>
+                                <option value="15">15日</option>
+                                <option value="20">20日</option>
+                                <option value="25">25日</option>
+                            </select>
+                        </div>
+                        <div style="flex:1;">
+                            <label>対象月</label>
+                            <input type="month" id="rbMonth">
+                        </div>
+                    </div>
+                    <div
+                        style="max-height:50vh; overflow-y:auto; border:1px solid var(--border); border-radius:var(--r-md); margin-bottom:16px;">
+                        <table style="width:100%; font-size:0.85rem; border-collapse:collapse; white-space:nowrap;">
+                            <thead>
+                                <tr style="background:#f8f9fa;">
+                                    <th
+                                        style="padding:8px; border-bottom:1px solid var(--border); width:40px; text-align:center;">
+                                        <input type="checkbox" id="rbCheckAll" onclick="toggleRbCheckboxes()" checked>
+                                    </th>
+                                    <th style="padding:8px; border-bottom:1px solid var(--border); text-align:left;">顧客名
+                                    </th>
+                                    <th style="padding:8px; border-bottom:1px solid var(--border); text-align:right;">
+                                        定期基本額</th>
+                                    <th style="padding:8px; border-bottom:1px solid var(--border); text-align:left;">
+                                        単発追加項目</th>
+                                    <th style="padding:8px; border-bottom:1px solid var(--border); text-align:right;">
+                                        追加金額</th>
+                                    <th style="padding:8px; border-bottom:1px solid var(--border); text-align:left;">
+                                        特記事項 (メモ)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="rbCustomerList"></tbody>
+                        </table>
+                    </div>
+                    <button class="btn btn-primary" onclick="submitRegularBulk()">一括生成する</button>
+                    <button class="btn btn-secondary mt-1" onclick="closeRegularBulkModal()">キャンセル</button>
+                </div>
+            </div>
+
         </div>
     </div><!-- /.billing-content -->
 
@@ -567,7 +621,7 @@
     </div>
 
     <!-- Bottom Nav -->
-        <nav class="bottom-nav">
+    <nav class="bottom-nav">
         <a href="index.html" class="nav-item"><span class="nav-icon">🏠</span><span>ホーム</span></a>
         <a href="pipeline.html" class="nav-item"><span class="nav-icon">📊</span><span>パイプライン</span></a>
         <a href="billing.html" class="nav-item active"><span class="nav-icon">💰</span><span>請求</span></a>
@@ -970,6 +1024,36 @@
                 </td></tr>
             `;
 
+            let isPersist = false;
+            const cust = allCustomers.find(c => c.id === inv.customer_id);
+            if (cust) {
+                try {
+                    const fd = JSON.parse(cust.form_data || "{}");
+                    if (fd.persistent_invoice_note === inv.notes && inv.notes) isPersist = true;
+                } catch (e) { }
+            }
+
+            let notesArea = document.getElementById('invNotesEditArea');
+            if (!notesArea) {
+                const tables = document.querySelectorAll('.inv-doc table');
+                const lastTable = tables[tables.length - 1];
+                notesArea = document.createElement('div');
+                notesArea.id = 'invNotesEditArea';
+                notesArea.style.marginTop = '16px';
+                lastTable.parentNode.insertBefore(notesArea, lastTable.nextSibling);
+            }
+
+            notesArea.innerHTML = `
+                <div style="font-weight:700; font-size:0.85rem; margin-bottom:4px; display:flex; justify-content:space-between; align-items:flex-end;">
+                    <span>備考 (内部メモ)</span>
+                    <label style="font-size:0.8rem; display:flex; align-items:center; gap:6px; font-weight:normal; cursor:pointer;">
+                        <input type="checkbox" id="editInvPersistNote" ${isPersist ? 'checked' : ''}>
+                        この顧客の次回以降の請求書にも自動反映する（永続化）
+                    </label>
+                </div>
+                <textarea id="editInvNotes" style="width:100%; height:80px; padding:8px; border:1px solid var(--border); border-radius:4px; font-size:0.85rem; font-family:inherit;">${inv.notes || ''}</textarea>
+            `;
+
             // アクションボタン更新
             const actionsDiv = document.querySelector('.inv-doc-actions');
             actionsDiv.innerHTML = `
@@ -1024,11 +1108,30 @@
                     amount: Math.round(qty * price),
                 });
             }
+            const notes = document.getElementById('editInvNotes')?.value || '';
+            const persist = document.getElementById('editInvPersistNote')?.checked;
+
             const btn = document.getElementById('editSaveBtn');
             btn.disabled = true;
             btn.innerHTML = '⏳ 保存中...';
             try {
-                await RyubeeAPI.updateInvoiceFull(editInvoiceId, { items });
+                await RyubeeAPI.updateInvoiceFull(editInvoiceId, { items, notes });
+
+                const inv = allInvoices.find(i => i.id === editInvoiceId);
+                if (inv) {
+                    const cust = allCustomers.find(c => c.id === inv.customer_id);
+                    if (cust) {
+                        try {
+                            const fd = JSON.parse(cust.form_data || "{}");
+                            if (persist) {
+                                fd.persistent_invoice_note = notes;
+                            } else {
+                                delete fd.persistent_invoice_note;
+                            }
+                            await RyubeeAPI.updateCustomer(cust.id, { form_data: JSON.stringify(fd) });
+                        } catch (e) { }
+                    }
+                }
                 showToast('✅ 請求書を更新しました');
                 await loadInvoices();
                 viewInvoice(editInvoiceId);
@@ -1049,6 +1152,96 @@
                 loadInvoices();
                 loadAlerts();
             } catch (e) { alert('エラー: ' + e.message); }
+        }
+
+        function showRegularBulkModal() {
+            const now = new Date();
+            document.getElementById('rbMonth').value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+            document.getElementById('regularBulkOverlay').classList.add('show');
+            renderRegularBulkList();
+        }
+
+        function closeRegularBulkModal() {
+            document.getElementById('regularBulkOverlay').classList.remove('show');
+        }
+
+        function toggleRbCheckboxes() {
+            const checked = document.getElementById('rbCheckAll').checked;
+            document.querySelectorAll('.rb-cust-check').forEach(cb => cb.checked = checked);
+        }
+
+        function renderRegularBulkList() {
+            const day = parseInt(document.getElementById('rbClosingDay').value);
+            const tbody = document.getElementById('rbCustomerList');
+            const subs = allCustomers.filter(c => c.contract_type === 'subscription' && c.billing_closing_day === day);
+
+            if (subs.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" style="text-align:center; padding:20px; color:var(--text-secondary);">該当する顧客がいません</td></tr>';
+                return;
+            }
+
+            tbody.innerHTML = subs.map((c, i) => {
+                let basePrice = 0;
+                try {
+                    const fd = JSON.parse(c.form_data || "{}");
+                    const pr = fd.pricing_list || [];
+                    basePrice = pr.reduce((sum, item) => sum + (parseFloat(item.price) || 0), 0);
+                } catch (e) { }
+
+                return `
+                    <tr>
+                        <td style="padding:8px; border-bottom:1px solid var(--border); text-align:center;">
+                            <input type="checkbox" class="rb-cust-check" data-id="${c.id}" checked>
+                        </td>
+                        <td style="padding:8px; border-bottom:1px solid var(--border);">${utils.escapeHtml(c.name)}</td>
+                        <td style="padding:8px; border-bottom:1px solid var(--border); text-align:right;">
+                            <input type="number" id="rbBase_${c.id}" value="${basePrice}" style="width:80px; padding:4px;" step="100">
+                        </td>
+                        <td style="padding:8px; border-bottom:1px solid var(--border);">
+                            <input type="text" id="rbAddItem_${c.id}" placeholder="例: 回収(大)" style="width:120px; padding:4px;">
+                        </td>
+                        <td style="padding:8px; border-bottom:1px solid var(--border); text-align:right;">
+                            <input type="number" id="rbAddPrice_${c.id}" placeholder="0" style="width:80px; padding:4px;" step="100">
+                        </td>
+                        <td style="padding:8px; border-bottom:1px solid var(--border);">
+                            <input type="text" id="rbNotes_${c.id}" placeholder="特記事項" style="width:120px; padding:4px;">
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        async function submitRegularBulk() {
+            const month = document.getElementById('rbMonth').value;
+            if (!month) return alert('月を選択してください');
+
+            const checks = document.querySelectorAll('.rb-cust-check:checked');
+            if (checks.length === 0) return alert('顧客が選択されていません');
+
+            const payload = { month, customers: [] };
+
+            checks.forEach(cb => {
+                const id = cb.dataset.id;
+                payload.customers.push({
+                    customer_id: id,
+                    base_price: parseInt(document.getElementById(`rbBase_${id}`).value) || 0,
+                    add_item_name: document.getElementById(`rbAddItem_${id}`).value.trim(),
+                    add_item_price: parseInt(document.getElementById(`rbAddPrice_${id}`).value) || 0,
+                    notes: document.getElementById(`rbNotes_${id}`).value.trim()
+                });
+            });
+
+            if (!confirm(`${payload.customers.length}件の請求書を作成しますか？`)) return;
+
+            try {
+                const res = await RyubeeAPI.generateSubscriptionsCustom(payload);
+                alert(`✅ ${res.length}件の請求書を作成しました`);
+                closeRegularBulkModal();
+                loadInvoices();
+                loadAlerts();
+            } catch (e) {
+                alert('エラー: ' + e.message);
+            }
         }
 
         function showPaymentModal() { document.getElementById('paymentOverlay').classList.add('show'); }

@@ -272,12 +272,12 @@
     }
   </style>
 
-    <link rel="manifest" href="manifest.json">
-    <meta name="theme-color" content="#1A237E">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <meta name="apple-mobile-web-app-title" content="Ryu兵衛">
-    <link rel="apple-touch-icon" href="assets/icons/icon-192.png">
+  <link rel="manifest" href="manifest.json">
+  <meta name="theme-color" content="#1A237E">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="apple-mobile-web-app-title" content="Ryu兵衛">
+  <link rel="apple-touch-icon" href="assets/icons/icon-192.png">
 </head>
 
 <body>
@@ -296,6 +296,8 @@
           id="count-est">0</span></button>
       <button class="folder-tab" onclick="setFolder('scheduled',this)">作業予定 <span class="folder-count"
           id="count-sch">0</span></button>
+      <button class="folder-tab" onclick="setFolder('waiting_manifest',this)">マニ待ち <span class="folder-count"
+          id="count-wait">0</span></button>
       <button class="folder-tab" onclick="setFolder('completed',this)">完了 <span class="folder-count"
           id="count-comp">0</span></button>
       <button class="folder-tab" onclick="setFolder('lost',this)">不成約 <span class="folder-count"
@@ -369,6 +371,7 @@
             <option value="negotiation">商談</option>
             <option value="contract">契約</option>
             <option value="scheduled">作業予定</option>
+            <option value="waiting_manifest">マニフェスト待ち</option>
             <option value="completed">完了</option>
             <option value="lost">不成約</option>
           </select>
@@ -488,20 +491,22 @@
     }
 
     function updateFolderCounts() {
-      const c = { all: allJobs.length, estimated: 0, scheduled: 0, completed: 0, lost: 0 };
+      const c = { all: allJobs.length, estimated: 0, scheduled: 0, waiting: 0, completed: 0, lost: 0 };
       allJobs.forEach(j => {
         const stage = j.pipeline_stage || 'estimate';
         if (['inquiry', 'estimate', 'negotiation', 'contract'].includes(stage)) c.estimated++;
         else if (stage === 'scheduled') c.scheduled++;
+        else if (stage === 'waiting_manifest') c.waiting++;
         else if (stage === 'completed') c.completed++;
         else if (stage === 'lost') c.lost++;
       });
-      // The DOM IDs are count-all, count-estimated, count-scheduled, count-completed, count-lost
+      // The DOM IDs are count-all, count-est, count-sch, count-wait, count-comp, count-lost
       document.getElementById('count-all').textContent = c.all;
-      document.getElementById('count-estimated').textContent = c.estimated;
-      document.getElementById('count-scheduled').textContent = c.scheduled;
-      document.getElementById('count-completed').textContent = c.completed;
-      document.getElementById('count-lost').textContent = c.lost;
+      if (document.getElementById('count-est')) document.getElementById('count-est').textContent = c.estimated;
+      if (document.getElementById('count-sch')) document.getElementById('count-sch').textContent = c.scheduled;
+      if (document.getElementById('count-wait')) document.getElementById('count-wait').textContent = c.waiting;
+      if (document.getElementById('count-comp')) document.getElementById('count-comp').textContent = c.completed;
+      if (document.getElementById('count-lost')) document.getElementById('count-lost').textContent = c.lost;
     }
 
     function filterJobs() {
@@ -513,6 +518,7 @@
         const stage = j.pipeline_stage || 'estimate';
         if (currentFolder === 'estimated') matchF = ['inquiry', 'estimate', 'negotiation', 'contract'].includes(stage);
         if (currentFolder === 'scheduled') matchF = (stage === 'scheduled');
+        if (currentFolder === 'waiting_manifest') matchF = (stage === 'waiting_manifest');
         if (currentFolder === 'completed') matchF = (stage === 'completed');
         if (currentFolder === 'lost') matchF = (stage === 'lost');
         return matchQ && matchF;
@@ -530,7 +536,7 @@
         const price = j.price_total != null ? `${Number(j.price_total).toLocaleString()} 円` : '-';
         const wdate = j.work_date ? `作業日: ${j.work_date}` : '作業日: 未定';
 
-        const STAGE_LABELS = { inquiry: '問合せ', estimate: '見積', negotiation: '商談', contract: '契約', scheduled: '作業予定', completed: '完了', lost: '不成約' };
+        const STAGE_LABELS = { inquiry: '問合せ', estimate: '見積', negotiation: '商談', contract: '契約', scheduled: '作業予定', waiting_manifest: 'マニ待ち', completed: '完了', lost: '不成約' };
         const slabel = STAGE_LABELS[j.pipeline_stage] || j.status;
         const card = document.createElement('div');
         card.className = 'job-card';
@@ -653,11 +659,11 @@
       document.body.appendChild(t); setTimeout(() => t.remove(), 2500);
     }
   </script>
-    <script>
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js').catch(e => console.log('SW registration failed:', e));
-        }
-    </script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('sw.js').catch(e => console.log('SW registration failed:', e));
+    }
+  </script>
 </body>
 
 </html>
