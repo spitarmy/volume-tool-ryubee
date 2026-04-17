@@ -49,7 +49,7 @@
         }
 
         .pipeline-column {
-            min-width: 280px;
+            min-width: 240px;
             max-width: 320px;
             flex-shrink: 0;
             background: var(--bg-secondary);
@@ -173,6 +173,11 @@
 
         .stage-btn:hover {
             background: var(--blue-light);
+        }
+
+        .stage-btn:active {
+            background: var(--blue-light);
+            transform: scale(0.95);
         }
 
         .drop-zone {
@@ -514,7 +519,7 @@
                 if (hideDone && (stage === 'completed' || stage === 'lost')) {
                     col.style.display = 'none';
                 } else {
-                    col.style.display = 'flex'; // `.pipeline-column` is naturally a flex column
+                    col.style.display = '';
                 }
             });
         }
