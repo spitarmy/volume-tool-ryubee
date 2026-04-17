@@ -261,6 +261,71 @@
             margin: 0 auto 40px auto;
             padding: 0 20px;
         }
+
+        /* Editable row controls */
+        .inv-table input {
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 6px 8px;
+            font-size: 13px;
+            background: #fafbfc;
+            width: 100%;
+            box-sizing: border-box;
+        }
+
+        .inv-table input:focus {
+            outline: none;
+            border-color: #2563eb;
+            background: #fff;
+        }
+
+        .row-delete-btn {
+            background: none;
+            border: none;
+            color: #DC2626;
+            cursor: pointer;
+            font-size: 16px;
+            padding: 4px;
+            border-radius: 4px;
+            line-height: 1;
+        }
+
+        .row-delete-btn:hover {
+            background: #FEE2E2;
+        }
+
+        .add-row-bar {
+            text-align: center;
+            margin: 8px 0 24px;
+        }
+
+        .add-row-bar button {
+            background: #EFF6FF;
+            border: 1px dashed #2563eb;
+            color: #2563eb;
+            font-weight: 600;
+            font-size: 13px;
+            padding: 8px 20px;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        .add-row-bar button:hover {
+            background: #DBEAFE;
+        }
+
+        @media print {
+            .inv-table input {
+                border: none;
+                background: transparent;
+                padding: 0;
+            }
+
+            .row-delete-btn,
+            .add-row-bar {
+                display: none !important;
+            }
+        }
     </style>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#1A237E">
@@ -339,17 +404,22 @@
             </div>
         </div>
 
-        <table class="inv-table">
+        <table class="inv-table" id="inv-items-table">
             <thead>
                 <tr>
                     <th style="width: 40%;">項目・品目</th>
-                    <th style="width: 15%;">数量</th>
+                    <th style="width: 10%;">数量</th>
                     <th style="width: 15%;">単価</th>
                     <th style="width: 20%;">金額 (円)</th>
+                    <th style="width: 5%;" class="row-delete-btn"></th>
                 </tr>
             </thead>
             <tbody id="out-table-body"></tbody>
         </table>
+
+        <div class="add-row-bar" id="addRowBar">
+            <button onclick="addItemRow('', 1, 0)">＋ 行を追加</button>
+        </div>
 
         <!-- 小計・消費税・合計 -->
         <table class="inv-table" style="width:50%; margin-left:auto; margin-top:0;">
@@ -436,46 +506,10 @@
                 document.getElementById('out-notes').textContent = job.notes || '-';
 
                 // 明細テーブル作成
-                const tbody = document.getElementById('out-table-body');
                 const priceTotal = job.price_total || 0;
                 const subtotal = Math.round(priceTotal / 1.1);
-                const taxAmt = priceTotal - subtotal;
 
-                let tr = document.createElement('tr');
-                tr.innerHTML = `
-                    <td>不用品回収・運搬費一式</td>
-                    <td class="qty">1 式</td>
-                    <td class="price">${subtotal.toLocaleString()}</td>
-                    <td class="price">${subtotal.toLocaleString()}</td>
-                `;
-                tbody.appendChild(tr);
-
-                // 合計金額表示
-                document.getElementById('out-total-price').textContent = priceTotal.toLocaleString();
-
-                // 小計・消費税・合計テーブル
-                const summaryBody = document.getElementById('out-summary-body');
-                if (summaryBody) {
-                    summaryBody.innerHTML = `
-                        <tr>
-                            <td style="padding:8px; font-weight:700; background:#f8f9fa; border:1px solid #ccc;">小計</td>
-                            <td style="padding:8px; text-align:right; border:1px solid #ccc;">¥${subtotal.toLocaleString()}円</td>
-                        </tr>
-                        <tr>
-                            <td style="padding:8px; font-weight:700; background:#f8f9fa; border:1px solid #ccc;">消費税</td>
-                            <td style="padding:8px; text-align:right; border:1px solid #ccc;">¥${taxAmt.toLocaleString()}円</td>
-                        </tr>
-                        <tr>
-                            <td style="padding:8px; font-weight:800; background:#f0f4ff; border:1px solid #ccc;">合計</td>
-                            <td style="padding:8px; text-align:right; font-weight:800; font-size:15px; border:1px solid #ccc;">¥${priceTotal.toLocaleString()}円</td>
-                        </tr>
-                        <tr>
-                            <td colspan="2" style="padding:4px 8px; font-size:11px; color:#888; border:1px solid #eee;">
-                                10%対象 ¥${subtotal.toLocaleString()}円 ／ 消費税額 ¥${taxAmt.toLocaleString()}円
-                            </td>
-                        </tr>
-                    `;
-                }
+                addItemRow('不用品回収・運搬費一式', 1, subtotal);
 
                 // サインの反映
                 if (job.signature_data) {
@@ -490,11 +524,104 @@
             }
         });
 
+        // ── Editable Row System ──
+        let rowCounter = 0;
+
+        function addItemRow(name, qty, unitPrice) {
+            rowCounter++;
+            const rid = 'row-' + rowCounter;
+            const tbody = document.getElementById('out-table-body');
+            const tr = document.createElement('tr');
+            tr.id = rid;
+            tr.innerHTML = `
+                <td><input type="text" value="${escAttr(name)}" oninput="recalcAll()" placeholder="品目名"></td>
+                <td><input type="number" value="${qty}" min="1" style="width:60px; text-align:right;" oninput="recalcAll()"></td>
+                <td><input type="number" value="${unitPrice}" style="text-align:right;" oninput="recalcAll()"></td>
+                <td class="price" id="${rid}-amt">0</td>
+                <td style="text-align:center;"><button class="row-delete-btn" onclick="deleteRow('${rid}')" title="削除">✕</button></td>
+            `;
+            tbody.appendChild(tr);
+            recalcAll();
+        }
+
+        function deleteRow(rid) {
+            const row = document.getElementById(rid);
+            if (row) row.remove();
+            recalcAll();
+        }
+
+        function escAttr(s) {
+            return (s || '').replace(/"/g, '&quot;').replace(/</g, '&lt;');
+        }
+
+        function recalcAll() {
+            const rows = document.querySelectorAll('#out-table-body tr');
+            let subtotal = 0;
+
+            rows.forEach(tr => {
+                const inputs = tr.querySelectorAll('input');
+                if (inputs.length < 3) return;
+                const qty = parseFloat(inputs[1].value) || 0;
+                const unit = parseFloat(inputs[2].value) || 0;
+                const amt = Math.round(qty * unit);
+                subtotal += amt;
+                const amtCell = tr.querySelector('td.price');
+                if (amtCell) amtCell.textContent = amt.toLocaleString();
+            });
+
+            const taxAmt = Math.round(subtotal * 0.1);
+            const total = subtotal + taxAmt;
+
+            // Update header total
+            document.getElementById('out-total-price').textContent = total.toLocaleString();
+
+            // Update summary table
+            const summaryBody = document.getElementById('out-summary-body');
+            if (summaryBody) {
+                summaryBody.innerHTML = `
+                    <tr>
+                        <td style="padding:8px; font-weight:700; background:#f8f9fa; border:1px solid #ccc;">小計</td>
+                        <td style="padding:8px; text-align:right; border:1px solid #ccc;">¥${subtotal.toLocaleString()}円</td>
+                    </tr>
+                    <tr>
+                        <td style="padding:8px; font-weight:700; background:#f8f9fa; border:1px solid #ccc;">消費税</td>
+                        <td style="padding:8px; text-align:right; border:1px solid #ccc;">¥${taxAmt.toLocaleString()}円</td>
+                    </tr>
+                    <tr>
+                        <td style="padding:8px; font-weight:800; background:#f0f4ff; border:1px solid #ccc;">合計</td>
+                        <td style="padding:8px; text-align:right; font-weight:800; font-size:15px; border:1px solid #ccc;">¥${total.toLocaleString()}円</td>
+                    </tr>
+                    <tr>
+                        <td colspan="2" style="padding:4px 8px; font-size:11px; color:#888; border:1px solid #eee;">
+                            10%対象 ¥${subtotal.toLocaleString()}円 ／ 消費税額 ¥${taxAmt.toLocaleString()}円
+                        </td>
+                    </tr>
+                `;
+            }
+        }
+
         // html2pdf によるPDF生成機能
         function generatePDF() {
             const element = document.getElementById('invoice-doc');
             const customerName = document.getElementById('out-customer-name').textContent;
             const fileName = `御見積書_${customerName}_${new Date().getTime()}.pdf`;
+
+            // Hide edit controls for PDF
+            document.getElementById('addRowBar').style.display = 'none';
+            document.querySelectorAll('.row-delete-btn').forEach(b => b.style.display = 'none');
+
+            // Freeze inputs to plain text
+            const allInputs = element.querySelectorAll('input');
+            const savedData = [];
+            allInputs.forEach(inp => {
+                savedData.push({ el: inp, parent: inp.parentNode, val: inp.value });
+                const span = document.createElement('span');
+                span.textContent = inp.type === 'number' ? Number(inp.value).toLocaleString() : inp.value;
+                span.style.fontSize = '13px';
+                if (inp.style.textAlign === 'right') span.style.textAlign = 'right';
+                inp.parentNode.replaceChild(span, inp);
+                span._origInput = inp;
+            });
 
             const opt = {
                 margin: 0,
@@ -504,11 +631,20 @@
                 jsPDF: { unit: 'in', format: 'letter', orientation: 'portrait' }
             };
 
-            // スマホ（iOS/Android）の場合は、生成したPDFをWeb Share APIでLINE等へ送れる機能を追加したい
-            // html2pdfはPromiseを返すので、出力データをBlobとして受け取ってShareに渡す
-            html2pdf().set(opt).from(element).outputPdf('blob').then((pdfBlob) => {
+            const restoreInputs = () => {
+                savedData.forEach(d => {
+                    const span = d.parent.querySelector('span');
+                    if (span && span._origInput) {
+                        d.parent.replaceChild(d.el, span);
+                    }
+                });
+                document.getElementById('addRowBar').style.display = '';
+                document.querySelectorAll('.row-delete-btn').forEach(b => b.style.display = '');
+            };
 
-                // Web Share APIが使える場合（モバイルOSの大半で利用可能）
+            html2pdf().set(opt).from(element).outputPdf('blob').then((pdfBlob) => {
+                restoreInputs();
+
                 if (navigator.canShare && navigator.canShare({ files: [new File([pdfBlob], fileName, { type: 'application/pdf' })] })) {
                     const file = new File([pdfBlob], fileName, { type: 'application/pdf' });
                     navigator.share({
@@ -517,10 +653,11 @@
                         files: [file]
                     }).catch(console.error);
                 } else {
-                    // PC等、共有APIが使えない場合は普通にダウンロード
                     html2pdf().set(opt).from(element).save();
                 }
-
+            }).catch(err => {
+                restoreInputs();
+                console.error('PDF generation failed', err);
             });
         }
     </script>
