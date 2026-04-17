@@ -609,6 +609,13 @@
         </div>
     </div><!-- /.billing-content -->
 
+    <!-- 一括メール送信バー -->
+    <div id="bulkEmailBar"
+        style="display:none; position:fixed; bottom: 80px; left:50%; transform:translateX(-50%); width: 90%; max-width: 600px; background:#2c3e50; color:#fff; border-radius:var(--r-xl); padding:16px 20px; z-index:2000; align-items:center; justify-content:space-between; box-shadow:0 10px 40px rgba(0,0,0,0.4);">
+        <span id="bulkEmailCount" style="font-weight:700; font-size:1.05rem;">0件選択中</span>
+        <button class="btn btn-sm btn-primary" onclick="sendBulkEmail()">✉️ 一括メール送信</button>
+    </div>
+
     <!-- 請求書詳細モーダル -->
     <div class="inv-detail-overlay" id="invDetailOverlay" onclick="if(event.target===this)closeInvDetail()">
         <div class="inv-detail-modal">
@@ -820,10 +827,17 @@
 
             const statusLabel = { draft: '下書き', sent: '送付済', paid: '入金済', partial: '一部入金', overdue: '期限超過' };
             list.innerHTML = filtered.map(inv => `
-                <div class="invoice-card" onclick="viewInvoice('${inv.id}')">
+                <div class="invoice-card" onclick="viewInvoice('${inv.id}')" style="position:relative; padding-left: 45px;">
+                    <div style="position:absolute; left: 16px; top: 22px;" onclick="event.stopPropagation()">
+                        <input type="checkbox" class="bulk-inv-check" value="${inv.id}" style="transform: scale(1.5);" onchange="updateBulkBar()">
+                    </div>
                     <div class="inv-top">
                         <span class="inv-customer">${utils.escapeHtml(inv.customer_name || '顧客')}</span>
-                        <span class="inv-status ${inv.status}">${statusLabel[inv.status] || inv.status}</span>
+                        <div style="display: flex; align-items: center; gap: 4px;">
+                            <span class="inv-status ${inv.status}">${statusLabel[inv.status] || inv.status}</span>
+                            <button title="PDFダウンロード" class="btn btn-xs" style="padding: 2px 6px; font-size: 0.85rem; border: 1px solid var(--border); background: #fff;" onclick="event.stopPropagation(); downloadPdf('${inv.id}')">📄</button>
+                            <button title="メールで送信" class="btn btn-xs" style="padding: 2px 6px; font-size: 0.85rem; border: 1px solid var(--border); background: #fff;" onclick="event.stopPropagation(); sendEmail('${inv.id}')">✉️</button>
+                        </div>
                     </div>
                     ${inv._yamaNum ? `<div class="inv-meta" style="font-weight:700; color:var(--primary); margin-top:2px; font-size:13px;">🎫 山文管理番号: ${utils.escapeHtml(inv._yamaNum)}</div>` : ''}
                     <div class="inv-top" style="margin-top:6px;">
@@ -833,9 +847,69 @@
                     <div class="inv-meta" style="margin-top:6px;">
                         入金: ¥${inv.paid_total.toLocaleString()} / 残: ¥${(inv.total_amount - inv.paid_total).toLocaleString()}
                         ${inv.due_date ? ' | 期限: ' + inv.due_date : ''}
+                        ${inv.sent_at ? '<br><span style="color:var(--green);font-weight:600;">✉️ 送信済: ' + inv.sent_at.slice(0, 10) + '</span>' : ''}
                     </div>
                 </div>
             `).join('');
+        }
+
+        async function downloadPdf(invoiceId) {
+            try {
+                await RyubeeAPI.downloadInvoicePdf(invoiceId);
+            } catch (e) {
+                alert("PDFダウンロードエラー: " + e.message);
+            }
+        }
+
+        async function sendEmail(invoiceId) {
+            const inv = allInvoices.find(i => i.id === invoiceId);
+            if (!inv) return;
+            if (!confirm(`「${inv.customer_name}」に請求書PDFをメール送信しますか？`)) return;
+            try {
+                await RyubeeAPI.sendInvoiceEmail(invoiceId);
+                alert("✅ メールを送信しました！");
+                loadInvoices(); // Reload to show sent_at badge
+            } catch (e) {
+                alert("メール送信エラー: " + e.message);
+            }
+        }
+
+        function updateBulkBar() {
+            const checks = document.querySelectorAll('.bulk-inv-check:checked');
+            const bar = document.getElementById('bulkEmailBar');
+            const countLabel = document.getElementById('bulkEmailCount');
+            if (checks.length > 0) {
+                bar.style.display = 'flex';
+                countLabel.innerText = checks.length + '件選択中';
+            } else {
+                bar.style.display = 'none';
+            }
+        }
+
+        async function sendBulkEmail() {
+            const checks = document.querySelectorAll('.bulk-inv-check:checked');
+            if (!checks.length) return;
+            if (!confirm(`選択された ${checks.length} 件の請求書をメール送信しますか？\\n※メール未設定の顧客はスキップされます。`)) return;
+
+            const ids = Array.from(checks).map(c => c.value);
+            let successCount = 0;
+            let skipCount = 0;
+
+            for (const id of ids) {
+                try {
+                    await RyubeeAPI.sendInvoiceEmail(id);
+                    successCount++;
+                } catch (e) {
+                    console.error("Bulk email error for", id, e.message);
+                    skipCount++;
+                }
+            }
+            alert(`✅ 送信完了: ${successCount}件 (エラー/未設定スキップ: ${skipCount}件)`);
+
+            // clear checks
+            checks.forEach(c => c.checked = false);
+            updateBulkBar();
+            loadInvoices();
         }
 
         function viewInvoice(id) {

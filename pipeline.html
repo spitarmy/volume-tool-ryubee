@@ -329,9 +329,16 @@
             style="width:100%; padding:10px 14px; border-radius:10px; border:1px solid var(--border); font-size:0.95rem; background:#fff; margin-bottom: 12px;">
 
         <!-- スタッフ絞り込みタブ -->
-        <div id="staffTabs"
-            style="display:flex; gap:8px; overflow-x:auto; padding-bottom:10px; -webkit-overflow-scrolling: touch; scrollbar-width: none;">
-            <button class="btn btn-xs btn-primary" style="flex-shrink:0;" onclick="filterByStaff('all')">全て</button>
+        <div style="display:flex; justify-content:space-between; align-items:center;">
+            <div id="staffTabs"
+                style="display:flex; gap:8px; overflow-x:auto; padding-bottom:10px; flex: 1; -webkit-overflow-scrolling: touch; scrollbar-width: none;">
+                <button class="btn btn-xs btn-primary" style="flex-shrink:0;" onclick="filterByStaff('all')">全て</button>
+            </div>
+            <label
+                style="display:flex; align-items:center; gap:6px; font-size:0.82rem; font-weight:600; cursor:pointer; color:var(--text-secondary); margin-left:16px; margin-bottom:10px; white-space:nowrap;"
+                title="完了・不成約を非表示">
+                <input type="checkbox" id="toggleHideDone" onchange="filterBoardVisibility()"> 完了/不成約を隠す
+            </label>
         </div>
     </div>
     <div class="pipeline-container" id="pipelineContainer">
@@ -380,110 +387,108 @@
                 <input type="number" id="njAmount" placeholder="未定の場合は空欄" style="width:100%;">
             </div>
             <button class="btn btn-primary" onclick="submitNewJob()">保存する</button>
-        </div>
-    </div>
 
-    <!-- Bottom Nav -->
-    <nav class="bottom-nav">
-        <a href="index.html" class="nav-item"><span class="nav-icon">🏠</span><span>ホーム</span></a>
-        <a href="pipeline.html" class="nav-item active"><span class="nav-icon">📊</span><span>パイプライン</span></a>
-        <a href="billing.html" class="nav-item"><span class="nav-icon">💰</span><span>請求</span></a>
-        <a href="customers.html" class="nav-item"><span class="nav-icon">🏢</span><span>顧客</span></a>
-        <a href="company-data.html" class="nav-item"><span class="nav-icon">📁</span><span>データ</span></a>
-    </nav>
+            <!-- Bottom Nav -->
+            <nav class="bottom-nav">
+                <a href="index.html" class="nav-item"><span class="nav-icon">🏠</span><span>ホーム</span></a>
+                <a href="pipeline.html" class="nav-item active"><span class="nav-icon">📊</span><span>パイプライン</span></a>
+                <a href="billing.html" class="nav-item"><span class="nav-icon">💰</span><span>請求</span></a>
+                <a href="customers.html" class="nav-item"><span class="nav-icon">🏢</span><span>顧客</span></a>
+                <a href="company-data.html" class="nav-item"><span class="nav-icon">📁</span><span>データ</span></a>
+            </nav>
 
-    <script src="assets/js/utils.js"></script>
-    <script src="assets/js/api.js"></script>
-    <script>
-        if (!RyubeeAPI.requireAuth()) throw new Error("Not authenticated");
+            <script src="assets/js/utils.js"></script>
+            <script src="assets/js/api.js"></script>
+            <script>
+                if (!RyubeeAPI.requireAuth()) throw new Error("Not authenticated");
 
-        const STAGES = [
-            { key: 'inquiry', label: '問合せ', emoji: '📩' },
-            { key: 'estimate', label: '見積', emoji: '📝' },
-            { key: 'negotiation', label: '商談', emoji: '🤝' },
-            { key: 'contract', label: '契約', emoji: '📋' },
-            { key: 'scheduled', label: '作業予定', emoji: '📅' },
-            { key: 'waiting_manifest', label: 'マニフェスト待ち', emoji: '📜' },
-            { key: 'completed', label: '完了', emoji: '✅' },
-            { key: 'lost', label: '不成約', emoji: '❌' },
-        ];
+                const STAGES = [
+                    { key: 'inquiry', label: '問合せ', emoji: '📩' },
+                    { key: 'estimate', label: '見積', emoji: '📝' },
+                    { key: 'negotiation', label: '商談', emoji: '🤝' },
+                    { key: 'contract', label: '契約', emoji: '📋' },
+                    { key: 'scheduled', label: '作業予定', emoji: '📅' },
+                    { key: 'waiting_manifest', label: 'マニフェスト待ち', emoji: '📜' },
+                    { key: 'completed', label: '完了', emoji: '✅' },
+                    { key: 'lost', label: '不成約', emoji: '❌' },
+                ];
 
-        const TYPE_LABELS = {
-            general_waste: '一般ゴミ',
-            industrial_waste: '産業廃棄物',
-            large_waste: '大型ゴミ等'
-        };
+                const TYPE_LABELS = {
+                    general_waste: '一般ゴミ',
+                    industrial_waste: '産業廃棄物',
+                    large_waste: '大型ゴミ等'
+                };
 
-        let pipelineData = {};
-        let allCustomers = [];
-        let currentStaffFilter = 'all';
+                let pipelineData = {};
+                let allCustomers = [];
+                let currentStaffFilter = 'all';
 
-        function renderStaffTabs() {
-            const allNames = new Set();
-            for (const stage of Object.values(pipelineData)) {
-                for (const job of stage) {
-                    if (job.created_by_name && job.created_by_name.trim() !== 'Unknown') allNames.add(job.created_by_name.trim());
-                    if (job.assigned_to_name && job.assigned_to_name.trim() !== 'Unknown') allNames.add(job.assigned_to_name.trim());
-                }
-            }
+                function renderStaffTabs() {
+                    const allNames = new Set();
+                    for (const stage of Object.values(pipelineData)) {
+                        for (const job of stage) {
+                            if (job.created_by_name && job.created_by_name.trim() !== 'Unknown') allNames.add(job.created_by_name.trim());
+                            if (job.assigned_to_name && job.assigned_to_name.trim() !== 'Unknown') allNames.add(job.assigned_to_name.trim());
+                        }
+                    }
 
-            const staffList = Array.from(allNames).sort();
-            const tabsDiv = document.getElementById('staffTabs');
+                    const staffList = Array.from(allNames).sort();
+                    const tabsDiv = document.getElementById('staffTabs');
 
-            let html = `<button class="btn btn-xs ${currentStaffFilter === 'all' ? 'btn-primary' : 'btn-secondary'}" style="flex-shrink:0;" onclick="filterByStaff('all')">全て</button>`;
+                    let html = `<button class="btn btn-xs ${currentStaffFilter === 'all' ? 'btn-primary' : 'btn-secondary'}" style="flex-shrink:0;" onclick="filterByStaff('all')">全て</button>`;
 
-            staffList.forEach(name => {
-                const isActive = currentStaffFilter === name;
-                html += `<button class="btn btn-xs ${isActive ? 'btn-primary' : 'btn-secondary'}" style="flex-shrink:0;" onclick="filterByStaff('${utils.escapeHtml(name).replace(/'/g, "\\'")}')">${utils.escapeHtml(name)}</button>`;
-            });
+                    staffList.forEach(name => {
+                        const isActive = currentStaffFilter === name;
+                        html += `<button class="btn btn-xs ${isActive ? 'btn-primary' : 'btn-secondary'}" style="flex-shrink:0;" onclick="filterByStaff('${utils.escapeHtml(name).replace(/'/g, "\\'")}')">${utils.escapeHtml(name)}</button>`;
+                    });
 
-            tabsDiv.innerHTML = html;
-        }
-
-        function filterByStaff(name) {
-            currentStaffFilter = name;
-            renderStaffTabs();
-            renderPipeline();
-            filterPipeline();
-        }
-
-        document.addEventListener('DOMContentLoaded', loadPipeline);
-
-        async function loadPipeline() {
-            try {
-                const [pData, cData] = await Promise.all([
-                    RyubeeAPI.fetchPipeline(),
-                    RyubeeAPI.fetchCustomers()
-                ]);
-                pipelineData = pData;
-                allCustomers = cData;
-                renderStaffTabs();
-                renderPipeline();
-            } catch (e) {
-                document.getElementById('pipelineContainer').innerHTML =
-                    `<div class="alert alert-danger" style="width:100%">${e.message}</div>`;
-            }
-        }
-
-        function renderPipeline() {
-            const container = document.getElementById('pipelineContainer');
-            container.innerHTML = '';
-
-            STAGES.forEach(stage => {
-                let jobs = pipelineData[stage.key] || [];
-
-                if (currentStaffFilter !== 'all') {
-                    jobs = jobs.filter(j =>
-                        (j.created_by_name || '').trim() === currentStaffFilter ||
-                        (j.assigned_to_name || '').trim() === currentStaffFilter
-                    );
+                    tabsDiv.innerHTML = html;
                 }
 
-                const col = document.createElement('div');
-                col.className = 'pipeline-column';
-                col.dataset.stage = stage.key;
+                function filterByStaff(name) {
+                    currentStaffFilter = name;
+                    renderStaffTabs();
+                    renderPipeline();
+                    filterPipeline();
+                }
 
-                col.innerHTML = `
+                document.addEventListener('DOMContentLoaded', loadPipeline);
+
+                async function loadPipeline() {
+                    try {
+                        const [pData, cData] = await Promise.all([
+                            RyubeeAPI.fetchPipeline(),
+                            RyubeeAPI.fetchCustomers()
+                        ]);
+                        pipelineData = pData;
+                        allCustomers = cData;
+                        renderStaffTabs();
+                        renderPipeline();
+                    } catch (e) {
+                        document.getElementById('pipelineContainer').innerHTML =
+                            `<div class="alert alert-danger" style="width:100%">${e.message}</div>`;
+                    }
+                }
+
+                function renderPipeline() {
+                    const container = document.getElementById('pipelineContainer');
+                    container.innerHTML = '';
+
+                    STAGES.forEach(stage => {
+                        let jobs = pipelineData[stage.key] || [];
+
+                        if (currentStaffFilter !== 'all') {
+                            jobs = jobs.filter(j =>
+                                (j.created_by_name || '').trim() === currentStaffFilter ||
+                                (j.assigned_to_name || '').trim() === currentStaffFilter
+                            );
+                        }
+
+                        const col = document.createElement('div');
+                        col.className = 'pipeline-column';
+                        col.dataset.stage = stage.key;
+
+                        col.innerHTML = `
                     <div class="col-header">
                         <span class="col-title">${stage.emoji} ${stage.label}</span>
                         <span class="col-count">${jobs.length}</span>
@@ -492,30 +497,43 @@
                         ${jobs.map(j => renderCard(j, stage.key)).join('')}
                     </div>
                 `;
-                container.appendChild(col);
-            });
+                        container.appendChild(col);
+                    });
 
-            // ドラッグ＆ドロップのセットアップ
-            setupDragDrop();
-        }
+                    // ドラッグ＆ドロップのセットアップ
+                    setupDragDrop();
+                    filterBoardVisibility();
+                }
 
-        function renderCard(job, currentStage) {
-            const typeClass = job.job_type || 'other';
-            const typeLabel = TYPE_LABELS[job.job_type] || 'その他';
-            const price = job.price_total ? `¥${job.price_total.toLocaleString()}` : '–';
-            const stageIdx = STAGES.findIndex(s => s.key === currentStage);
-            const nextStage = stageIdx < STAGES.length - 2 ? STAGES[stageIdx + 1] : null;
-            const prevStage = stageIdx > 0 ? STAGES[stageIdx - 1] : null;
+                function filterBoardVisibility() {
+                    const hideDone = document.getElementById('toggleHideDone')?.checked;
+                    document.querySelectorAll('.pipeline-column').forEach(col => {
+                        const stage = col.dataset.stage;
+                        if (hideDone && (stage === 'completed' || stage === 'lost')) {
+                            col.style.display = 'none';
+                        } else {
+                            col.style.display = 'flex'; // `.pipeline-column` is naturally a flex column
+                        }
+                    });
+                }
 
-            const createdText = job.created_at ? new Date(job.created_at).toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
-            const updatedText = job.updated_at ? new Date(job.updated_at).toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+                function renderCard(job, currentStage) {
+                    const typeClass = job.job_type || 'other';
+                    const typeLabel = TYPE_LABELS[job.job_type] || 'その他';
+                    const price = job.price_total ? `¥${job.price_total.toLocaleString()}` : '–';
+                    const stageIdx = STAGES.findIndex(s => s.key === currentStage);
+                    const nextStage = stageIdx < STAGES.length - 2 ? STAGES[stageIdx + 1] : null;
+                    const prevStage = stageIdx > 0 ? STAGES[stageIdx - 1] : null;
 
-            const cust = allCustomers.find(c => c.id === job.customer_id) || {};
-            let fd = {};
-            try { fd = JSON.parse(cust.form_data || "{}"); } catch (e) { }
-            const yamaNum = fd.yamabun_management_number || '';
+                    const createdText = job.created_at ? new Date(job.created_at).toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+                    const updatedText = job.updated_at ? new Date(job.updated_at).toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
 
-            return `
+                    const cust = allCustomers.find(c => c.id === job.customer_id) || {};
+                    let fd = {};
+                    try { fd = JSON.parse(cust.form_data || "{}"); } catch (e) { }
+                    const yamaNum = fd.yamabun_management_number || '';
+
+                    return `
                 <div class="pipeline-card" draggable="true" data-job-id="${job.job_id}" data-stage="${currentStage}" onclick="openJobDetail('${job.job_id}')">
                     <div class="pc-name">
                         ${utils.escapeHtml(job.job_name || '案件')}
@@ -549,130 +567,130 @@
                     </div>
                 </div>
             `;
-        }
-
-        function setupDragDrop() {
-            document.querySelectorAll('.pipeline-card').forEach(card => {
-                card.addEventListener('dragstart', e => {
-                    e.dataTransfer.setData('text/plain', card.dataset.jobId);
-                    card.classList.add('dragging');
-                });
-                card.addEventListener('dragend', () => card.classList.remove('dragging'));
-            });
-
-            document.querySelectorAll('.drop-zone').forEach(zone => {
-                zone.addEventListener('dragover', e => {
-                    e.preventDefault();
-                    zone.classList.add('over');
-                });
-                zone.addEventListener('dragleave', () => zone.classList.remove('over'));
-                zone.addEventListener('drop', async e => {
-                    e.preventDefault();
-                    zone.classList.remove('over');
-                    const jobId = e.dataTransfer.getData('text/plain');
-                    const newStage = zone.dataset.stage;
-                    await moveJob(jobId, newStage);
-                });
-            });
-        }
-
-        function filterPipeline() {
-            const q = document.getElementById('plSearch').value.toLowerCase();
-            document.querySelectorAll('.pipeline-card').forEach(card => {
-                const text = card.textContent.toLowerCase();
-                if (text.includes(q)) {
-                    card.style.display = 'block';
-                } else {
-                    card.style.display = 'none';
                 }
-            });
-        }
 
-        async function moveJob(jobId, newStage) {
-            try {
-                await RyubeeAPI.updateJobStage(jobId, newStage);
-                await loadPipeline();
-                showToast(`✅ ステージを「${STAGES.find(s => s.key === newStage)?.label}」に変更`);
-            } catch (e) { alert('更新エラー: ' + e.message); }
-        }
+                function setupDragDrop() {
+                    document.querySelectorAll('.pipeline-card').forEach(card => {
+                        card.addEventListener('dragstart', e => {
+                            e.dataTransfer.setData('text/plain', card.dataset.jobId);
+                            card.classList.add('dragging');
+                        });
+                        card.addEventListener('dragend', () => card.classList.remove('dragging'));
+                    });
 
-        function showToast(msg) {
-            const t = document.createElement('div');
-            t.textContent = msg;
-            t.style.cssText = 'position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#34C759;color:#fff;padding:10px 20px;border-radius:20px;font-weight:600;z-index:9999;';
-            document.body.appendChild(t);
-            setTimeout(() => t.remove(), 2500);
-        }
+                    document.querySelectorAll('.drop-zone').forEach(zone => {
+                        zone.addEventListener('dragover', e => {
+                            e.preventDefault();
+                            zone.classList.add('over');
+                        });
+                        zone.addEventListener('dragleave', () => zone.classList.remove('over'));
+                        zone.addEventListener('drop', async e => {
+                            e.preventDefault();
+                            zone.classList.remove('over');
+                            const jobId = e.dataTransfer.getData('text/plain');
+                            const newStage = zone.dataset.stage;
+                            await moveJob(jobId, newStage);
+                        });
+                    });
+                }
 
-        async function submitNewJob() {
-            const name = document.getElementById('njName').value.trim();
-            const type = document.getElementById('njType').value;
-            const stage = document.getElementById('njStage').value;
-            const amount = document.getElementById('njAmount').value;
+                function filterPipeline() {
+                    const q = document.getElementById('plSearch').value.toLowerCase();
+                    document.querySelectorAll('.pipeline-card').forEach(card => {
+                        const text = card.textContent.toLowerCase();
+                        if (text.includes(q)) {
+                            card.style.display = 'block';
+                        } else {
+                            card.style.display = 'none';
+                        }
+                    });
+                }
 
-            if (!name) { alert("案件名を入力してください"); return; }
+                async function moveJob(jobId, newStage) {
+                    try {
+                        await RyubeeAPI.updateJobStage(jobId, newStage);
+                        await loadPipeline();
+                        showToast(`✅ ステージを「${STAGES.find(s => s.key === newStage)?.label}」に変更`);
+                    } catch (e) { alert('更新エラー: ' + e.message); }
+                }
 
-            try {
-                // 手動でのジョブ作成（API）
-                await RyubeeAPI.createJob({
-                    job_name: name,
-                    customer_name: name, // 顧客名と案件名を同じにして簡略化
-                    job_type: type,
-                    pipeline_stage: stage,
-                    estimated_price: amount ? parseInt(amount, 10) : 0,
-                    source: 'manual'
-                });
-                document.getElementById('newJobModal').classList.remove('show');
-                showToast("✅ 新規案件を手動追加しました");
-                loadPipeline();
-                // フォームリセット
-                document.getElementById('njName').value = '';
-                document.getElementById('njAmount').value = '';
-            } catch (e) {
-                alert("追加エラー: " + e.message);
-            }
-        }
+                function showToast(msg) {
+                    const t = document.createElement('div');
+                    t.textContent = msg;
+                    t.style.cssText = 'position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#34C759;color:#fff;padding:10px 20px;border-radius:20px;font-weight:600;z-index:9999;';
+                    document.body.appendChild(t);
+                    setTimeout(() => t.remove(), 2500);
+                }
 
-        function openNewJobModal() {
-            document.getElementById('newJobModal').classList.add('show');
-        }
+                async function submitNewJob() {
+                    const name = document.getElementById('njName').value.trim();
+                    const type = document.getElementById('njType').value;
+                    const stage = document.getElementById('njStage').value;
+                    const amount = document.getElementById('njAmount').value;
 
-        // ── Detail Drawer (Comments + Deal Amounts) ───
-        function closeDrawer(e) {
-            if (e && e.target !== document.getElementById('drawerOverlay')) return;
-            document.getElementById('drawerOverlay').classList.remove('show');
-        }
+                    if (!name) { alert("案件名を入力してください"); return; }
 
-        async function openJobDetail(jobId) {
-            const drawer = document.getElementById('drawerOverlay');
-            const body = document.getElementById('drawerBody');
+                    try {
+                        // 手動でのジョブ作成（API）
+                        await RyubeeAPI.createJob({
+                            job_name: name,
+                            customer_name: name, // 顧客名と案件名を同じにして簡略化
+                            job_type: type,
+                            pipeline_stage: stage,
+                            estimated_price: amount ? parseInt(amount, 10) : 0,
+                            source: 'manual'
+                        });
+                        document.getElementById('newJobModal').classList.remove('show');
+                        showToast("✅ 新規案件を手動追加しました");
+                        loadPipeline();
+                        // フォームリセット
+                        document.getElementById('njName').value = '';
+                        document.getElementById('njAmount').value = '';
+                    } catch (e) {
+                        alert("追加エラー: " + e.message);
+                    }
+                }
 
-            // Find job in pipeline data
-            let job = null;
-            for (const jobs of Object.values(pipelineData)) {
-                const found = jobs.find(j => j.job_id === jobId);
-                if (found) { job = found; break; }
-            }
-            if (!job) return;
+                function openNewJobModal() {
+                    document.getElementById('newJobModal').classList.add('show');
+                }
 
-            // Load comments
-            let comments = [];
-            try { comments = await RyubeeAPI.fetchComments(jobId); } catch (e) { }
+                // ── Detail Drawer (Comments + Deal Amounts) ───
+                function closeDrawer(e) {
+                    if (e && e.target !== document.getElementById('drawerOverlay')) return;
+                    document.getElementById('drawerOverlay').classList.remove('show');
+                }
 
-            const est = job.estimated_price || job.price_total || 0;
-            const fin = job.final_price || 0;
-            const disc = job.discount_amount || 0;
-            const surcharge = job.surcharge_amount || 0;
+                async function openJobDetail(jobId) {
+                    const drawer = document.getElementById('drawerOverlay');
+                    const body = document.getElementById('drawerBody');
 
-            // Form Data for Subcontractor
-            let fd = {};
-            try { fd = JSON.parse(job.form_data || "{}"); } catch (e) { }
+                    // Find job in pipeline data
+                    let job = null;
+                    for (const jobs of Object.values(pipelineData)) {
+                        const found = jobs.find(j => j.job_id === jobId);
+                        if (found) { job = found; break; }
+                    }
+                    if (!job) return;
 
-            // Photos parsing
-            let photos = [];
-            try { photos = JSON.parse(job.photos || "[]"); } catch (e) { }
+                    // Load comments
+                    let comments = [];
+                    try { comments = await RyubeeAPI.fetchComments(jobId); } catch (e) { }
 
-            body.innerHTML = `
+                    const est = job.estimated_price || job.price_total || 0;
+                    const fin = job.final_price || 0;
+                    const disc = job.discount_amount || 0;
+                    const surcharge = job.surcharge_amount || 0;
+
+                    // Form Data for Subcontractor
+                    let fd = {};
+                    try { fd = JSON.parse(job.form_data || "{}"); } catch (e) { }
+
+                    // Photos parsing
+                    let photos = [];
+                    try { photos = JSON.parse(job.photos || "[]"); } catch (e) { }
+
+                    body.innerHTML = `
                 <div style="display:flex;justify-content:space-between;align-items:flex-start;">
                     <h3 style="font-size:1.2rem;font-weight:700;margin-bottom:4px;flex:1;">${utils.escapeHtml(job.job_name || '案件')}</h3>
                     <a href="jobs.html?id=${jobId}" style="flex-shrink:0;margin-left:8px;padding:4px 10px;font-size:0.72rem;background:#FEE2E2;color:#DC2626;border:1px solid #FECACA;border-radius:8px;text-decoration:none;font-weight:700;white-space:nowrap;">✏️ フル編集</a>
@@ -759,258 +777,258 @@
                     </div>
                 </div>
             `;
-            drawer.classList.add('show');
-            // Populate customer dropdown if job has no customer_id
-            if (!job.customer_id) {
-                populateCustomerDropdown();
-            }
-        }
+                    drawer.classList.add('show');
+                    // Populate customer dropdown if job has no customer_id
+                    if (!job.customer_id) {
+                        populateCustomerDropdown();
+                    }
+                }
 
-        async function registerCustomerFromPipeline(jobId, custName) {
-            // Legacy fallback — now handled by linkCustomerToJob
-            await linkCustomerToJob(jobId);
-        }
+                async function registerCustomerFromPipeline(jobId, custName) {
+                    // Legacy fallback — now handled by linkCustomerToJob
+                    await linkCustomerToJob(jobId);
+                }
 
-        let _cachedCustomers = null;
-        async function populateCustomerDropdown() {
-            const sel = document.getElementById('customerLinkSelect');
-            if (!sel) return;
-            if (!_cachedCustomers) {
-                try { _cachedCustomers = await RyubeeAPI.fetchCustomers(); } catch (e) { _cachedCustomers = []; }
-            }
-            _cachedCustomers.forEach(c => {
-                const opt = document.createElement('option');
-                opt.value = c.id;
-                opt.textContent = `${c.name}${c.address ? ' — ' + c.address : ''}`;
-                sel.appendChild(opt);
-            });
-        }
+                let _cachedCustomers = null;
+                async function populateCustomerDropdown() {
+                    const sel = document.getElementById('customerLinkSelect');
+                    if (!sel) return;
+                    if (!_cachedCustomers) {
+                        try { _cachedCustomers = await RyubeeAPI.fetchCustomers(); } catch (e) { _cachedCustomers = []; }
+                    }
+                    _cachedCustomers.forEach(c => {
+                        const opt = document.createElement('option');
+                        opt.value = c.id;
+                        opt.textContent = `${c.name}${c.address ? ' — ' + c.address : ''}`;
+                        sel.appendChild(opt);
+                    });
+                }
 
-        async function linkCustomerToJob(jobId) {
-            const sel = document.getElementById('customerLinkSelect');
-            const val = sel ? sel.value : '';
+                async function linkCustomerToJob(jobId) {
+                    const sel = document.getElementById('customerLinkSelect');
+                    const val = sel ? sel.value : '';
 
-            if (!val) {
-                alert('顧客を選択してください');
-                return;
-            }
+                    if (!val) {
+                        alert('顧客を選択してください');
+                        return;
+                    }
 
-            try {
-                if (val === '__new__') {
-                    // Find current job name for default
+                    try {
+                        if (val === '__new__') {
+                            // Find current job name for default
+                            let job = null;
+                            for (const jobs of Object.values(pipelineData)) {
+                                job = jobs.find(j => j.job_id === jobId);
+                                if (job) break;
+                            }
+                            const custName = job ? job.customer_name : '';
+                            const name = prompt('新規顧客の「お客様名 / 法人名」を入力してください:', custName);
+                            if (!name) return;
+
+                            const cPayload = {
+                                name: name,
+                                address: '',
+                                phone: '',
+                                email: '',
+                                form_data: JSON.stringify({ source: 'パイプラインからの本登録' })
+                            };
+                            const newCus = await RyubeeAPI.createCustomer(cPayload);
+                            if (!newCus || !newCus.id) throw new Error('顧客作成に失敗しました');
+
+                            await RyubeeAPI.updateJob(jobId, { customer_id: newCus.id, customer_name: name });
+                            showToast(`✅ "${name}" 様を登録して紐づけました`);
+                        } else {
+                            // Link to existing customer
+                            const cust = _cachedCustomers.find(c => c.id === val);
+                            const custName = cust ? cust.name : '';
+                            await RyubeeAPI.updateJob(jobId, { customer_id: val, customer_name: custName });
+                            showToast(`✅ "${custName}" 様を紐づけました`);
+                        }
+
+                        _cachedCustomers = null; // clear cache
+                        document.getElementById('drawerOverlay').classList.remove('show');
+                        loadPipeline();
+                    } catch (e) {
+                        alert('エラーが発生しました: ' + e.message);
+                    }
+                }
+
+                async function postJobComment(jobId) {
+                    const input = document.getElementById('commentInput');
+                    const content = input.value.trim();
+                    if (!content) return;
+                    try {
+                        await RyubeeAPI.postComment(jobId, content);
+                        input.value = '';
+                        openJobDetail(jobId);
+                        showToast('✅ コメントを投稿しました');
+                    } catch (e) { alert('エラー: ' + e.message); }
+                }
+
+                async function convertToInvoice(jobId) {
                     let job = null;
                     for (const jobs of Object.values(pipelineData)) {
                         job = jobs.find(j => j.job_id === jobId);
                         if (job) break;
                     }
-                    const custName = job ? job.customer_name : '';
-                    const name = prompt('新規顧客の「お客様名 / 法人名」を入力してください:', custName);
-                    if (!name) return;
+                    if (!job) return;
 
-                    const cPayload = {
-                        name: name,
-                        address: '',
-                        phone: '',
-                        email: '',
-                        form_data: JSON.stringify({ source: 'パイプラインからの本登録' })
-                    };
-                    const newCus = await RyubeeAPI.createCustomer(cPayload);
-                    if (!newCus || !newCus.id) throw new Error('顧客作成に失敗しました');
+                    const currentPrice = job.final_price || job.estimated_price || job.price_total || 0;
+                    const newPriceStr = prompt('発行する請求書の最終金額(税抜)を入力してください。変更がない場合はそのままOKを押してください。', currentPrice);
+                    if (newPriceStr === null) return; // cancelled
 
-                    await RyubeeAPI.updateJob(jobId, { customer_id: newCus.id, customer_name: name });
-                    showToast(`✅ "${name}" 様を登録して紐づけました`);
-                } else {
-                    // Link to existing customer
-                    const cust = _cachedCustomers.find(c => c.id === val);
-                    const custName = cust ? cust.name : '';
-                    await RyubeeAPI.updateJob(jobId, { customer_id: val, customer_name: custName });
-                    showToast(`✅ "${custName}" 様を紐づけました`);
+                    const newPrice = parseInt(newPriceStr, 10);
+                    if (isNaN(newPrice)) { alert('正しい数値を入力してください'); return; }
+
+                    if (!confirm(`請求金額を ${newPrice.toLocaleString()}円 で発行してよろしいですか？\n（業者の締め払い設定に基づいて支払期限が自動設定されます）`)) return;
+
+                    try {
+                        // Update final price on Job if changed
+                        if (newPrice !== currentPrice) {
+                            job.final_price = newPrice;
+                            await fetch(`${RyubeeAPI.baseUrl}/jobs/${jobId}`, {
+                                method: 'PUT', headers: RyubeeAPI.getHeaders(), body: JSON.stringify({ final_price: newPrice })
+                            });
+                        }
+
+                        const inv = await RyubeeAPI.createInvoiceFromEstimate(jobId);
+                        showToast(`✅ 請求書を発行しました (税込¥${inv.total_amount.toLocaleString()})`);
+                        document.getElementById('drawerOverlay').classList.remove('show');
+                        setTimeout(() => { window.location.href = 'billing.html'; }, 1500);
+                    } catch (e) { alert('エラー: ' + e.message); }
                 }
 
-                _cachedCustomers = null; // clear cache
-                document.getElementById('drawerOverlay').classList.remove('show');
-                loadPipeline();
-            } catch (e) {
-                alert('エラーが発生しました: ' + e.message);
-            }
-        }
+                async function collectCash(jobId) {
+                    let job = null;
+                    for (const jobs of Object.values(pipelineData)) {
+                        job = jobs.find(j => j.job_id === jobId);
+                        if (job) break;
+                    }
+                    if (!job) return;
 
-        async function postJobComment(jobId) {
-            const input = document.getElementById('commentInput');
-            const content = input.value.trim();
-            if (!content) return;
-            try {
-                await RyubeeAPI.postComment(jobId, content);
-                input.value = '';
-                openJobDetail(jobId);
-                showToast('✅ コメントを投稿しました');
-            } catch (e) { alert('エラー: ' + e.message); }
-        }
+                    const currentPrice = job.final_price || job.estimated_price || job.price_total || 0;
+                    const newPriceStr = prompt('現金で受け取る最終金額(税抜)を入力してください。変更がない場合はそのままOKを押してください。', currentPrice);
+                    if (newPriceStr === null) return;
 
-        async function convertToInvoice(jobId) {
-            let job = null;
-            for (const jobs of Object.values(pipelineData)) {
-                job = jobs.find(j => j.job_id === jobId);
-                if (job) break;
-            }
-            if (!job) return;
+                    const newPrice = parseInt(newPriceStr, 10);
+                    if (isNaN(newPrice)) { alert('正しい数値を入力してください'); return; }
 
-            const currentPrice = job.final_price || job.estimated_price || job.price_total || 0;
-            const newPriceStr = prompt('発行する請求書の最終金額(税抜)を入力してください。変更がない場合はそのままOKを押してください。', currentPrice);
-            if (newPriceStr === null) return; // cancelled
+                    if (!confirm(`現金 ${newPrice.toLocaleString()}円(税抜) を受け取りましたか？\n（請求書が自動生成され、入金済みとして処理されます）`)) return;
 
-            const newPrice = parseInt(newPriceStr, 10);
-            if (isNaN(newPrice)) { alert('正しい数値を入力してください'); return; }
+                    try {
+                        if (newPrice !== currentPrice) {
+                            await fetch(`${RyubeeAPI.baseUrl}/jobs/${jobId}`, {
+                                method: 'PUT', headers: RyubeeAPI.getHeaders(), body: JSON.stringify({ final_price: newPrice })
+                            });
+                        }
 
-            if (!confirm(`請求金額を ${newPrice.toLocaleString()}円 で発行してよろしいですか？\n（業者の締め払い設定に基づいて支払期限が自動設定されます）`)) return;
+                        const inv = await RyubeeAPI.createInvoiceAndCollectCash(jobId);
+                        showToast(`✅ 現金回収を記録しました (税込¥${inv.total_amount.toLocaleString()})`);
+                        document.getElementById('drawerOverlay').classList.remove('show');
+                        loadPipeline();
+                    } catch (e) { alert('エラー: ' + e.message); }
+                }
 
-            try {
-                // Update final price on Job if changed
-                if (newPrice !== currentPrice) {
-                    job.final_price = newPrice;
-                    await fetch(`${RyubeeAPI.baseUrl}/jobs/${jobId}`, {
-                        method: 'PUT', headers: RyubeeAPI.getHeaders(), body: JSON.stringify({ final_price: newPrice })
+                async function updateJobFormData(jobId) {
+                    let job = null;
+                    for (const jobs of Object.values(pipelineData)) {
+                        job = jobs.find(j => j.job_id === jobId);
+                        if (job) break;
+                    }
+                    if (!job) return;
+
+                    let fd = {};
+                    try { fd = JSON.parse(job.form_data || "{}"); } catch (e) { }
+
+                    fd.subcontractor_name = document.getElementById('jobSubcontractor').value.trim();
+                    fd.vehicle_number = document.getElementById('jobVehicleNum').value.trim();
+                    const newFormData = JSON.stringify(fd);
+                    job.form_data = newFormData;
+
+                    try {
+                        await RyubeeAPI.updateJob(jobId, { form_data: newFormData });
+                        showToast("✅ 配車情報を保存しました");
+                    } catch (e) { alert("保存エラー"); }
+                }
+
+                async function uploadJobPhotos(event, jobId) {
+                    const files = Array.from(event.target.files);
+                    if (!files.length) return;
+
+                    // Find job to get existing photos
+                    let job = null;
+                    for (const jobs of Object.values(pipelineData)) {
+                        job = jobs.find(j => j.job_id === jobId);
+                        if (job) break;
+                    }
+                    if (!job) return;
+
+                    let pArr = [];
+                    try {
+                        pArr = Array.isArray(job.photos) ? [...job.photos] : JSON.parse(job.photos || "[]");
+                    } catch (e) { }
+
+                    showToast(`📸 ${files.length}枚の写真を処理中...`);
+
+                    // Process all files in parallel with canvas resize
+                    const processFile = (file) => new Promise((resolve) => {
+                        const reader = new FileReader();
+                        reader.onload = function (e) {
+                            const img = new Image();
+                            img.onload = function () {
+                                const canvas = document.createElement('canvas');
+                                const MAX_WIDTH = 800;
+                                const scale = Math.min(1, MAX_WIDTH / img.width);
+                                canvas.width = img.width * scale;
+                                canvas.height = img.height * scale;
+                                const ctx = canvas.getContext('2d');
+                                ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+                                resolve(canvas.toDataURL('image/jpeg', 0.8));
+                            };
+                            img.src = e.target.result;
+                        };
+                        reader.readAsDataURL(file);
                     });
+
+                    try {
+                        const base64Results = await Promise.all(files.map(f => processFile(f)));
+                        pArr.push(...base64Results);
+                        const photosStr = JSON.stringify(pArr);
+                        await RyubeeAPI.updateJob(jobId, { photos: photosStr });
+                        showToast(`📸 ${files.length}枚の写真を保存しました`);
+                        await loadPipeline();
+                        openJobDetail(jobId);
+                    } catch (err) { alert("アップロード失敗: " + err.message); }
                 }
 
-                const inv = await RyubeeAPI.createInvoiceFromEstimate(jobId);
-                showToast(`✅ 請求書を発行しました (税込¥${inv.total_amount.toLocaleString()})`);
-                document.getElementById('drawerOverlay').classList.remove('show');
-                setTimeout(() => { window.location.href = 'billing.html'; }, 1500);
-            } catch (e) { alert('エラー: ' + e.message); }
-        }
+                async function deleteJobPhoto(jobId, index) {
+                    if (!confirm("この写真を削除しますか？")) return;
+                    let job = null;
+                    for (const jobs of Object.values(pipelineData)) {
+                        job = jobs.find(j => j.job_id === jobId);
+                        if (job) break;
+                    }
+                    if (!job) return;
 
-        async function collectCash(jobId) {
-            let job = null;
-            for (const jobs of Object.values(pipelineData)) {
-                job = jobs.find(j => j.job_id === jobId);
-                if (job) break;
-            }
-            if (!job) return;
+                    let pArr = [];
+                    try {
+                        pArr = Array.isArray(job.photos) ? job.photos : JSON.parse(job.photos || "[]");
+                    } catch (e) { }
+                    pArr.splice(index, 1);
+                    const photosStr = JSON.stringify(pArr);
 
-            const currentPrice = job.final_price || job.estimated_price || job.price_total || 0;
-            const newPriceStr = prompt('現金で受け取る最終金額(税抜)を入力してください。変更がない場合はそのままOKを押してください。', currentPrice);
-            if (newPriceStr === null) return;
-
-            const newPrice = parseInt(newPriceStr, 10);
-            if (isNaN(newPrice)) { alert('正しい数値を入力してください'); return; }
-
-            if (!confirm(`現金 ${newPrice.toLocaleString()}円(税抜) を受け取りましたか？\n（請求書が自動生成され、入金済みとして処理されます）`)) return;
-
-            try {
-                if (newPrice !== currentPrice) {
-                    await fetch(`${RyubeeAPI.baseUrl}/jobs/${jobId}`, {
-                        method: 'PUT', headers: RyubeeAPI.getHeaders(), body: JSON.stringify({ final_price: newPrice })
-                    });
+                    try {
+                        await RyubeeAPI.updateJob(jobId, { photos: photosStr });
+                        await loadPipeline();
+                        openJobDetail(jobId); // reload drawer
+                    } catch (err) { alert("削除失敗"); }
                 }
-
-                const inv = await RyubeeAPI.createInvoiceAndCollectCash(jobId);
-                showToast(`✅ 現金回収を記録しました (税込¥${inv.total_amount.toLocaleString()})`);
-                document.getElementById('drawerOverlay').classList.remove('show');
-                loadPipeline();
-            } catch (e) { alert('エラー: ' + e.message); }
-        }
-
-        async function updateJobFormData(jobId) {
-            let job = null;
-            for (const jobs of Object.values(pipelineData)) {
-                job = jobs.find(j => j.job_id === jobId);
-                if (job) break;
-            }
-            if (!job) return;
-
-            let fd = {};
-            try { fd = JSON.parse(job.form_data || "{}"); } catch (e) { }
-
-            fd.subcontractor_name = document.getElementById('jobSubcontractor').value.trim();
-            fd.vehicle_number = document.getElementById('jobVehicleNum').value.trim();
-            const newFormData = JSON.stringify(fd);
-            job.form_data = newFormData;
-
-            try {
-                await RyubeeAPI.updateJob(jobId, { form_data: newFormData });
-                showToast("✅ 配車情報を保存しました");
-            } catch (e) { alert("保存エラー"); }
-        }
-
-        async function uploadJobPhotos(event, jobId) {
-            const files = Array.from(event.target.files);
-            if (!files.length) return;
-
-            // Find job to get existing photos
-            let job = null;
-            for (const jobs of Object.values(pipelineData)) {
-                job = jobs.find(j => j.job_id === jobId);
-                if (job) break;
-            }
-            if (!job) return;
-
-            let pArr = [];
-            try {
-                pArr = Array.isArray(job.photos) ? [...job.photos] : JSON.parse(job.photos || "[]");
-            } catch (e) { }
-
-            showToast(`📸 ${files.length}枚の写真を処理中...`);
-
-            // Process all files in parallel with canvas resize
-            const processFile = (file) => new Promise((resolve) => {
-                const reader = new FileReader();
-                reader.onload = function (e) {
-                    const img = new Image();
-                    img.onload = function () {
-                        const canvas = document.createElement('canvas');
-                        const MAX_WIDTH = 800;
-                        const scale = Math.min(1, MAX_WIDTH / img.width);
-                        canvas.width = img.width * scale;
-                        canvas.height = img.height * scale;
-                        const ctx = canvas.getContext('2d');
-                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                        resolve(canvas.toDataURL('image/jpeg', 0.8));
-                    };
-                    img.src = e.target.result;
-                };
-                reader.readAsDataURL(file);
-            });
-
-            try {
-                const base64Results = await Promise.all(files.map(f => processFile(f)));
-                pArr.push(...base64Results);
-                const photosStr = JSON.stringify(pArr);
-                await RyubeeAPI.updateJob(jobId, { photos: photosStr });
-                showToast(`📸 ${files.length}枚の写真を保存しました`);
-                await loadPipeline();
-                openJobDetail(jobId);
-            } catch (err) { alert("アップロード失敗: " + err.message); }
-        }
-
-        async function deleteJobPhoto(jobId, index) {
-            if (!confirm("この写真を削除しますか？")) return;
-            let job = null;
-            for (const jobs of Object.values(pipelineData)) {
-                job = jobs.find(j => j.job_id === jobId);
-                if (job) break;
-            }
-            if (!job) return;
-
-            let pArr = [];
-            try {
-                pArr = Array.isArray(job.photos) ? job.photos : JSON.parse(job.photos || "[]");
-            } catch (e) { }
-            pArr.splice(index, 1);
-            const photosStr = JSON.stringify(pArr);
-
-            try {
-                await RyubeeAPI.updateJob(jobId, { photos: photosStr });
-                await loadPipeline();
-                openJobDetail(jobId); // reload drawer
-            } catch (err) { alert("削除失敗"); }
-        }
-    </script>
-    <script>
-        if ('serviceWorker' in navigator) {
-            navigator.serviceWorker.register('sw.js').catch(e => console.log('SW registration failed:', e));
-        }
-    </script>
+            </script>
+            <script>
+                if ('serviceWorker' in navigator) {
+                    navigator.serviceWorker.register('sw.js').catch(e => console.log('SW registration failed:', e));
+                }
+            </script>
 </body>
 
 </html>

@@ -205,6 +205,34 @@ const RyubeeAPI = {
     return apiFetch(`/v1/invoices/${invoiceId}`);
   },
 
+  async downloadInvoicePdf(invoiceId) {
+    const token = this.getToken();
+    if (!token) throw new Error("認証が必要です");
+    return fetch(`${this.baseUrl}/v1/invoices/${invoiceId}/pdf`, {
+      method: "GET",
+      headers: { "Authorization": `Bearer ${token}` }
+    }).then(async res => {
+      if (!res.ok) throw new Error(await res.text());
+      return res.blob();
+    }).then(blob => {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `Invoice_${invoiceId.slice(0, 6)}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    });
+  },
+
+  async sendInvoiceEmail(invoiceId, body = { subject: "【ご請求書】送付のご案内", body: "いつも大変お世話になっております。\\n添付の通り、ご請求書を送付いたします。\\nご確認のほどよろしくお願い申し上げます。" }) {
+    return apiFetch(`/v1/invoices/${invoiceId}/send`, {
+      method: "POST",
+      body: JSON.stringify(body)
+    });
+  },
+
   async createInvoice(body) {
     return apiFetch("/v1/invoices", {
       method: "POST",

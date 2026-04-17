@@ -333,7 +333,7 @@
     </div>
 
     <!-- Bottom Nav -->
-        <nav class="bottom-nav">
+    <nav class="bottom-nav">
         <a href="index.html" class="nav-item"><span class="nav-icon">🏠</span><span>ホーム</span></a>
         <a href="pipeline.html" class="nav-item"><span class="nav-icon">📊</span><span>パイプライン</span></a>
         <a href="billing.html" class="nav-item"><span class="nav-icon">💰</span><span>請求</span></a>
@@ -357,13 +357,19 @@
         if (!RyubeeAPI.requireAuth()) throw new Error("Not authenticated");
 
         let allCustomers = [];
+        let allWasteContracts = [];
         let editingId = null;
 
         document.addEventListener('DOMContentLoaded', loadCustomers);
 
         async function loadCustomers() {
             try {
-                allCustomers = await RyubeeAPI.fetchCustomers();
+                const [custRes, contractsRes] = await Promise.all([
+                    RyubeeAPI.fetchCustomers(),
+                    RyubeeAPI.fetchWasteContracts().catch(() => [])
+                ]);
+                allCustomers = custRes;
+                allWasteContracts = contractsRes;
                 allCustomers.forEach(c => {
                     try { c.parsed_form = JSON.parse(c.form_data || "{}"); } catch (e) { c.parsed_form = {}; }
                 });
@@ -550,6 +556,38 @@
             let history = [];
             try { history = await RyubeeAPI.fetchCustomerHistory(id); } catch (e) { }
 
+            const customerContracts = allWasteContracts.filter(ct => (ct.contractor_name || '').trim() === c.name.trim());
+            const hardcodedDisposers = ['ホームケルン', '光アスコン', '旭興産業', '木材開発', '厳本金属', '京都有機資源', 'HIRAYAMA', '大剛', '京都環境保全公社', '西山環境サービス', '家電リサイクル'];
+
+            // 顧客専用のイレギュラーな処分先があれば追加
+            const existingDisposers = new Set(hardcodedDisposers);
+            customerContracts.forEach(ct => {
+                if (ct.disposal_company && !existingDisposers.has(ct.disposal_company)) {
+                    hardcodedDisposers.push(ct.disposal_company);
+                    existingDisposers.add(ct.disposal_company);
+                }
+            });
+
+            const contractListHtml = hardcodedDisposers.map(disp => {
+                const contract = customerContracts.find(ct => ct.disposal_company === disp);
+                if (contract) {
+                    const clickAction = contract.document_url ? `href="${contract.document_url}" target="_blank"` : `href="#" onclick="alert('契約書データ(PDF)が未登録です。データ管理で該当契約のPDFをアップロードしてください。');return false;"`;
+                    return `
+                        <div style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px dashed var(--border);">
+                            <span style="font-size:0.85rem; font-weight:600;">${utils.escapeHtml(disp)}</span>
+                            <a ${clickAction} style="text-decoration:none; font-size:1.15rem; color:#111; line-height:1; cursor:pointer;" title="契約書を開く">⚫︎</a>
+                        </div>
+                    `;
+                } else {
+                    return `
+                        <div style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px dashed rgba(0,0,0,0.05);">
+                            <span style="font-size:0.85rem; color:var(--text-tertiary);">${utils.escapeHtml(disp)}</span>
+                            <span style="color:transparent; font-size:1.15rem; line-height:1; pointer-events:none;">⚫︎</span>
+                        </div>
+                    `;
+                }
+            }).join('');
+
             const pc = document.getElementById('previewContent');
             pc.innerHTML = `
                 <h3 style="font-size:1.4rem;font-weight:700;margin-bottom:8px;">${utils.escapeHtml(c.name)}</h3>
@@ -576,9 +614,18 @@
                     <span style="display:inline-block;width:70px;color:var(--text-tertiary);font-size:0.85rem;">支払締:</span> ${utils.escapeHtml(fd.payment_method || '振込')} / ${c.billing_closing_day === 31 ? '月末' : c.billing_closing_day + '日'}締め
                 </div>
 
+                <!-- 契約リスト（コード表連携） -->
+                <div style="background:var(--bg-secondary); padding:16px; border-radius:12px; margin-bottom:16px; font-size:0.95rem; line-height:1.6;">
+                    📋 <strong style="margin-left:4px;">契約リスト (産廃収集運搬・処分先)</strong><br>
+                    <p style="font-size:0.75rem; color:var(--text-tertiary); margin-bottom:8px; line-height:1.3;">※ 登録されている処分先には「⚫︎」が付きます。⚫︎をクリックすると契約書PDFなどを開きます。</p>
+                    <div style="display:grid; grid-template-columns: 1fr; gap:0px; background:#fff; padding:6px 16px; border-radius:8px; border:1px solid var(--border);">
+                        ${contractListHtml}
+                    </div>
+                </div>
+
                 <div style="margin-top:16px; display:grid; grid-template-columns:1fr 1fr; gap:8px;">
                     <a href="manifests.html?customer_id=${c.id}" class="btn btn-sm btn-secondary" style="text-align:center;text-decoration:none;padding:12px;">♻️ マニフェスト発行</a>
-                    <a href="contract-form.html?id=${c.id}" class="btn btn-sm btn-secondary" style="text-align:center;text-decoration:none;padding:12px;">📄 契約書確認</a>
+                    <a href="contract-form.html?id=${c.id}" class="btn btn-sm btn-secondary" style="text-align:center;text-decoration:none;padding:12px;">📄 新規 契約書作成</a>
                 </div>
 
                 <!-- 履歴・対応ログ (CRM Timeline) -->
