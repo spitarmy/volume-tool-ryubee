@@ -407,11 +407,9 @@
 
         <div class="form-group">
           <label>現場住所</label>
-          <div style="display: flex; gap: 8px;">
-            <input type="text" id="job-address" placeholder="東京都渋谷区..." style="flex: 1;">
-            <button type="button" class="btn btn-secondary" onclick="fetchGPSLocation()"
-              style="margin: 0; padding: 0 12px; white-space: nowrap;">📍 現在地</button>
-          </div>
+          <input type="text" id="job-address" placeholder="東京都渋谷区..." style="width: 100%; font-size: 16px;">
+          <button type="button" class="btn btn-secondary btn-sm" onclick="fetchGPSLocation()"
+            style="margin-top: 6px; padding: 6px 14px; white-space: nowrap; width: auto;">📍 現在地を取得</button>
           <small id="gps-status" class="small-text text-muted" style="display: block; margin-top: 4px;"></small>
         </div>
 

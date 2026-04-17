@@ -314,7 +314,7 @@
                     </tr>
                     <tr>
                         <td style="border:none; padding:2px 0; color:#888;">有効期限</td>
-                        <td style="border:none; padding:2px 0;">発行日ん30日</td>
+                        <td style="border:none; padding:2px 0;">発行日から30日</td>
                     </tr>
                     <tr>
                         <td style="border:none; padding:2px 0; color:#888;">件名</td>
@@ -363,13 +363,7 @@
             <div style="padding:10px 12px; font-size:13px; min-height:30px;" id="out-notes">特になし</div>
         </div>
 
-        <div style="margin-top:16px; font-size:13px;">
-            <div>お支払いは下記銀行口座へ振り込みくださいますようお願い申し上げます。</div>
-            <div style="margin-top:8px; border:1px solid #ccc; padding:12px; border-radius:4px;">
-                <div style="font-weight:bold; margin-bottom:4px;">【振込先】</div>
-                <div id="out-bank-info" style="white-space:pre-wrap;">設定画面から振込口座を登録してください。</div>
-            </div>
-        </div>
+
 
         <!-- サイン印字エリア -->
         <div class="inv-signature-box" id="sig-container" style="display: none;">
@@ -396,9 +390,6 @@
                     document.getElementById('out-company-address').textContent = settings.company_address || '';
                     document.getElementById('out-company-phone').textContent = settings.company_phone || '';
                     document.getElementById('out-company-invoice').textContent = settings.company_invoice_no || '未設定';
-                    if (settings.company_bank_info) {
-                        document.getElementById('out-bank-info').textContent = settings.company_bank_info;
-                    }
                     if (settings.company_logo) {
                         const logoEl = document.getElementById('out-company-logo');
                         logoEl.src = settings.company_logo;
@@ -421,9 +412,6 @@
                         document.getElementById('out-company-address').textContent = settings.company_address || '';
                         document.getElementById('out-company-phone').textContent = settings.company_phone || '';
                         document.getElementById('out-company-invoice').textContent = settings.company_invoice_no || '未設定';
-                        if (settings.company_bank_info) {
-                            document.getElementById('out-bank-info').textContent = settings.company_bank_info;
-                        }
                     } catch (e) { }
                 }
             }

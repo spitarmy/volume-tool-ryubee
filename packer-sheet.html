@@ -227,6 +227,12 @@
                 try { jfd = JSON.parse(job.form_data || "{}"); } catch (e) { }
                 let photos = [];
                 try { photos = JSON.parse(job.photos || "[]"); } catch (e) { }
+                // Resolve relative photo paths to full backend URL
+                const backendOrigin = RyubeeAPI.baseUrl.replace(/\/v1$/, '');
+                photos = photos.map(p => {
+                    if (p && p.startsWith('/uploads/')) return backendOrigin + p;
+                    return p;
+                });
 
                 const workDate = job.work_date ? new Date(job.work_date).toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric', weekday: 'short' }) : '未定';
                 const today = new Date().toLocaleDateString('ja-JP', { year: 'numeric', month: 'long', day: 'numeric' });
