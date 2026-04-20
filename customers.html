@@ -323,6 +323,14 @@
             <div id="pricingListContainer"></div>
             <button class="btn btn-secondary btn-sm mt-1" style="width:100%;" onclick="addPricingRow()">＋ 品目を追加</button>
 
+            <h4 class="section-title mt-4">🏢 関連手配先・処分先</h4>
+            <p style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:8px;">
+                ご契約中、または今後手配する可能性のある処分先にチェックを入れてください</p>
+            <div id="custContractorsList"
+                style="display:flex; flex-wrap:wrap; gap:8px; border:1px solid var(--border); padding:10px; border-radius:var(--r-md); background:var(--bg-secondary);">
+                <!-- JSで動的にチェックボックスを生成 -->
+            </div>
+
             <div class="form-group mt-2"><label>社内用メモ</label><textarea id="custNotes"
                     placeholder="特記事項など..."></textarea></div>
 
@@ -365,20 +373,23 @@
         let allCustomers = [];
         let allWasteContracts = [];
         let allUsers = [];
+        let appSettings = {};
         let editingId = null;
 
         document.addEventListener('DOMContentLoaded', loadCustomers);
 
         async function loadCustomers() {
             try {
-                const [custRes, contractsRes, usersRes] = await Promise.all([
+                const [custRes, contractsRes, usersRes, settingsRes] = await Promise.all([
                     RyubeeAPI.fetchCustomers(),
                     RyubeeAPI.fetchWasteContracts().catch(() => []),
-                    RyubeeAPI.fetchUsers().catch(() => [])
+                    RyubeeAPI.fetchUsers().catch(() => []),
+                    RyubeeAPI.fetchSettings().catch(() => ({}))
                 ]);
                 allCustomers = custRes;
                 allWasteContracts = contractsRes;
                 allUsers = usersRes || [];
+                appSettings = settingsRes || {};
 
                 const sel = document.getElementById('custAssignedUser');
                 if (sel) {
@@ -582,6 +593,7 @@
                 : ['ホームケルン', '光アスコン', '旭興産業', '木材開発', '厳本金属', '京都有機資源', 'HIRAYAMA', '大剛', '京都環境保全公社', '西山環境サービス', '家電リサイクル'];
 
             // 顧客専用のイレギュラーな処分先があれば追加
+            const activeCbs = Array.isArray(fd.active_contractors) ? fd.active_contractors : [];
             const existingDisposers = new Set(dynamicDisposers);
             customerContracts.forEach(ct => {
                 if (ct.disposal_company && !existingDisposers.has(ct.disposal_company)) {
@@ -589,15 +601,30 @@
                     existingDisposers.add(ct.disposal_company);
                 }
             });
+            activeCbs.forEach(ct => {
+                if (ct && !existingDisposers.has(ct)) {
+                    dynamicDisposers.push(ct);
+                    existingDisposers.add(ct);
+                }
+            });
 
             const contractListHtml = dynamicDisposers.map(disp => {
                 const contract = customerContracts.find(ct => ct.disposal_company === disp);
+                const isChecked = activeCbs.includes(disp);
+
                 if (contract) {
                     const clickAction = contract.document_url ? `href="${contract.document_url}" target="_blank"` : `href="#" onclick="alert('契約書データ(PDF)が未登録です。データ管理で該当契約のPDFをアップロードしてください。');return false;"`;
                     return `
                         <div style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px dashed var(--border);">
                             <span style="font-size:0.85rem; font-weight:600;">${utils.escapeHtml(disp)}</span>
                             <a ${clickAction} style="text-decoration:none; font-size:1.15rem; color:#111; line-height:1; cursor:pointer;" title="契約書を開く">⚫︎</a>
+                        </div>
+                    `;
+                } else if (isChecked) {
+                    return `
+                        <div style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px dashed var(--border);">
+                            <span style="font-size:0.85rem; font-weight:600;">${utils.escapeHtml(disp)}</span>
+                            <a href="#" onclick="alert('チェックは入っていますが、契約書PDFデータがシステムに存在しません。\\n必要に応じて「データ・マニフェスト」画面から『契約書アップロード』を行ってください。');return false;" style="text-decoration:none; font-size:1.15rem; color:var(--blue); line-height:1; cursor:pointer;" title="契約PDF 未登録">⚫︎</a>
                         </div>
                     `;
                 } else {
@@ -707,6 +734,8 @@
                 if (item || price) pricing_list.push({ item, price, unit });
             });
 
+            const activeContractors = Array.from(document.querySelectorAll('.cust-contractor-cb:checked')).map(cb => cb.value);
+
             const formData = {
                 yamabun_management_number: document.getElementById('custYamabunNumber').value.trim(),
                 waste_category: document.getElementById('custWasteCategory').value,
@@ -727,7 +756,8 @@
                 billing_address: document.getElementById('custBillingAddress').value.trim(),
                 billing_email: document.getElementById('custBillingEmail').value.trim(),
                 billing_contact: document.getElementById('custBillingContact').value.trim(),
-                pricing_list: pricing_list
+                pricing_list: pricing_list,
+                active_contractors: activeContractors
             };
 
             const body = {

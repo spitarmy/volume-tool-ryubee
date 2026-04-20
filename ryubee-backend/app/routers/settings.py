@@ -115,13 +115,16 @@ def update_settings(
 
     # CompanySettings フィールドを一括更新
     exclude = {"company_name", "custom_ai_items", "general_waste_pricing", "contractors_master"}
-    for field, val in body.model_dump(exclude=exclude).items():
+    for field, val in body.model_dump(exclude=exclude, exclude_unset=True).items():
         if hasattr(rec, field):
             setattr(rec, field, val)
 
-    rec.custom_ai_items = json.dumps(body.custom_ai_items, ensure_ascii=False)
-    rec.general_waste_pricing = json.dumps(body.general_waste_pricing, ensure_ascii=False)
-    rec.contractors_master = json.dumps(body.contractors_master, ensure_ascii=False)
+    if "custom_ai_items" in body.model_fields_set:
+        rec.custom_ai_items = json.dumps(body.custom_ai_items, ensure_ascii=False)
+    if "general_waste_pricing" in body.model_fields_set:
+        rec.general_waste_pricing = json.dumps(body.general_waste_pricing, ensure_ascii=False)
+    if "contractors_master" in body.model_fields_set:
+        rec.contractors_master = json.dumps(body.contractors_master, ensure_ascii=False)
 
     db.commit()
     db.refresh(rec)
