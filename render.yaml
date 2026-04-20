@@ -21,7 +21,6 @@ services:
   - type: web
     name: ryubee-frontend-app
     env: static
-    region: singapore
     buildCommand: "echo 'No build required'"
     staticPublishPath: "./"
 
