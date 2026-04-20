@@ -581,6 +581,56 @@ const RyubeeAPI = {
   },
   async deleteTrainingMaterial(id) {
     return apiFetch(`/v1/training-materials/${id}`, { method: "DELETE" });
+  },
+
+  // ── 繰越処理 ──────────────────────────────────────────
+  async carryoverInvoices(sourceMonth, targetMonth) {
+    return apiFetch("/v1/invoices/carryover", {
+      method: "POST",
+      body: JSON.stringify({ source_month: sourceMonth, target_month: targetMonth }),
+    });
+  },
+
+  // ── 口座振替 ──────────────────────────────────────────
+  async previewAutoDebit(month) {
+    return apiFetch(`/v1/auto-debit/preview?month=${month}`);
+  },
+  async generateAutoDebitCsv(invoiceIds, debitDate, opts = {}) {
+    const token = localStorage.getItem("ryubee_token");
+    const res = await fetch(`${API_BASE}/v1/auto-debit/generate`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
+      body: JSON.stringify({ invoice_ids: invoiceIds, debit_date: debitDate, ...opts }),
+    });
+    if (!res.ok) {
+      const errText = await res.text();
+      throw new Error(errText);
+    }
+    // CSVレスポンスの場合はBlobとしてダウンロード
+    const contentType = res.headers.get("content-type") || "";
+    if (contentType.includes("text/csv")) {
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `auto_debit_${debitDate}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      return { generated: parseInt(res.headers.get("x-generated-count") || "0"), skipped: parseInt(res.headers.get("x-skipped-count") || "0") };
+    }
+    return res.json();
+  },
+  async importAutoDebitResult(file) {
+    const token = localStorage.getItem("ryubee_token");
+    const formData = new FormData();
+    formData.append("file", file);
+    const res = await fetch(`${API_BASE}/v1/auto-debit/import-result`, {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${token}` },
+      body: formData,
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
   }
 };
 

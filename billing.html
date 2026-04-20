@@ -428,8 +428,14 @@
                 <button class="btn btn-xs btn-secondary" onclick="showBankUpload()"
                     style="width:100%;background:var(--blue-light);color:var(--blue-dark);border-color:var(--blue);">🏦
                     銀行入金取込</button>
-                <button class="btn btn-xs btn-ghost" onclick="connectFreee()" id="freeeBtn" style="width:100%;">🔗
+                <button class="btn btn-xs btn-ghost" onclick="connectFreee()" id="freeeBtn" style="width:100;">🔗
                     freee連携</button>
+                <button class="btn btn-xs btn-secondary" onclick="showCarryoverDialog()"
+                    style="width:100%;background:#FEF3C7;color:#92400E;border-color:#F59E0B;">🔄
+                    繰越処理</button>
+                <button class="btn btn-xs btn-secondary" onclick="showAutoDebitModal()"
+                    style="width:100%;background:#E0E7FF;color:#3730A3;border-color:#6366F1;">💳
+                    口座振替データ</button>
             </div>
 
             <!-- 検索・フィルター -->
@@ -1534,6 +1540,147 @@
             t.style.cssText = 'position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#34C759;color:#fff;padding:10px 20px;border-radius:20px;font-weight:600;z-index:9999;';
             document.body.appendChild(t);
             setTimeout(() => t.remove(), 2500);
+        }
+
+        // ── 繰越処理 ────────────────────────────────────────
+        async function showCarryoverDialog() {
+            const currentMonth = document.getElementById('monthFilter').value;
+            if (!currentMonth) { alert('先に対象月を選択してください'); return; }
+
+            // 次月を計算
+            const [y, m] = currentMonth.split('-').map(Number);
+            const nextM = m === 12 ? 1 : m + 1;
+            const nextY = m === 12 ? y + 1 : y;
+            const targetMonth = `${nextY}-${String(nextM).padStart(2, '0')}`;
+
+            // 未入金件数を計算
+            const unpaid = allInvoices.filter(inv =>
+                inv.month === currentMonth &&
+                ['sent', 'partial', 'overdue', 'draft'].includes(inv.status) &&
+                (inv.total_amount - inv.paid_total) > 0
+            );
+
+            if (unpaid.length === 0) {
+                alert(`${currentMonth} に未入金の請求書はありません`);
+                return;
+            }
+
+            const totalRemaining = unpaid.reduce((s, inv) => s + (inv.total_amount - inv.paid_total), 0);
+            if (!confirm(`🔄 繰越処理\n\n${currentMonth} の未入金 ${unpaid.length}件 (合計 ¥${totalRemaining.toLocaleString()}) を\n${targetMonth} の請求書に繰越しますか？`)) return;
+
+            try {
+                const result = await RyubeeAPI.carryoverInvoices(currentMonth, targetMonth);
+                alert(`✅ ${result.length}件の請求書に繰越しました`);
+                loadInvoices();
+            } catch (e) {
+                alert('エラー: ' + e.message);
+            }
+        }
+
+        // ── 口座振替データ ───────────────────────────────────
+        async function showAutoDebitModal() {
+            const month = document.getElementById('monthFilter').value;
+            if (!month) { alert('先に対象月を選択してください'); return; }
+
+            try {
+                const targets = await RyubeeAPI.previewAutoDebit(month);
+                if (!targets.length) {
+                    alert(`${month} に口座振替対象の請求書はありません`);
+                    return;
+                }
+
+                let html = `<div style="padding:20px;">
+                    <h3 style="margin:0 0 12px;">💳 口座振替データ生成 (${month})</h3>
+                    <div style="margin-bottom:12px;">
+                        <label>振替日: <input type="date" id="debitDate" value="" style="padding:6px;border:1px solid var(--border);border-radius:4px;"></label>
+                    </div>
+                    <table style="width:100%;font-size:0.85rem;">
+                        <thead><tr><th style="width:30px;"><input type="checkbox" id="debitCheckAll" onchange="toggleAllDebitChecks()"></th><th>顧客</th><th>金額</th><th>口座</th></tr></thead>
+                        <tbody>`;
+
+                targets.forEach(t => {
+                    const bankLabel = t.has_bank_info ? `✅ ${t.bank_code}-${t.account_holder}` : `❌ 未登録`;
+                    html += `<tr>
+                        <td><input type="checkbox" class="debit-check" value="${t.invoice_id}" ${t.has_bank_info ? 'checked' : 'disabled'}></td>
+                        <td>${t.customer_name}</td>
+                        <td style="text-align:right;">¥${t.remaining.toLocaleString()}</td>
+                        <td style="font-size:0.75rem;">${bankLabel}</td>
+                    </tr>`;
+                });
+
+                html += `</tbody></table>
+                    <div style="margin-top:16px;display:flex;gap:12px;">
+                        <button class="btn btn-primary" onclick="executeAutoDebit()" style="flex:1;">💾 CSVダウンロード</button>
+                        <button class="btn btn-secondary" onclick="closeAutoDebitModal()" style="flex:1;">閉じる</button>
+                    </div>
+                    <hr style="margin:16px 0;">
+                    <h4 style="margin:0 0 8px;">📥 振替結果CSV取込</h4>
+                    <input type="file" id="debitResultFile" accept=".csv" style="font-size:0.85rem;">
+                    <button class="btn btn-xs btn-success" onclick="importDebitResult()" style="margin-top:8px;">取込実行</button>
+                    <div id="debitResultArea"></div>
+                </div>`;
+
+                // モーダル表示
+                let modal = document.getElementById('autoDebitModal');
+                if (!modal) {
+                    modal = document.createElement('div');
+                    modal.id = 'autoDebitModal';
+                    modal.style.cssText = 'position:fixed;top:0;left:0;right:0;bottom:0;background:rgba(0,0,0,0.5);z-index:5000;display:flex;align-items:center;justify-content:center;';
+                    document.body.appendChild(modal);
+                }
+                modal.innerHTML = `<div style="background:#fff;border-radius:12px;max-width:600px;width:95%;max-height:80vh;overflow-y:auto;">${html}</div>`;
+                modal.style.display = 'flex';
+            } catch (e) {
+                alert('エラー: ' + e.message);
+            }
+        }
+
+        function closeAutoDebitModal() {
+            const modal = document.getElementById('autoDebitModal');
+            if (modal) modal.style.display = 'none';
+        }
+
+        function toggleAllDebitChecks() {
+            const all = document.getElementById('debitCheckAll').checked;
+            document.querySelectorAll('.debit-check:not(:disabled)').forEach(c => c.checked = all);
+        }
+
+        async function executeAutoDebit() {
+            const checks = document.querySelectorAll('.debit-check:checked');
+            if (!checks.length) { alert('振替対象を選択してください'); return; }
+            const debitDate = document.getElementById('debitDate').value;
+            if (!debitDate) { alert('振替日を入力してください'); return; }
+
+            const ids = Array.from(checks).map(c => c.value);
+            try {
+                const result = await RyubeeAPI.generateAutoDebitCsv(ids, debitDate);
+                showToast(`✅ ${result.generated}件のCSVをダウンロードしました`);
+            } catch (e) {
+                alert('エラー: ' + e.message);
+            }
+        }
+
+        async function importDebitResult() {
+            const fileInput = document.getElementById('debitResultFile');
+            if (!fileInput.files.length) { alert('CSVファイルを選択してください'); return; }
+            try {
+                const result = await RyubeeAPI.importAutoDebitResult(fileInput.files[0]);
+                let html = `<div style="margin-top:12px;padding:12px;background:#f0fdf4;border-radius:8px;">
+                    <strong>✅ 成功: ${result.success_count}件</strong>`;
+                if (result.failed_count > 0) {
+                    html += `<br><strong style="color:#DC2626;">❌ 不能: ${result.failed_count}件</strong>`;
+                    html += '<table style="width:100%;font-size:0.8rem;margin-top:8px;"><thead><tr><th>顧客</th><th>金額</th><th>理由</th></tr></thead><tbody>';
+                    result.failed_items.forEach(f => {
+                        html += `<tr><td>${f.customer_name}</td><td>¥${f.amount.toLocaleString()}</td><td style="color:#DC2626;">${f.failure_reason}</td></tr>`;
+                    });
+                    html += '</tbody></table>';
+                }
+                html += '</div>';
+                document.getElementById('debitResultArea').innerHTML = html;
+                loadInvoices();
+            } catch (e) {
+                alert('エラー: ' + e.message);
+            }
         }
     </script>
     <script>
