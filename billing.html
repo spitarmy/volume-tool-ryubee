@@ -1667,11 +1667,32 @@
                 const result = await RyubeeAPI.importAutoDebitResult(fileInput.files[0]);
                 let html = `<div style="margin-top:12px;padding:12px;background:#f0fdf4;border-radius:8px;">
                     <strong>✅ 成功: ${result.success_count}件</strong>`;
+
+                // アラート表示
+                if (result.alert_count > 0) {
+                    html += `<div style="margin-top:8px;padding:10px;background:#FEF2F2;border:2px solid #DC2626;border-radius:8px;">
+                        <strong style="color:#DC2626;">🚨 要対応アラート: ${result.alert_count}件</strong>`;
+                    result.alerts.forEach(a => {
+                        html += `<div style="margin-top:6px;padding:6px 10px;background:#fff;border-radius:4px;border-left:4px solid #DC2626;">
+                            <strong>${a.alert_message}</strong><br>
+                            <span style="font-size:0.8rem;color:#666;">金額: ¥${a.amount.toLocaleString()} | コード: ${a.failure_code}</span>
+                        </div>`;
+                    });
+                    html += '</div>';
+                }
+
                 if (result.failed_count > 0) {
-                    html += `<br><strong style="color:#DC2626;">❌ 不能: ${result.failed_count}件</strong>`;
-                    html += '<table style="width:100%;font-size:0.8rem;margin-top:8px;"><thead><tr><th>顧客</th><th>金額</th><th>理由</th></tr></thead><tbody>';
+                    html += `<div style="margin-top:8px;"><strong>振替不能一覧: ${result.failed_count}件</strong></div>`;
+                    html += '<table style="width:100%;font-size:0.8rem;margin-top:4px;"><thead><tr><th>顧客</th><th>金額</th><th>理由</th><th>状態</th></tr></thead><tbody>';
                     result.failed_items.forEach(f => {
-                        html += `<tr><td>${f.customer_name}</td><td>¥${f.amount.toLocaleString()}</td><td style="color:#DC2626;">${f.failure_reason}</td></tr>`;
+                        const rowColor = f.alert ? 'background:#FEF2F2;' : (f.failure_code === '1' ? 'background:#FFFBEB;' : '');
+                        const badge = f.alert ? '<span style="color:#DC2626;font-weight:700;">🔴</span>' : (f.failure_code === '1' ? '<span style="color:#F59E0B;">⚠️ 1回目</span>' : '');
+                        html += `<tr style="${rowColor}">
+                            <td>${f.customer_name}</td>
+                            <td>¥${f.amount.toLocaleString()}</td>
+                            <td style="color:#DC2626;">${f.failure_reason}</td>
+                            <td>${badge}</td>
+                        </tr>`;
                     });
                     html += '</tbody></table>';
                 }
