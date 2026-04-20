@@ -102,11 +102,30 @@ const RyubeeAPI = {
     window.location.href = "login.html";
   },
 
+  isAdmin() {
+    const userStr = localStorage.getItem("ryubee_user");
+    if (!userStr) return false;
+    try {
+      return JSON.parse(userStr).role === "admin";
+    } catch { return false; }
+  },
+
   /** ログイン済みかチェック。未ログインなら login.html へ飛ばす */
   requireAuth() {
     const token = localStorage.getItem("ryubee_token");
     if (!token) {
       window.location.href = "login.html";
+      return false;
+    }
+    return true;
+  },
+
+  /** 管理者権限チェック。非管理者なら pipeline.html へ飛ばす */
+  requireAdmin() {
+    if (!this.requireAuth()) return false;
+    if (!this.isAdmin()) {
+      alert("管理者権限がありません。");
+      window.location.href = "pipeline.html";
       return false;
     }
     return true;

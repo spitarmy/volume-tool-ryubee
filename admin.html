@@ -151,15 +151,8 @@
     <script src="assets/js/utils.js"></script>
     <script src="assets/js/api.js"></script>
     <script>
-        if (!RyubeeAPI.requireAuth()) throw new Error("Not authenticated");
+        if (!RyubeeAPI.requireAdmin()) throw new Error("Not an admin");
         document.addEventListener('DOMContentLoaded', async () => {
-            // 本来は管理者権限チェックを入れる
-            const role = localStorage.getItem('ryubee_user_role');
-            if (role !== 'admin') {
-                alert("このページにアクセスする権限がありません。");
-                window.location.href = 'index.html';
-                return;
-            }
 
             await loadDashboardData();
         });

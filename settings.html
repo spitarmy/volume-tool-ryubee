@@ -535,7 +535,7 @@
 
     <script src="assets/js/api.js"></script>
     <script>
-        RyubeeAPI.requireAuth();
+        if (!RyubeeAPI.requireAdmin()) throw new Error("Not an admin");
         // === 全フィールドの ID とデフォルト値 ===
         const FIELDS = {
             // 会社情報
