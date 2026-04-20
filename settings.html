@@ -530,6 +530,38 @@
                 <button class="btn btn-primary mt-1" id="save-email-btn" onclick="saveEmailSettings()">💾
                     メール設定を保存</button>
             </div>
+
+            <div class="card">
+                <div class="card-title">送信元メールサーバー (SMTP) 接続設定</div>
+                <p class="small-text mb-2">
+                    お客様ご自身のメールアドレスから直接顧客へ請求書などを送信するための認証情報です。<br>
+                    ※指定された OCNメール 以外を利用する場合はサーバー名を変更してください。
+                </p>
+
+                <div style="display:flex; gap:8px;">
+                    <div class="form-group" style="flex:2;">
+                        <label>SMTPサーバー</label>
+                        <input type="text" id="smtpHost" placeholder="smtp.ocn.ne.jp">
+                    </div>
+                    <div class="form-group" style="flex:1;">
+                        <label>ポート番号</label>
+                        <input type="number" id="smtpPort" placeholder="587">
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label>送信元メールアドレス（ログインID兼用）</label>
+                    <input type="email" id="smtpUser" placeholder="yamabun@sirius.ocn.ne.jp">
+                </div>
+
+                <div class="form-group">
+                    <label>メールパスワード</label>
+                    <input type="password" id="smtpPassword" placeholder="パスワードを入力">
+                </div>
+
+                <button class="btn btn-primary mt-1" id="save-smtp-btn" onclick="saveEmailSettings()">💾
+                    SMTP接続設定を保存</button>
+            </div>
         </div>
 
         <!-- ── TAB 4: スタッフ管理 ── -->
@@ -750,6 +782,10 @@
                 if (document.getElementById('emailSubject')) {
                     document.getElementById('emailSubject').value = saved.unpaid_email_subject || '';
                     document.getElementById('emailBody').value = saved.unpaid_email_body || '';
+                    document.getElementById('smtpHost').value = saved.smtp_host || 'smtp.ocn.ne.jp';
+                    document.getElementById('smtpPort').value = saved.smtp_port || 587;
+                    document.getElementById('smtpUser').value = saved.smtp_user || 'yamabun@sirius.ocn.ne.jp';
+                    document.getElementById('smtpPassword').value = saved.smtp_password || '';
                 }
             } catch (e) {
                 console.warn('設定取得失敗、キャッシュを使用:', e.message);
@@ -821,19 +857,26 @@
         }
 
         async function saveEmailSettings() {
-            const btn = document.getElementById('save-email-btn');
-            btn.textContent = "保存中...";
+            const btn1 = document.getElementById('save-email-btn');
+            const btn2 = document.getElementById('save-smtp-btn');
+            if (btn1) btn1.textContent = "保存中...";
+            if (btn2) btn2.textContent = "保存中...";
             try {
                 const body = {
                     unpaid_email_subject: document.getElementById('emailSubject').value.trim(),
-                    unpaid_email_body: document.getElementById('emailBody').value.trim()
+                    unpaid_email_body: document.getElementById('emailBody').value.trim(),
+                    smtp_host: document.getElementById('smtpHost').value.trim(),
+                    smtp_port: parseInt(document.getElementById('smtpPort').value) || 587,
+                    smtp_user: document.getElementById('smtpUser').value.trim(),
+                    smtp_password: document.getElementById('smtpPassword').value.trim()
                 };
                 await RyubeeAPI.updateSettings(body);
                 alert("✅ メール設定を保存しました");
             } catch (e) {
                 alert("保存エラー: " + e.message);
             } finally {
-                btn.textContent = "💾 メール設定を保存";
+                if (btn1) btn1.textContent = "💾 メール設定を保存";
+                if (btn2) btn2.textContent = "💾 SMTP接続設定を保存";
             }
         }
 

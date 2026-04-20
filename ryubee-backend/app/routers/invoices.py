@@ -1329,10 +1329,11 @@ async def send_invoice_email(
         await browser.close()
 
     # Email properties
-    smtp_host = os.getenv("SMTP_HOST", "smtp.gmail.com")
-    smtp_port = int(os.getenv("SMTP_PORT", "587"))
-    smtp_user = os.getenv("SMTP_USER", "")
-    smtp_pass = os.getenv("SMTP_PASS", "")
+    # Email properties derived from database settings rather than env variables
+    smtp_host = settings.smtp_host if settings and settings.smtp_host else os.getenv("SMTP_HOST", "smtp.ocn.ne.jp")
+    smtp_port = settings.smtp_port if settings and settings.smtp_port else int(os.getenv("SMTP_PORT", "587"))
+    smtp_user = settings.smtp_user if settings and settings.smtp_user else os.getenv("SMTP_USER", "")
+    smtp_pass = settings.smtp_password if settings and settings.smtp_password else os.getenv("SMTP_PASS", "")
 
     if smtp_user and smtp_pass:
         msg = MIMEMultipart()
@@ -1410,8 +1411,30 @@ def send_reminders(
         due_str = alert.due_date or "指定なし"
         body = body.replace("{{due_date}}", due_str)
         
-        # 本来ならここで send_email(to=alert.email, subject=subject_tmpl, body=body) を実行する
-        logs.append(f"Sent to {alert.email} ({alert.customer_name}): ¥{alert.remaining:,}")
+        smtp_host = settings.smtp_host if settings and settings.smtp_host else os.getenv("SMTP_HOST", "smtp.ocn.ne.jp")
+        smtp_port = settings.smtp_port if settings and settings.smtp_port else int(os.getenv("SMTP_PORT", "587"))
+        smtp_user = settings.smtp_user if settings and settings.smtp_user else os.getenv("SMTP_USER", "")
+        smtp_pass = settings.smtp_password if settings and settings.smtp_password else os.getenv("SMTP_PASS", "")
+
+        if smtp_user and smtp_pass:
+            try:
+                msg = MIMEMultipart()
+                msg['From'] = f"{company.name} <{smtp_user}>"
+                msg['To'] = alert.email
+                msg['Subject'] = subject_tmpl
+                msg.attach(MIMEText(body, 'plain'))
+                
+                server = smtplib.SMTP(smtp_host, smtp_port)
+                server.starttls()
+                server.login(smtp_user, smtp_pass)
+                server.send_message(msg)
+                server.quit()
+                logs.append(f"Sent successfully to {alert.email} ({alert.customer_name})")
+            except Exception as e:
+                logs.append(f"Failed to send to {alert.email} ({alert.customer_name}): {e}")
+        else:
+            # 本来ならここで send_email(to=alert.email, subject=subject_tmpl, body=body) を実行する
+            logs.append(f"SMTP not configued. Failed to send to {alert.email} ({alert.customer_name}): ¥{alert.remaining:,}")
         
         # 記録更新
         inv.last_reminded_at = now_str

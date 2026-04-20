@@ -49,6 +49,12 @@ class SettingsSchema(BaseModel):
     unpaid_email_subject: str = "【重要】未入金のお知らせ"
     unpaid_email_body: str = "{{customer_name}}様\n\n平素は格別のお引き立てを賜り、厚く御礼申し上げます。\n以下の請求書につきまして、お支払いの確認がとれておりません。\n\n請求月: {{month}}\n請求額: ¥{{amount}}\n支払期限: {{due_date}}\n\n既にお振込み済みの場合は、行き違いをご容赦ください。\n何卒よろしくお願い申し上げます。"
 
+    # カスタムメール送信（SMTP）設定
+    smtp_host: str = "smtp.ocn.ne.jp"
+    smtp_port: int = 587
+    smtp_user: str = "yamabun@sirius.ocn.ne.jp"
+    smtp_password: str = ""
+
     model_config = {"from_attributes": True}
     # ロゴ・電子角印 (Base64 data URL)
     company_logo: str = ""

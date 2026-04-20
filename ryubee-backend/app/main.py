@@ -25,6 +25,13 @@ try:
             ("customers", "account_type", "VARCHAR(1) DEFAULT '1'"),
             ("customers", "account_number", "VARCHAR(7) DEFAULT ''"),
             ("customers", "account_holder", "VARCHAR(30) DEFAULT ''"),
+            ("company_settings", "unpaid_email_subject", "VARCHAR(255) DEFAULT '【重要】未入金のお知らせ'"),
+            ("company_settings", "unpaid_email_body", "TEXT"),
+            ("company_settings", "smtp_host", "VARCHAR(255) DEFAULT 'smtp.ocn.ne.jp'"),
+            ("company_settings", "smtp_port", "INTEGER DEFAULT 587"),
+            ("company_settings", "smtp_user", "VARCHAR(255) DEFAULT 'yamabun@sirius.ocn.ne.jp'"),
+            ("company_settings", "smtp_password", "VARCHAR(255) DEFAULT ''"),
+            ("users", "role", "VARCHAR(20) DEFAULT 'staff'"),
         ]
         for _table, _col, _coltype in _migrations:
             try:

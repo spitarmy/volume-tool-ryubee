@@ -91,6 +91,12 @@ class CompanySettings(Base):
     unpaid_email_subject: Mapped[str] = mapped_column(String(255), default="【重要】未入金のお知らせ")
     unpaid_email_body: Mapped[str] = mapped_column(Text, default="{{customer_name}}様\n\n平素は格別のお引き立てを賜り、厚く御礼申し上げます。\n以下の請求書につきまして、お支払いの確認がとれておりません。\n\n請求月: {{month}}\n請求額: ¥{{amount}}\n支払期限: {{due_date}}\n\n既にお振込み済みの場合は、行き違いをご容赦ください。\n何卒よろしくお願い申し上げます。")
 
+    # カスタムメール送信（SMTP）サーバー設定
+    smtp_host: Mapped[str] = mapped_column(String(255), default="smtp.ocn.ne.jp")
+    smtp_port: Mapped[int] = mapped_column(Integer, default=587)
+    smtp_user: Mapped[str] = mapped_column(String(255), default="yamabun@sirius.ocn.ne.jp")
+    smtp_password: Mapped[str] = mapped_column(String(255), default="")
+
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
     company: Mapped["Company"] = relationship(back_populates="settings")
