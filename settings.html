@@ -145,6 +145,7 @@
         <div class="tab active" onclick="switchTab('ai')">💴 AI立米</div>
         <div class="tab" onclick="switchTab('waste')">🗑 一般廃棄物</div>
         <div class="tab" onclick="switchTab('items')">📋 単価マスタ</div>
+        <div class="tab" onclick="switchTab('contractors')">🏢 処分先</div>
         <div class="tab" onclick="switchTab('email')">✉️ メール</div>
         <div class="tab" onclick="switchTab('users')">👥 スタッフ</div>
     </div>
@@ -499,6 +500,27 @@
                 <p class="text-center small-text">読み込み中...</p>
             </div>
         </div>
+        <!-- ── TAB 2.5: 処分先・委託先マスタ ── -->
+        <div id="tab-contractors" class="tab-content">
+            <div class="card mb-3">
+                <div class="card-title">🏢 契約（処分先・収集運搬委託先）マスタ</div>
+                <p class="small-text mb-2">
+                    ここで登録した業者名は顧客の「契約リスト」や契約書作成時に選択できるようになります。
+                </p>
+
+                <div id="contractors-master-list" style="display:flex; flex-direction:column; gap:8px;">
+                    <!-- JS rendered -->
+                </div>
+
+                <button class="btn btn-secondary mt-2" onclick="addContractorMaster()" style="width:100%;">
+                    ＋ 処分先／委託先 を行追加
+                </button>
+            </div>
+
+            <div class="sticky-footer">
+                <button class="btn btn-primary" id="save-btn-contractors" onclick="saveSettings()">💾 マスタを保存する</button>
+            </div>
+        </div>
 
         <!-- ── TAB 3: メール・リマインド ── -->
         <div id="tab-email" class="tab-content">
@@ -651,6 +673,7 @@
 
         let customAiItems = [];
         let uploadedImages = { company_logo: '', company_stamp: '' };
+        let contractorsMaster = [];
 
         // 一般廃棄物単価マスタ
         const WASTE_FREQUENCIES = ['毎日', '週3回', '週2回', '週1回', '月2回', '月1回'];
@@ -760,6 +783,38 @@
             customAiItems[index][key] = value;
         }
 
+        function renderContractorsMaster() {
+            const list = document.getElementById('contractors-master-list');
+            if (!list) return;
+            if (contractorsMaster.length === 0) {
+                list.innerHTML = '<p class="small-text text-center text-muted" style="margin-bottom:0;">追加項目はありません</p>';
+                return;
+            }
+            list.innerHTML = contractorsMaster.map((name, index) => `
+                <div class="price-row" style="background:var(--bg-secondary); padding:10px 14px; border-radius:var(--r-md); border:none; display:flex;">
+                    <div style="flex:1;">
+                        <input type="text" value="${utils.escapeHtml(name)}" placeholder="業者名 (例: ホームケルン, 光アスコン...)" 
+                               onchange="updateContractorMaster(${index}, this.value)" style="width:100%; border:1px solid var(--border); background:#fff; font-weight:600;">
+                    </div>
+                    <button class="btn btn-xs btn-danger" style="padding:6px 12px; margin-left:8px;" onclick="removeContractorMaster(${index})">✕</button>
+                </div>
+            `).join('');
+        }
+
+        function addContractorMaster() {
+            contractorsMaster.push('');
+            renderContractorsMaster();
+        }
+
+        function removeContractorMaster(index) {
+            contractorsMaster.splice(index, 1);
+            renderContractorsMaster();
+        }
+
+        function updateContractorMaster(index, value) {
+            contractorsMaster[index] = value;
+        }
+
         function switchTab(tabId) {
             document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
             document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
@@ -823,6 +878,14 @@
                 wastePricingData = {};
             }
             renderWastePricing();
+            
+            // 処分先マスタの反映
+            contractorsMaster = Array.isArray(saved.contractors_master) ? saved.contractors_master : [];
+            if(contractorsMaster.length === 0) {
+                // 初期データがなければハードコードのものをセットする(移行用)
+                contractorsMaster = ['ホームケルン', '光アスコン', '旭興産業', '木材開発', '厳本金属', '京都有機資源', 'HIRAYAMA', '大剛', '京都環境保全公社', '西山環境サービス', '家電リサイクル'];
+            }
+            renderContractorsMaster();
         }
 
         async function saveSettings() {
@@ -841,6 +904,7 @@
             data.company_logo = uploadedImages.company_logo || '';
             data.company_stamp = uploadedImages.company_stamp || '';
             data.general_waste_pricing = wastePricingData;
+            data.contractors_master = contractorsMaster.filter(c => c.trim() !== '');
 
             try {
                 // RyubeeAPI.updateSettings internally calls RyubeeAPI.saveSettings if aliased, but we made updateSettings

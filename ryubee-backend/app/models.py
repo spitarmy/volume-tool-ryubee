@@ -97,6 +97,9 @@ class CompanySettings(Base):
     smtp_user: Mapped[str] = mapped_column(String(255), default="yamabun@sirius.ocn.ne.jp")
     smtp_password: Mapped[str] = mapped_column(String(255), default="")
 
+    # 処分先・委託先マスター (JSON array of strings)
+    contractors_master: Mapped[str] = mapped_column(Text, default="[\"ホームケルン\", \"光アスコン\", \"旭興産業\", \"木材開発\", \"厳本金属\", \"京都有機資源\", \"HIRAYAMA\", \"大剛\", \"京都環境保全公社\", \"西山環境サービス\", \"家電リサイクル\"]")
+
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
 
     company: Mapped["Company"] = relationship(back_populates="settings")

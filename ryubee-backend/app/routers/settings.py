@@ -59,8 +59,10 @@ class SettingsSchema(BaseModel):
     # ロゴ・電子角印 (Base64 data URL)
     company_logo: str = ""
     company_stamp: str = ""
-    # 一般廃棄物単価マスタ (genre × frequency)
-    general_waste_pricing: dict = {}
+    # 処分先・委託先マスター
+    contractors_master: list[str] = []
+
+    model_config = {"from_attributes": True}
 
 
 @router.get("", response_model=SettingsSchema)
@@ -88,6 +90,10 @@ def get_settings(
         data_dict["general_waste_pricing"] = json.loads(rec.general_waste_pricing) if rec.general_waste_pricing else {}
     except Exception:
         data_dict["general_waste_pricing"] = {}
+    try:
+        data_dict["contractors_master"] = json.loads(rec.contractors_master) if rec.contractors_master else []
+    except Exception:
+        data_dict["contractors_master"] = []
     return SettingsSchema(**data_dict)
 
 
@@ -108,13 +114,14 @@ def update_settings(
         rec.company.name = body.company_name
 
     # CompanySettings フィールドを一括更新
-    exclude = {"company_name", "custom_ai_items", "general_waste_pricing"}
+    exclude = {"company_name", "custom_ai_items", "general_waste_pricing", "contractors_master"}
     for field, val in body.model_dump(exclude=exclude).items():
         if hasattr(rec, field):
             setattr(rec, field, val)
 
     rec.custom_ai_items = json.dumps(body.custom_ai_items, ensure_ascii=False)
     rec.general_waste_pricing = json.dumps(body.general_waste_pricing, ensure_ascii=False)
+    rec.contractors_master = json.dumps(body.contractors_master, ensure_ascii=False)
 
     db.commit()
     db.refresh(rec)
@@ -129,4 +136,8 @@ def update_settings(
         data_dict["general_waste_pricing"] = json.loads(rec.general_waste_pricing) if rec.general_waste_pricing else {}
     except Exception:
         data_dict["general_waste_pricing"] = {}
+    try:
+        data_dict["contractors_master"] = json.loads(rec.contractors_master) if rec.contractors_master else []
+    except Exception:
+        data_dict["contractors_master"] = []
     return SettingsSchema(**data_dict)

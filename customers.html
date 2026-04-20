@@ -573,19 +573,24 @@
             let history = [];
             try { history = await RyubeeAPI.fetchCustomerHistory(id); } catch (e) { }
 
+            let settings = {};
+            try { settings = await RyubeeAPI.fetchSettings(); } catch (e) { }
+
             const customerContracts = allWasteContracts.filter(ct => (ct.contractor_name || '').trim() === c.name.trim());
-            const hardcodedDisposers = ['ホームケルン', '光アスコン', '旭興産業', '木材開発', '厳本金属', '京都有機資源', 'HIRAYAMA', '大剛', '京都環境保全公社', '西山環境サービス', '家電リサイクル'];
+            const dynamicDisposers = Array.isArray(settings.contractors_master) && settings.contractors_master.length > 0
+                ? [...settings.contractors_master]
+                : ['ホームケルン', '光アスコン', '旭興産業', '木材開発', '厳本金属', '京都有機資源', 'HIRAYAMA', '大剛', '京都環境保全公社', '西山環境サービス', '家電リサイクル'];
 
             // 顧客専用のイレギュラーな処分先があれば追加
-            const existingDisposers = new Set(hardcodedDisposers);
+            const existingDisposers = new Set(dynamicDisposers);
             customerContracts.forEach(ct => {
                 if (ct.disposal_company && !existingDisposers.has(ct.disposal_company)) {
-                    hardcodedDisposers.push(ct.disposal_company);
+                    dynamicDisposers.push(ct.disposal_company);
                     existingDisposers.add(ct.disposal_company);
                 }
             });
 
-            const contractListHtml = hardcodedDisposers.map(disp => {
+            const contractListHtml = dynamicDisposers.map(disp => {
                 const contract = customerContracts.find(ct => ct.disposal_company === disp);
                 if (contract) {
                     const clickAction = contract.document_url ? `href="${contract.document_url}" target="_blank"` : `href="#" onclick="alert('契約書データ(PDF)が未登録です。データ管理で該当契約のPDFをアップロードしてください。');return false;"`;
