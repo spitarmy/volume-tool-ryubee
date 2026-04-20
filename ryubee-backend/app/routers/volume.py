@@ -9,8 +9,7 @@ from app.database import get_db
 from app import models, auth
 
 router = APIRouter(prefix="/v1/volume-estimate", tags=["volume"])
-
-client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY", "dummy_key_to_prevent_crash"))
 
 # モデル定義など
 SYSTEM_PROMPT = """
