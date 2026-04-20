@@ -330,8 +330,12 @@ const RyubeeAPI = {
 
   // ── Customers (顧客管理) ────────────────────────────────────
 
-  async fetchCustomers() {
-    return apiFetch("/v1/customers");
+  async fetchCustomers(search = null) {
+    let url = "/v1/customers?limit=2000";
+    if (search) url += `&search=${encodeURIComponent(search)}`;
+    const res = await apiFetch(url);
+    // 後方互換: 配列 or {items} どちらでも対応
+    return Array.isArray(res) ? res : (res.items || []);
   },
 
   async createCustomer(body) {
