@@ -246,7 +246,7 @@ def create_invoice(
     return _invoice_to_out(inv)
 
 
-client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+client = AsyncOpenAI(api_key=os.getenv("OPENAI_API_KEY", "dummy_key_to_prevent_crash"))
 
 OCR_SYSTEM_PROMPT = """
 あなたは、手書きのゴミ回収伝票・集計表（例：花のいえ）から数値を読み取るOCR AIです。
