@@ -14,7 +14,7 @@ const API_BASE = (() => {
   if (host === "localhost" || host === "127.0.0.1") {
     return "http://localhost:8000";
   }
-  return "https://ryubee-api-new.onrender.com";
+  return "https://ryubee-api-v2.onrender.com";
 })();
 
 // ── 共通フェッチラッパー ──────────────────────────────────────
