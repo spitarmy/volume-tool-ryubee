@@ -113,3 +113,42 @@ def invite_user(
     db.commit()
     db.refresh(user)
     return user
+
+
+@router.get("/users", response_model=list[UserOut])
+def list_users(
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(get_db),
+):
+    """自社に所属する全てのユーザーを取得（全員参照可）"""
+    users = db.query(models.User).filter(models.User.company_id == current_user.company_id).all()
+    return users
+
+
+class RoleUpdateRequest(BaseModel):
+    role: str
+
+
+@router.put("/users/{user_id}/role", response_model=UserOut)
+def update_user_role(
+    user_id: str,
+    req: RoleUpdateRequest,
+    current_user: models.User = Depends(auth.require_admin),
+    db: Session = Depends(get_db),
+):
+    """管理者がスタッフの権限を変更する"""
+    if req.role not in ["admin", "staff"]:
+        raise HTTPException(status_code=400, detail="無効な権限です")
+
+    target_user = db.query(models.User).filter(
+        models.User.id == user_id, 
+        models.User.company_id == current_user.company_id
+    ).first()
+
+    if not target_user:
+        raise HTTPException(status_code=404, detail="ユーザーが見つかりません")
+
+    target_user.role = req.role
+    db.commit()
+    db.refresh(target_user)
+    return target_user

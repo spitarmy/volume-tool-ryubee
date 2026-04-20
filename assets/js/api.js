@@ -140,6 +140,27 @@ const RyubeeAPI = {
     }
   },
 
+  // ── Users/Staff Management ────────────────────────────────────
+
+  async fetchUsers() {
+    return apiFetch("/v1/auth/users");
+  },
+
+  async inviteUser(email, password, name, role) {
+    return apiFetch("/v1/auth/invite", {
+      method: "POST",
+      body: JSON.stringify({ email, password, name, role }),
+    });
+  },
+
+  async updateUserRole(userId, role) {
+    return apiFetch(`/v1/auth/users/${userId}/role`, {
+      method: "PUT",
+      body: JSON.stringify({ role }),
+    });
+  },
+
+
   // ── Jobs ────────────────────────────────────────────────────
 
   async fetchJobs({ status = null, q = null } = {}) {
