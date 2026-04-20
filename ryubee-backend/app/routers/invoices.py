@@ -1353,8 +1353,11 @@ async def send_invoice_email(
         msg.attach(part)
 
         try:
-            server = smtplib.SMTP(smtp_host, smtp_port)
-            server.starttls()
+            if smtp_port == 465:
+                server = smtplib.SMTP_SSL(smtp_host, smtp_port, timeout=15)
+            else:
+                server = smtplib.SMTP(smtp_host, smtp_port, timeout=15)
+                server.starttls()
             server.login(smtp_user, smtp_pass)
             server.send_message(msg)
             server.quit()
@@ -1424,8 +1427,11 @@ def send_reminders(
                 msg['Subject'] = subject_tmpl
                 msg.attach(MIMEText(body, 'plain'))
                 
-                server = smtplib.SMTP(smtp_host, smtp_port)
-                server.starttls()
+                if smtp_port == 465:
+                    server = smtplib.SMTP_SSL(smtp_host, smtp_port, timeout=15)
+                else:
+                    server = smtplib.SMTP(smtp_host, smtp_port, timeout=15)
+                    server.starttls()
                 server.login(smtp_user, smtp_pass)
                 server.send_message(msg)
                 server.quit()
