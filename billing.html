@@ -447,8 +447,17 @@
                         style="width: auto; padding: 10px; border-radius: var(--r-pill); border: 1px solid var(--border); font-size: 0.9rem; background: #fff; cursor: pointer; color: var(--text-primary);">
                         <option value="yama_asc">🎫 管理番号順</option>
                         <option value="updated">🔄 更新順</option>
+                        <option value="assigned_user">👥 担当者順</option>
                     </select>
                 </div>
+                <!-- 担当者フィルター -->
+                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom: 12px;">
+                    <div id="staffTabs" style="display:flex; gap:8px; overflow-x:auto; padding-bottom:4px; flex: 1;">
+                        <button class="btn btn-xs btn-primary" style="flex-shrink:0;"
+                            onclick="setStaffFilter('all')">全て</button>
+                    </div>
+                </div>
+                <!-- 締め日フィルター -->
                 <div style="display:flex; gap:8px;">
                     <button class="btn btn-xs btn-primary" id="btn-tab-all" style="flex:1"
                         onclick="setInvTab('all')">全て</button>
@@ -649,7 +658,9 @@
 
         let allInvoices = [];
         let allCustomers = [];
+        let allUsers = [];
         let currentInvTab = 'all';
+        let currentStaffFilter = 'all';
         let companySettings = {};
 
         document.addEventListener('DOMContentLoaded', async () => {
@@ -659,6 +670,10 @@
             try {
                 allCustomers = await RyubeeAPI.fetchCustomers();
             } catch (e) { console.error('Customers load failed', e); }
+            try {
+                allUsers = await RyubeeAPI.fetchUsers();
+                renderStaffTabs();
+            } catch (e) { console.error('Users load failed', e); }
             try {
                 companySettings = await RyubeeAPI.fetchSettings() || {};
             } catch (e) { console.error('Settings load failed', e); }
@@ -675,6 +690,25 @@
                 el.className = 'btn btn-xs ' + (tab === tabKey ? 'btn-primary' : 'btn-secondary');
             });
             renderInvoices();
+        }
+
+        function setStaffFilter(staffId) {
+            currentStaffFilter = staffId;
+            renderStaffTabs();
+            renderInvoices();
+        }
+
+        function renderStaffTabs() {
+            const container = document.getElementById('staffTabs');
+            if (!container) return;
+
+            let html = `<button class="btn btn-xs ${currentStaffFilter === 'all' ? 'btn-primary' : 'btn-secondary'}" style="flex-shrink:0;" onclick="setStaffFilter('all')">全て</button>`;
+
+            allUsers.forEach(u => {
+                const isActive = currentStaffFilter === u.id;
+                html += `<button class="btn btn-xs ${isActive ? 'btn-primary' : 'btn-secondary'}" style="flex-shrink:0;" onclick="setStaffFilter('${u.id}')">${utils.escapeHtml(u.name)}</button>`;
+            });
+            container.innerHTML = html;
         }
 
         async function loadDriverTally() {
@@ -807,7 +841,12 @@
                 else if (currentInvTab === 'group_end') matchT = closingDay === 31;
                 else if (currentInvTab === 'auto') matchT = payMethod === '自動引落し';
 
-                return matchQ && matchT;
+                let matchS = true;
+                if (currentStaffFilter !== 'all') {
+                    if (cust.assigned_user_id !== currentStaffFilter) matchS = false;
+                }
+
+                return matchQ && matchT && matchS;
             });
 
             if (!filtered.length) {
@@ -817,7 +856,13 @@
 
             const sortVal = document.getElementById('sortSelect').value;
             filtered.sort((a, b) => {
-                if (sortVal === 'yama_asc') {
+                if (sortVal === 'assigned_user') {
+                    const custA = allCustomers.find(c => c.id === a.customer_id) || {};
+                    const custB = allCustomers.find(c => c.id === b.customer_id) || {};
+                    const nameA = custA.assigned_user_name || "未設定";
+                    const nameB = custB.assigned_user_name || "未設定";
+                    return nameA.localeCompare(nameB);
+                } else if (sortVal === 'yama_asc') {
                     const numA = a._yamaNum || "";
                     const numB = b._yamaNum || "";
                     return numA.localeCompare(numB);

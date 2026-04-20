@@ -195,6 +195,12 @@
                 </div>
             </div>
             <div class="form-group">
+                <label>担当営業 (自社)</label>
+                <select id="custAssignedUser">
+                    <option value="">未設定</option>
+                </select>
+            </div>
+            <div class="form-group">
                 <label>廃棄物カテゴリ (管理用)</label>
                 <select id="custWasteCategory">
                     <option value="general">一般ゴミ</option>
@@ -358,18 +364,27 @@
 
         let allCustomers = [];
         let allWasteContracts = [];
+        let allUsers = [];
         let editingId = null;
 
         document.addEventListener('DOMContentLoaded', loadCustomers);
 
         async function loadCustomers() {
             try {
-                const [custRes, contractsRes] = await Promise.all([
+                const [custRes, contractsRes, usersRes] = await Promise.all([
                     RyubeeAPI.fetchCustomers(),
-                    RyubeeAPI.fetchWasteContracts().catch(() => [])
+                    RyubeeAPI.fetchWasteContracts().catch(() => []),
+                    RyubeeAPI.fetchUsers().catch(() => [])
                 ]);
                 allCustomers = custRes;
                 allWasteContracts = contractsRes;
+                allUsers = usersRes || [];
+
+                const sel = document.getElementById('custAssignedUser');
+                if (sel) {
+                    sel.innerHTML = '<option value="">未設定</option>' + allUsers.map(u => `<option value="${u.id}">${utils.escapeHtml(u.name)}</option>`).join('');
+                }
+
                 allCustomers.forEach(c => {
                     try { c.parsed_form = JSON.parse(c.form_data || "{}"); } catch (e) { c.parsed_form = {}; }
                 });
@@ -461,7 +476,8 @@
                         </div>
                         ${c.parsed_form?.yamabun_management_number ? `<div class="cc-meta" style="font-weight:700; color:var(--primary); margin-top:2px; font-size:13px;">🎫 山文管理番号: ${utils.escapeHtml(c.parsed_form.yamabun_management_number)}</div>` : ''}
                         <div class="cc-meta" style="font-size:12px; color:var(--text-tertiary); margin-bottom:8px;">📅 締め日: ${c.billing_closing_day === 31 ? '月末' : c.billing_closing_day + '日'}締め</div>
-                        ${c.contact_person ? `<div class="cc-meta">👤 ${utils.escapeHtml(c.contact_person)}</div>` : ''}
+                        <div class="cc-meta">👥 営業担当: <strong style="color:var(--text-primary);">${utils.escapeHtml(c.assigned_user_name || '未設定')}</strong></div>
+                        ${c.contact_person ? `<div class="cc-meta">👤 先方担当: ${utils.escapeHtml(c.contact_person)}</div>` : ''}
                         <div class="cc-meta">📍 ${utils.escapeHtml(c.address || '未設定')}</div>
                         <div class="cc-meta">📞 ${utils.escapeHtml(c.phone || '未設定')}</div>
                         ${c.email ? `<div class="cc-meta">✉️ ${utils.escapeHtml(c.email)}</div>` : ''}
@@ -484,6 +500,7 @@
                 printBtn.style.display = 'none';
             }
             document.getElementById('custName').value = cust?.name || '';
+            document.getElementById('custAssignedUser').value = cust?.assigned_user_id || '';
             document.getElementById('custContact').value = cust?.contact_person || '';
             document.getElementById('custAddress').value = cust?.address || '';
             document.getElementById('custPhone').value = cust?.phone || '';
@@ -710,6 +727,7 @@
 
             const body = {
                 name: document.getElementById('custName').value.trim(),
+                assigned_user_id: document.getElementById('custAssignedUser').value || null,
                 contact_person: document.getElementById('custContact').value.trim(),
                 address: document.getElementById('custAddress').value.trim(),
                 phone: document.getElementById('custPhone').value.trim(),

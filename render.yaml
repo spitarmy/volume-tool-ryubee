@@ -1,0 +1,34 @@
+services:
+  # バックエンドAPIサービス (FastAPI)
+  - type: web
+    name: ryubee-api-v2
+    env: python
+    region: singapore
+    rootDir: ryubee-backend
+    buildCommand: "pip install -r requirements.txt"
+    startCommand: "uvicorn app.main:app --host 0.0.0.0 --port $PORT"
+    envVars:
+      - key: DATABASE_URL
+        fromDatabase:
+          name: ryubee-postgres
+          property: connectionString
+      - key: PYTHON_VERSION
+        value: 3.11.0
+      - key: SECRET_KEY
+        generateValue: true
+
+  # 今回フロントエンドもRenderでホストしたい場合のStatic Web
+  - type: web
+    name: ryubee-frontend-app
+    env: static
+    region: singapore
+    buildCommand: "" # ビルド不要（静的HTML）
+    staticPublishPath: "./"
+
+databases:
+  # PostgreSQLデータベース
+  - name: ryubee-postgres
+    region: singapore
+    databaseName: ryubee_db
+    user: ryubee_admin
+    plan: free # もしくは必要に応じて starter に変更

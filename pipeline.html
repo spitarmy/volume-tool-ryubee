@@ -391,6 +391,12 @@
                 <label>見込金額</label>
                 <input type="number" id="njAmount" placeholder="未定の場合は空欄" style="width:100%;">
             </div>
+            <div class="form-group" style="margin-bottom:24px;">
+                <label>担当営業</label>
+                <select id="njAssignedTo">
+                    <option value="">未設定</option>
+                </select>
+            </div>
             <button class="btn btn-primary" onclick="submitNewJob()">保存する</button>
         </div>
     </div>
@@ -634,31 +640,45 @@
             const type = document.getElementById('njType').value;
             const stage = document.getElementById('njStage').value;
             const amount = document.getElementById('njAmount').value;
+            const assigned_to = document.getElementById('njAssignedTo').value;
 
             if (!name) { alert("案件名を入力してください"); return; }
 
             try {
                 // 手動でのジョブ作成（API）
-                await RyubeeAPI.createJob({
+                const payload = {
                     job_name: name,
                     customer_name: name, // 顧客名と案件名を同じにして簡略化
                     job_type: type,
                     pipeline_stage: stage,
                     estimated_price: amount ? parseInt(amount, 10) : 0,
                     source: 'manual'
-                });
+                };
+                if (assigned_to) {
+                    payload.assigned_to = assigned_to;
+                }
+                
+                await RyubeeAPI.createJob(payload);
                 document.getElementById('newJobModal').classList.remove('show');
                 showToast("✅ 新規案件を手動追加しました");
                 loadPipeline();
                 // フォームリセット
                 document.getElementById('njName').value = '';
                 document.getElementById('njAmount').value = '';
+                document.getElementById('njAssignedTo').value = '';
             } catch (e) {
                 alert("追加エラー: " + e.message);
             }
         }
 
-        function openNewJobModal() {
+        async function openNewJobModal() {
+            try {
+                const users = await RyubeeAPI.fetchUsers();
+                const sel = document.getElementById('njAssignedTo');
+                sel.innerHTML = '<option value="">未設定</option>' + users.map(u => `<option value="${u.id}">${utils.escapeHtml(u.name)}</option>`).join('');
+            } catch (e) {
+                console.error("Failed to fetch users", e);
+            }
             document.getElementById('newJobModal').classList.add('show');
         }
 
