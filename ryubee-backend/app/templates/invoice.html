@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8">
+    <title>請求書</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 20mm;
+
+            @bottom-center {
+                content: counter(page) "/" counter(pages);
+                font-family: sans-serif;
+                font-size: 10pt;
+                color: #555;
+            }
+        }
+
+        body {
+            font-family: "Helvetica Neue", "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+            margin: 0;
+            padding: 0;
+            color: #333;
+            line-height: 1.5;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            margin: 0;
+            font-size: 24pt;
+            letter-spacing: 5px;
+            color: #2c3e50;
+            border-bottom: 2px solid #2c3e50;
+            display: inline-block;
+            padding-bottom: 5px;
+        }
+
+        .top-info {
+            width: 100%;
+            margin-bottom: 40px;
+            display: table;
+        }
+
+        .customer-info {
+            display: table-cell;
+            width: 50%;
+            vertical-align: top;
+        }
+
+        .customer-name {
+            font-size: 16pt;
+            font-weight: bold;
+            border-bottom: 1px solid #000;
+            padding-bottom: 5px;
+            margin-bottom: 10px;
+            width: 90%;
+        }
+
+        .company-info {
+            display: table-cell;
+            width: 50%;
+            vertical-align: top;
+            text-align: right;
+        }
+
+        .company-name {
+            font-size: 14pt;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .meta-info {
+            text-align: right;
+            font-size: 10pt;
+            margin-bottom: 20px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+            font-size: 10pt;
+        }
+
+        th,
+        td {
+            border: 1px solid #ccc;
+            padding: 8px;
+        }
+
+        th {
+            background-color: #f7f9fa;
+            color: #2c3e50;
+            text-align: center;
+        }
+
+        .desc {
+            width: 45%;
+        }
+
+        .qty {
+            width: 10%;
+            text-align: center;
+        }
+
+        .unit {
+            width: 10%;
+            text-align: center;
+        }
+
+        .uprice {
+            width: 15%;
+            text-align: right;
+        }
+
+        .amt {
+            width: 20%;
+            text-align: right;
+        }
+
+        .summary-table {
+            width: 40%;
+            float: right;
+            font-size: 12pt;
+        }
+
+        .summary-table th,
+        .summary-table td {
+            border: 1px solid #ccc;
+            padding: 8px;
+        }
+
+        .summary-table th {
+            background-color: #f7f9fa;
+            text-align: left;
+        }
+
+        .summary-table td {
+            text-align: right;
+            font-weight: bold;
+        }
+
+        .total-highlight {
+            font-size: 14pt;
+            color: #e74c3c;
+            background-color: #fdf5f5;
+        }
+
+        .notes-area {
+            clear: both;
+            padding-top: 50px;
+            font-size: 10pt;
+        }
+
+        .bank-info {
+            margin-top: 20px;
+            padding: 15px;
+            border: 1px solid #ccc;
+            background-color: #fdfdfd;
+            border-radius: 4px;
+        }
+
+        .bank-info h3 {
+            margin-top: 0;
+            font-size: 11pt;
+            color: #2c3e50;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="meta-info">
+        発行日：{{ today }}<br>
+        請求書番号：INV-{{ invoice.month.replace('-', '') }}-{{ invoice.id[:6].upper() }}
+    </div>
+
+    <div class="header">
+        <h1>請 求 書</h1>
+    </div>
+
+    <div class="top-info">
+        <div class="customer-info">
+            <div class="customer-name">{{ customer.customer_name }} 御中</div>
+            {% if customer.building_name %}
+            <div style="font-size: 10pt; padding-left: 5px;">{{ customer.building_name }}</div>
+            {% endif %}
+            <div style="margin-top: 20px; font-size: 12pt;">
+                下記の通りご請求申し上げます。
+            </div>
+            <div
+                style="margin-top: 15px; font-size: 14pt; font-weight: bold; border-bottom: 2px solid #000; width: 90%; padding-bottom: 5px;">
+                ご請求金額: ￥ {{ "{:,}".format((invoice.total_amount or 0) + (invoice.tax_amount or 0)) }} -
+            </div>
+            <div style="margin-top: 5px; font-size: 10pt;">
+                お支払期限: {{ invoice.due_date if invoice.due_date else "----年--月--日" }}
+            </div>
+        </div>
+        <div class="company-info">
+            <div class="company-name">{{ company.name }}</div>
+            {% if settings and settings.company_address %}
+            <div style="font-size: 10pt;">
+                {{ settings.company_address.replace('\n', '<br>') | safe }}
+            </div>
+            {% endif %}
+            {% if settings and settings.company_phone %}
+            <div style="font-size: 10pt;">TEL: {{ settings.company_phone }}</div>
+            {% endif %}
+            {% if settings and settings.invoice_invoice_number %}
+            <div style="font-size: 10pt;">適格請求書発行事業者登録番号: {{ settings.invoice_invoice_number }}</div>
+            {% endif %}
+        </div>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th class="desc">品名 / 明細</th>
+                <th class="qty">数量</th>
+                <th class="unit">単位</th>
+                <th class="uprice">単価</th>
+                <th class="amt">金額</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in invoice.items %}
+            <tr>
+                <td class="desc">{{ item.description }}</td>
+                <td class="qty">{{ item.quantity }}</td>
+                <td class="unit">{{ item.unit }}</td>
+                <td class="uprice">¥ {{ "{:,}".format(item.unit_price|int) }}</td>
+                <td class="amt">¥ {{ "{:,}".format(item.amount or 0) }}</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="5" style="text-align: center;">明細がありません</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+    <table class="summary-table">
+        <tr>
+            <th>小計</th>
+            <td>¥ {{ "{:,}".format(invoice.total_amount or 0) }}</td>
+        </tr>
+        <tr>
+            <th>消費税 (10%)</th>
+            <td>¥ {{ "{:,}".format(invoice.tax_amount or 0) }}</td>
+        </tr>
+        <tr>
+            <th class="total-highlight">合計金額</th>
+            <td class="total-highlight">¥ {{ "{:,}".format((invoice.total_amount or 0) + (invoice.tax_amount or 0)) }}
+            </td>
+        </tr>
+    </table>
+
+    <div class="notes-area">
+        {% if invoice.notes %}
+        <div style="margin-bottom: 20px;">
+            <strong>備考:</strong><br>
+            {{ invoice.notes.replace('\n', '<br>') | safe }}
+        </div>
+        {% endif %}
+
+        {% if settings and settings.invoice_bank_info %}
+        <div class="bank-info">
+            <h3>【お振込先】</h3>
+            {{ settings.invoice_bank_info.replace('\n', '<br>') | safe }}
+            <div style="margin-top: 10px; font-size: 9pt; color: #666;">
+                ※ 誠に恐れ入りますが、お振込手数料は貴社にてご負担賜りますようお願い申し上げます。
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+</body>
+
+</html>
