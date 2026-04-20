@@ -1352,15 +1352,20 @@ async def send_invoice_email(
         msg['Subject'] = body.subject
         msg.attach(MIMEText(body.body, 'plain'))
 
-        part = MIMEBase('application', 'octet-stream')
-        part.set_payload(pdf_bytes)
-        encoders.encode_base64(part)
-        filename = f"Invoice_{inv.month}_{inv.customer.customer_name}.pdf".replace(" ", "_")
-        
-        # utf-8 encode parameter for non-ascii attachment filenames in some mail clients could be added,
-        # but modern clients usually handle RFC2231 / utf8 well if given cleanly.
-        part.add_header('Content-Disposition', f'attachment; filename="{filename}"')
-        msg.attach(part)
+        if pdf_bytes:
+            part = MIMEBase('application', 'octet-stream')
+            part.set_payload(pdf_bytes)
+            encoders.encode_base64(part)
+            filename = f"Invoice_{inv.month}_{inv.customer.name}.pdf".replace(" ", "_")
+            
+            # utf-8 encode parameter for non-ascii attachment filenames in some mail clients could be added,
+            # but modern clients usually handle RFC2231 / utf8 well if given cleanly.
+            part.add_header('Content-Disposition', f'attachment; filename="{filename}"')
+            msg.attach(part)
+        else:
+            txt_part = MIMEText("サーバー環境制約のため、事前のPDF生成に失敗しました。", 'plain')
+            txt_part.add_header('Content-Disposition', 'attachment; filename="error.txt"')
+            msg.attach(txt_part)
 
         try:
             if smtp_port == 465:
