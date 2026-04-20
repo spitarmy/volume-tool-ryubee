@@ -13,9 +13,9 @@ Base.metadata.create_all(bind=engine)
 
 # 起動時の自動マイグレーション（新カラム追加 — PostgreSQL互換）
 try:
-    with engine.connect() as _conn:
+    with engine.connect().execution_options(isolation_level="AUTOCOMMIT") as _conn:
         _sa = __import__('sqlalchemy')
-        # 各カラム追加を個別にtry/exceptで実行（既に存在する場合はスキップ）
+        # 各カラム追加を個別に実行（既に存在する場合はDB側でエラーになるが無視する）
         _migrations = [
             ("company_settings", "company_logo", "TEXT DEFAULT ''"),
             ("company_settings", "company_stamp", "TEXT DEFAULT ''"),
@@ -38,9 +38,7 @@ try:
             try:
                 _conn.execute(_sa.text(f"ALTER TABLE {_table} ADD COLUMN {_col} {_coltype}"))
             except Exception:
-                _conn.rollback()
-                continue
-        _conn.commit()
+                pass
 except Exception as _e:
     print(f"Auto-migration skipped: {_e}")
 
