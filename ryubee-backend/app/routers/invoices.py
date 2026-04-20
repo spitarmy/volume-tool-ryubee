@@ -1280,15 +1280,18 @@ async def get_invoice_pdf(
     )
 
     # Playwright PDF logic
-    async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=True)
-        page = await browser.new_page()
-        await page.set_content(html_content, wait_until="networkidle")
-        pdf_bytes = await page.pdf(format="A4", print_background=True, margin={"top": "20mm", "bottom": "20mm", "left": "20mm", "right": "20mm"})
-        await browser.close()
+    pdf_bytes = None
+    try:
+        async with async_playwright() as p:
+            browser = await p.chromium.launch(headless=True)
+            page = await browser.new_page()
+            await page.set_content(html_content, wait_until="networkidle")
+            pdf_bytes = await page.pdf(format="A4", print_background=True, margin={"top": "20mm", "bottom": "20mm", "left": "20mm", "right": "20mm"})
+            await browser.close()
+    except Exception as e:
+        print("Playwright PDF generation failed:", e)
 
-    return Response(content=pdf_bytes, media_type="application/pdf")
-
+    return Response(content=pdf_bytes or b"PDF Generation failed on server.", media_type="application/pdf")
 
 @router.post("/{invoice_id}/send", response_model=InvoiceOut)
 async def send_invoice_email(
@@ -1321,12 +1324,19 @@ async def send_invoice_email(
         settings=settings,
         today=datetime.now().strftime("%Y年%m月%d日")
     )
-    async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=True)
-        page = await browser.new_page()
-        await page.set_content(html_content, wait_until="networkidle")
-        pdf_bytes = await page.pdf(format="A4", print_background=True, margin={"top": "20mm", "bottom": "20mm", "left": "20mm", "right": "20mm"})
-        await browser.close()
+    
+    pdf_bytes = None
+    try:
+        async with async_playwright() as p:
+            browser = await p.chromium.launch(headless=True)
+            page = await browser.new_page()
+            await page.set_content(html_content, wait_until="networkidle")
+            pdf_bytes = await page.pdf(format="A4", print_background=True, margin={"top": "20mm", "bottom": "20mm", "left": "20mm", "right": "20mm"})
+            await browser.close()
+    except Exception as e:
+        print("Playwright error during email dispatch:", e)
+        # サーバー環境（Render）の制約でPDFが生成できない場合はエラーを返す
+        raise HTTPException(500, f"対象サーバーの環境制約のためPDF生成に失敗しました: {e}")
 
     # Email properties
     # Email properties derived from database settings rather than env variables
