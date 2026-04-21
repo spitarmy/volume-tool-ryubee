@@ -18,6 +18,8 @@ from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
 from email.mime.text import MIMEText
 from email import encoders
+from email.utils import formataddr
+from email.header import Header
 
 router = APIRouter(prefix="/v1/invoices", tags=["invoices"])
 
@@ -1342,7 +1344,7 @@ async def send_invoice_email(
             raise HTTPException(400, "SMTP設定（メールサーバーのユーザー名・パスワード）が未設定です。設定画面から登録してください。")
 
         msg = MIMEMultipart()
-        msg['From'] = f"{company.name} <{smtp_user}>"
+        msg['From'] = formataddr((str(Header(company.name, 'utf-8')), smtp_user))
         msg['To'] = inv.customer.email
         msg['Subject'] = body.subject
         msg.attach(MIMEText(body.body, 'plain'))
@@ -1434,7 +1436,7 @@ def send_reminders(
         if smtp_user and smtp_pass:
             try:
                 msg = MIMEMultipart()
-                msg['From'] = f"{company.name} <{smtp_user}>"
+                msg['From'] = formataddr((str(Header(company.name, 'utf-8')), smtp_user))
                 msg['To'] = alert.email
                 msg['Subject'] = subject_tmpl
                 msg.attach(MIMEText(body, 'plain'))
