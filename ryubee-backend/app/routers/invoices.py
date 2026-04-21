@@ -1374,8 +1374,12 @@ async def send_invoice_email(
         if not smtp_user or not smtp_pass:
             raise HTTPException(400, "SMTP設定（メールサーバーのユーザー名・パスワード）が未設定です。設定画面から登録してください。")
 
+        from_email = smtp_user
+        if "amazonaws.com" in smtp_host:
+            from_email = "info@yamabun-ryubee.jp"
+
         msg = MIMEMultipart()
-        msg['From'] = formataddr((str(Header(company.name, 'utf-8')), smtp_user))
+        msg['From'] = formataddr((str(Header(company.name, 'utf-8')), from_email))
         msg['To'] = inv.customer.email
         msg['Subject'] = body.subject
         body_text = body.body.replace('\\n', '\n')
@@ -1466,9 +1470,13 @@ def send_reminders(
         smtp_pass = settings.smtp_password if settings and settings.smtp_password else os.getenv("SMTP_PASS", "")
 
         if smtp_user and smtp_pass:
+            from_email = smtp_user
+            if "amazonaws.com" in smtp_host:
+                from_email = "info@yamabun-ryubee.jp"
+
             try:
                 msg = MIMEMultipart()
-                msg['From'] = formataddr((str(Header(company.name, 'utf-8')), smtp_user))
+                msg['From'] = formataddr((str(Header(company.name, 'utf-8')), from_email))
                 msg['To'] = alert.email
                 msg['Subject'] = subject_tmpl
                 msg.attach(MIMEText(body, 'plain'))
