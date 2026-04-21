@@ -1334,9 +1334,8 @@ async def send_invoice_email(
             pdf_bytes = await page.pdf(format="A4", print_background=True, margin={"top": "20mm", "bottom": "20mm", "left": "20mm", "right": "20mm"})
             await browser.close()
     except Exception as e:
-        print("Playwright error during email dispatch:", e)
-        # サーバー環境（Render）の制約でPDFが生成できない場合はエラーを返す
-        raise HTTPException(500, f"対象サーバーの環境制約のためPDF生成に失敗しました: {e}")
+        print("Playwright error during email dispatch (continuing without PDF):", e)
+        # サーバー環境（Render）の制約でPDFが生成できない場合でもメール送信は続行する
 
     # Email properties
     # Email properties derived from database settings rather than env variables
@@ -1345,39 +1344,39 @@ async def send_invoice_email(
     smtp_user = settings.smtp_user if settings and settings.smtp_user else os.getenv("SMTP_USER", "")
     smtp_pass = settings.smtp_password if settings and settings.smtp_password else os.getenv("SMTP_PASS", "")
 
-    if smtp_user and smtp_pass:
-        msg = MIMEMultipart()
-        msg['From'] = f"{company.name} <{smtp_user}>"
-        msg['To'] = inv.customer.email
-        msg['Subject'] = body.subject
-        msg.attach(MIMEText(body.body, 'plain'))
+    if not smtp_user or not smtp_pass:
+        raise HTTPException(400, "SMTP設定（メールサーバーのユーザー名・パスワード）が未設定です。設定画面から登録してください。")
 
-        if pdf_bytes:
-            part = MIMEBase('application', 'octet-stream')
-            part.set_payload(pdf_bytes)
-            encoders.encode_base64(part)
-            filename = f"Invoice_{inv.month}_{inv.customer.name}.pdf".replace(" ", "_")
-            
-            # utf-8 encode parameter for non-ascii attachment filenames in some mail clients could be added,
-            # but modern clients usually handle RFC2231 / utf8 well if given cleanly.
-            part.add_header('Content-Disposition', f'attachment; filename="{filename}"')
-            msg.attach(part)
+    msg = MIMEMultipart()
+    msg['From'] = f"{company.name} <{smtp_user}>"
+    msg['To'] = inv.customer.email
+    msg['Subject'] = body.subject
+
+    # PDFが生成できなかった場合は本文にその旨を追記
+    email_body = body.body
+    if not pdf_bytes:
+        email_body += "\n\n※ サーバー環境の制約により、PDF請求書の添付ができませんでした。別途お送りいたします。"
+    msg.attach(MIMEText(email_body, 'plain'))
+
+    if pdf_bytes:
+        part = MIMEBase('application', 'octet-stream')
+        part.set_payload(pdf_bytes)
+        encoders.encode_base64(part)
+        filename = f"Invoice_{inv.month}_{inv.customer.name}.pdf".replace(" ", "_")
+        part.add_header('Content-Disposition', f'attachment; filename="{filename}"')
+        msg.attach(part)
+
+    try:
+        if smtp_port == 465:
+            server = smtplib.SMTP_SSL(smtp_host, smtp_port, timeout=15)
         else:
-            txt_part = MIMEText("サーバー環境制約のため、事前のPDF生成に失敗しました。", 'plain')
-            txt_part.add_header('Content-Disposition', 'attachment; filename="error.txt"')
-            msg.attach(txt_part)
-
-        try:
-            if smtp_port == 465:
-                server = smtplib.SMTP_SSL(smtp_host, smtp_port, timeout=15)
-            else:
-                server = smtplib.SMTP(smtp_host, smtp_port, timeout=15)
-                server.starttls()
-            server.login(smtp_user, smtp_pass)
-            server.send_message(msg)
-            server.quit()
-        except Exception as e:
-            raise HTTPException(500, f"メール送信に失敗しました: {e}")
+            server = smtplib.SMTP(smtp_host, smtp_port, timeout=15)
+            server.starttls()
+        server.login(smtp_user, smtp_pass)
+        server.send_message(msg)
+        server.quit()
+    except Exception as e:
+        raise HTTPException(500, f"メール送信に失敗しました: {e}")
 
     inv.sent_at = datetime.now().isoformat()
     db.commit()
