@@ -1280,8 +1280,9 @@ async def get_invoice_pdf(
     )
 
     # WeasyPrint PDF generation
+    template_dir = os.path.join(os.path.dirname(__file__), "..", "templates")
     try:
-        pdf_bytes = weasyprint.HTML(string=html_content).write_pdf()
+        pdf_bytes = weasyprint.HTML(string=html_content, base_url=template_dir).write_pdf()
     except Exception as e:
         print("WeasyPrint PDF generation failed:", e)
         raise HTTPException(500, f"PDF生成に失敗しました: {e}")
@@ -1321,9 +1322,10 @@ async def send_invoice_email(
     )
     
     # WeasyPrint PDF generation for email attachment
+    template_dir = os.path.join(os.path.dirname(__file__), "..", "templates")
     pdf_bytes = None
     try:
-        pdf_bytes = weasyprint.HTML(string=html_content).write_pdf()
+        pdf_bytes = weasyprint.HTML(string=html_content, base_url=template_dir).write_pdf()
     except Exception as e:
         print("WeasyPrint PDF generation failed for email:", e)
         raise HTTPException(500, f"PDF生成に失敗しました: {e}")
