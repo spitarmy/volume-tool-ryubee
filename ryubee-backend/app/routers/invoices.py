@@ -1347,14 +1347,15 @@ async def send_invoice_email(
         msg['From'] = formataddr((str(Header(company.name, 'utf-8')), smtp_user))
         msg['To'] = inv.customer.email
         msg['Subject'] = body.subject
-        msg.attach(MIMEText(body.body, 'plain'))
+        body_text = body.body.replace('\\n', '\n')
+        msg.attach(MIMEText(body_text, 'plain'))
 
         # PDF添付
-        part = MIMEBase('application', 'octet-stream')
+        part = MIMEBase('application', 'pdf')
         part.set_payload(pdf_bytes)
         encoders.encode_base64(part)
         filename = f"Invoice_{inv.month}_{inv.customer.name}.pdf".replace(" ", "_")
-        part.add_header('Content-Disposition', f'attachment; filename="{filename}"')
+        part.add_header('Content-Disposition', 'attachment', filename=filename)
         msg.attach(part)
 
         try:
