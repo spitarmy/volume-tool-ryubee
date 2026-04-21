@@ -14,3 +14,4 @@ email-validator==2.1.1
 jinja2
 weasyprint
 reportlab
+python-dateutil
