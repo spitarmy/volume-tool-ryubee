@@ -836,118 +836,126 @@ def generate_custom_subscriptions(
     db: Session = Depends(get_db),
 ):
     """指定された定期顧客情報を元にカスタム一括請求書を生成"""
-    company_id = current_user.company_id
-    month = body.month
-
-    # Get Customer map
-    cust_ids = [c.customer_id for c in body.customers]
-    customers = db.query(models.Customer).filter(models.Customer.id.in_(cust_ids)).filter_by(company_id=company_id).all()
-    c_map = {c.id: c for c in customers}
-    
-    existing = db.query(models.Invoice).filter(
-        models.Invoice.company_id == company_id,
-        models.Invoice.month == month,
-        models.Invoice.customer_id.in_(cust_ids)
-    ).all()
-    existing_map = {i.customer_id: i for i in existing}
-
-    created = []
-    import datetime
-    from dateutil.relativedelta import relativedelta
     try:
-        curr_d = datetime.datetime.strptime(month, "%Y-%m").date()
-        prev_d = curr_d - relativedelta(months=1)
-        prev_month_str = prev_d.strftime("%Y-%m")
-    except Exception:
-        prev_month_str = ""
+        company_id = current_user.company_id
+        month = body.month
 
-    for cust_data in body.customers:
-        cust_id = cust_data.customer_id
-        if cust_id in existing_map:
-            continue
-            
-        c = c_map.get(cust_id)
-        if not c:
-            continue
-            
-        items = []
-        sales_total = 0
+        # Get Customer map
+        cust_ids = [c.customer_id for c in body.customers]
+        customers = db.query(models.Customer).filter(models.Customer.id.in_(cust_ids)).filter_by(company_id=company_id).all()
+        c_map = {c.id: c for c in customers}
         
-        if cust_data.base_price > 0:
-            items.append(models.InvoiceItem(
-                description="定期回収諸費用",
-                quantity=1, unit="式", unit_price=cust_data.base_price, amount=cust_data.base_price
-            ))
-            sales_total += cust_data.base_price
+        existing = db.query(models.Invoice).filter(
+            models.Invoice.company_id == company_id,
+            models.Invoice.month == month,
+            models.Invoice.customer_id.in_(cust_ids)
+        ).all()
+        existing_map = {i.customer_id: i for i in existing}
+
+        created = []
+        import datetime
+        from dateutil.relativedelta import relativedelta
+        try:
+            curr_d = datetime.datetime.strptime(month, "%Y-%m").date()
+            prev_d = curr_d - relativedelta(months=1)
+            prev_month_str = prev_d.strftime("%Y-%m")
+        except Exception:
+            prev_month_str = ""
+
+        for cust_data in body.customers:
+            cust_id = cust_data.customer_id
+            if cust_id in existing_map:
+                continue
+                
+            c = c_map.get(cust_id)
+            if not c:
+                continue
+                
+            items = []
+            sales_total = 0
             
-        if cust_data.add_item_name and cust_data.add_item_price > 0:
-            items.append(models.InvoiceItem(
-                description=cust_data.add_item_name,
-                quantity=1, unit="式", unit_price=cust_data.add_item_price, amount=cust_data.add_item_price
-            ))
-            sales_total += cust_data.add_item_price
+            if cust_data.base_price > 0:
+                items.append(models.InvoiceItem(
+                    description="定期回収諸費用",
+                    quantity=1, unit="式", unit_price=cust_data.base_price, amount=cust_data.base_price
+                ))
+                sales_total += cust_data.base_price
+                
+            if cust_data.add_item_name and cust_data.add_item_price > 0:
+                items.append(models.InvoiceItem(
+                    description=cust_data.add_item_name,
+                    quantity=1, unit="式", unit_price=cust_data.add_item_price, amount=cust_data.add_item_price
+                ))
+                sales_total += cust_data.add_item_price
 
-        if sales_total <= 0:
-            continue
+            if sales_total <= 0:
+                continue
+                
+            carry_over = 0
+            if prev_month_str:
+                prev_inv = db.query(models.Invoice).options(joinedload(models.Invoice.payments)).filter_by(
+                    company_id=company_id, customer_id=cust_id, month=prev_month_str
+                ).first()
+                if prev_inv:
+                    paid = sum(p.amount for p in prev_inv.payments)
+                    if prev_inv.total_amount - paid > 0:
+                        carry_over = prev_inv.total_amount - paid
+                        items.append(models.InvoiceItem(
+                            description="前回繰越額", quantity=1, unit="式", unit_price=carry_over, amount=carry_over
+                        ))
             
-        carry_over = 0
-        if prev_month_str:
-            prev_inv = db.query(models.Invoice).options(joinedload(models.Invoice.payments)).filter_by(
-                company_id=company_id, customer_id=cust_id, month=prev_month_str
-            ).first()
-            if prev_inv:
-                paid = sum(p.amount for p in prev_inv.payments)
-                if prev_inv.total_amount - paid > 0:
-                    carry_over = prev_inv.total_amount - paid
-                    items.append(models.InvoiceItem(
-                        description="前回繰越額", quantity=1, unit="式", unit_price=carry_over, amount=carry_over
-                    ))
-        
-        tax = int(sales_total * 0.1)
-        grand_total = sales_total + tax + carry_over
+            tax = int(sales_total * 0.1)
+            grand_total = sales_total + tax + carry_over
 
-        customer_fd = {}
-        if c.form_data:
-            import json
-            try: customer_fd = json.loads(c.form_data)
-            except: pass
-        persistent_note = customer_fd.get("persistent_invoice_note", "")
+            customer_fd = {}
+            if c.form_data:
+                import json
+                try: customer_fd = json.loads(c.form_data)
+                except: pass
+            persistent_note = customer_fd.get("persistent_invoice_note", "")
 
-        notes_text = f"【内訳】今回請求額: ¥{(sales_total+tax):,}, 前回繰越: ¥{carry_over:,}" if carry_over > 0 else "定期月次"
-        if persistent_note: notes_text += f"\n\n{persistent_note}"
-        if cust_data.notes: notes_text += f"\n\n【特記事項】\n{cust_data.notes}"
+            notes_text = f"【内訳】今回請求額: ¥{(sales_total+tax):,}, 前回繰越: ¥{carry_over:,}" if carry_over > 0 else "定期月次"
+            if persistent_note: notes_text += f"\n\n{persistent_note}"
+            if cust_data.notes: notes_text += f"\n\n【特記事項】\n{cust_data.notes}"
 
-        inv = models.Invoice(
-            company_id=company_id,
-            customer_id=cust_id,
-            month=month,
-            total_amount=grand_total,
-            tax_amount=tax,
-            status="draft",
-            due_date=body.due_date or _auto_due_date(c, month),
-            notes=notes_text,
-        )
-        db.add(inv)
-        db.flush()
+            inv = models.Invoice(
+                company_id=company_id,
+                customer_id=cust_id,
+                month=month,
+                total_amount=grand_total,
+                tax_amount=tax,
+                status="draft",
+                due_date=body.due_date or _auto_due_date(c, month),
+                notes=notes_text,
+            )
+            db.add(inv)
+            db.flush()
 
-        for item in items:
-            item.invoice_id = inv.id
-            db.add(item)
-            
-        created.append(inv)
+            for item in items:
+                item.invoice_id = inv.id
+                db.add(item)
+                
+            created.append(inv)
 
-    db.commit()
+        db.commit()
 
-    result = []
-    for inv in created:
-        loaded = db.query(models.Invoice).options(
-            joinedload(models.Invoice.items),
-            joinedload(models.Invoice.payments),
-            joinedload(models.Invoice.customer),
-        ).filter_by(id=inv.id).first()
-        result.append(_invoice_to_out(loaded))
+        result = []
+        for inv in created:
+            loaded = db.query(models.Invoice).options(
+                joinedload(models.Invoice.items),
+                joinedload(models.Invoice.payments),
+                joinedload(models.Invoice.customer),
+            ).filter_by(id=inv.id).first()
+            result.append(_invoice_to_out(loaded))
 
-    return result
+        return result
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        import traceback
+        traceback.print_exc()
+        raise HTTPException(status_code=500, detail=f"一括生成に失敗しました: {str(e)}")
 
 
 def _auto_due_date(customer, month: str) -> str | None:
