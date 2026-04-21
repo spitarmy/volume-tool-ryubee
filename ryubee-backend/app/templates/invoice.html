@@ -5,20 +5,22 @@
     <meta charset="UTF-8">
     <title>請求書</title>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap');
+
         @page {
             size: A4;
             margin: 20mm;
 
             @bottom-center {
                 content: counter(page) "/" counter(pages);
-                font-family: sans-serif;
+                font-family: 'Noto Sans JP', sans-serif;
                 font-size: 10pt;
                 color: #555;
             }
         }
 
         body {
-            font-family: "Helvetica Neue", "Hiragino Kaku Gothic ProN", "Yu Gothic", sans-serif;
+            font-family: 'Noto Sans JP', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', sans-serif;
             margin: 0;
             padding: 0;
             color: #333;
