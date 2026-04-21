@@ -1367,7 +1367,7 @@ async def send_invoice_email(
         except Exception as e:
             raise HTTPException(500, f"メール送信に失敗しました: {e}")
 
-        inv.sent_at = datetime.now().isoformat()
+        inv.sent_at = datetime.now().isoformat(timespec='seconds')
         db.commit()
         db.refresh(inv)
         return _invoice_to_out(inv)
@@ -1408,7 +1408,7 @@ def send_reminders(
     
     sent_count = 0
     logs = []
-    now_str = datetime.now().isoformat()
+    now_str = datetime.now().isoformat(timespec='seconds')
 
     for alert in alerts:
         if not alert.email:
