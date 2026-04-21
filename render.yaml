@@ -5,11 +5,9 @@ services:
     env: python
     region: singapore
     rootDir: ryubee-backend
-    buildCommand: "pip install -r requirements.txt && playwright install chromium"
+    buildCommand: "pip install -r requirements.txt"
     startCommand: "uvicorn app.main:app --host 0.0.0.0 --port 10000"
     envVars:
-      - key: PLAYWRIGHT_BROWSERS_PATH
-        value: "/opt/render/project/src/.ms-playwright"
       - key: DATABASE_URL
         fromDatabase:
           name: ryubee-postgres

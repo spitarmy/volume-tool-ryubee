@@ -12,7 +12,7 @@ from openai import AsyncOpenAI
 from app.database import get_db
 from app import models, auth
 from jinja2 import Environment, FileSystemLoader
-from playwright.async_api import async_playwright
+import weasyprint
 import smtplib
 from email.mime.multipart import MIMEMultipart
 from email.mime.base import MIMEBase
@@ -1279,19 +1279,14 @@ async def get_invoice_pdf(
         today=datetime.now().strftime("%Y年%m月%d日")
     )
 
-    # Playwright PDF logic
-    pdf_bytes = None
+    # WeasyPrint PDF generation
     try:
-        async with async_playwright() as p:
-            browser = await p.chromium.launch(headless=True)
-            page = await browser.new_page()
-            await page.set_content(html_content, wait_until="networkidle")
-            pdf_bytes = await page.pdf(format="A4", print_background=True, margin={"top": "20mm", "bottom": "20mm", "left": "20mm", "right": "20mm"})
-            await browser.close()
+        pdf_bytes = weasyprint.HTML(string=html_content).write_pdf()
     except Exception as e:
-        print("Playwright PDF generation failed:", e)
+        print("WeasyPrint PDF generation failed:", e)
+        raise HTTPException(500, f"PDF生成に失敗しました: {e}")
 
-    return Response(content=pdf_bytes or b"PDF Generation failed on server.", media_type="application/pdf")
+    return Response(content=pdf_bytes, media_type="application/pdf")
 
 @router.post("/{invoice_id}/send", response_model=InvoiceOut)
 async def send_invoice_email(
@@ -1325,17 +1320,13 @@ async def send_invoice_email(
         today=datetime.now().strftime("%Y年%m月%d日")
     )
     
+    # WeasyPrint PDF generation for email attachment
     pdf_bytes = None
     try:
-        async with async_playwright() as p:
-            browser = await p.chromium.launch(headless=True)
-            page = await browser.new_page()
-            await page.set_content(html_content, wait_until="networkidle")
-            pdf_bytes = await page.pdf(format="A4", print_background=True, margin={"top": "20mm", "bottom": "20mm", "left": "20mm", "right": "20mm"})
-            await browser.close()
+        pdf_bytes = weasyprint.HTML(string=html_content).write_pdf()
     except Exception as e:
-        print("Playwright error during email dispatch (continuing without PDF):", e)
-        # サーバー環境（Render）の制約でPDFが生成できない場合でもメール送信は続行する
+        print("WeasyPrint PDF generation failed for email:", e)
+        raise HTTPException(500, f"PDF生成に失敗しました: {e}")
 
     # Email properties
     # Email properties derived from database settings rather than env variables
@@ -1351,20 +1342,15 @@ async def send_invoice_email(
     msg['From'] = f"{company.name} <{smtp_user}>"
     msg['To'] = inv.customer.email
     msg['Subject'] = body.subject
+    msg.attach(MIMEText(body.body, 'plain'))
 
-    # PDFが生成できなかった場合は本文にその旨を追記
-    email_body = body.body
-    if not pdf_bytes:
-        email_body += "\n\n※ サーバー環境の制約により、PDF請求書の添付ができませんでした。別途お送りいたします。"
-    msg.attach(MIMEText(email_body, 'plain'))
-
-    if pdf_bytes:
-        part = MIMEBase('application', 'octet-stream')
-        part.set_payload(pdf_bytes)
-        encoders.encode_base64(part)
-        filename = f"Invoice_{inv.month}_{inv.customer.name}.pdf".replace(" ", "_")
-        part.add_header('Content-Disposition', f'attachment; filename="{filename}"')
-        msg.attach(part)
+    # PDF添付
+    part = MIMEBase('application', 'octet-stream')
+    part.set_payload(pdf_bytes)
+    encoders.encode_base64(part)
+    filename = f"Invoice_{inv.month}_{inv.customer.name}.pdf".replace(" ", "_")
+    part.add_header('Content-Disposition', f'attachment; filename="{filename}"')
+    msg.attach(part)
 
     try:
         if smtp_port == 465:
