@@ -151,6 +151,13 @@
         </div>
     </div>
 
+    <!-- 一括削除アクションバー -->
+    <div id="bulkCustomerBar"
+        style="display:none; position:fixed; bottom: 80px; left:50%; transform:translateX(-50%); width: 90%; max-width: 600px; background:#2c3e50; color:#fff; border-radius:var(--r-xl); padding:16px 20px; z-index:2000; align-items:center; justify-content:space-between; box-shadow:0 10px 40px rgba(0,0,0,0.4);">
+        <span id="bulkCustomerCount" style="font-weight:700; font-size:1.05rem;">0件選択中</span>
+        <button class="btn btn-sm btn-danger" onclick="bulkDeleteCustomers()">🗑 一括削除</button>
+    </div>
+
     <!-- 顧客編集モーダル -->
     <div class="cust-modal-overlay" id="custOverlay">
         <div class="cust-modal">
@@ -482,7 +489,10 @@
                 return `
                     <div class="customer-card" onclick="openPreview('${c.id}')">
                         <div class="cc-top">
-                            <span class="cc-name">${utils.escapeHtml(c.name)}</span>
+                            <div style="display:flex; align-items:center;">
+                                <input type="checkbox" class="cust-sel-cb" value="${c.id}" onclick="event.stopPropagation(); checkCustSelection()" style="margin-right:12px; transform:scale(1.3);">
+                                <span class="cc-name">${utils.escapeHtml(c.name)}</span>
+                            </div>
                             <div>${wasteBadge} ${typeBadge}</div>
                         </div>
                         ${c.parsed_form?.yamabun_management_number ? `<div class="cc-meta" style="font-weight:700; color:var(--primary); margin-top:2px; font-size:13px;">🎫 山文管理番号: ${utils.escapeHtml(c.parsed_form.yamabun_management_number)}</div>` : ''}
@@ -496,6 +506,41 @@
                     </div>
                 `;
             }).join('');
+            checkCustSelection();
+        }
+
+        function checkCustSelection() {
+            const checkboxes = document.querySelectorAll('.cust-sel-cb:checked');
+            const bar = document.getElementById('bulkCustomerBar');
+            const countSpan = document.getElementById('bulkCustomerCount');
+            if (checkboxes.length > 0) {
+                bar.style.display = 'flex';
+                countSpan.textContent = checkboxes.length + '件選択中';
+            } else {
+                bar.style.display = 'none';
+            }
+        }
+
+        async function bulkDeleteCustomers() {
+            const checkboxes = document.querySelectorAll('.cust-sel-cb:checked');
+            if (checkboxes.length === 0) return;
+            const ids = Array.from(checkboxes).map(cb => cb.value);
+
+            if (!confirm(`選択した ${ids.length} 件の顧客データを一斉に削除します。\n一度削除すると元に戻せませんがよろしいですか？\n（関連するマニフェスト等も削除される、または見えなくなる可能性があります）`)) return;
+
+            const btn = document.querySelector('#bulkCustomerBar button');
+            btn.disabled = true;
+            btn.textContent = '削除中...';
+            try {
+                await RyubeeAPI.bulkDeleteCustomers(ids);
+                showToast(`✅ ${ids.length}件の顧客を削除しました`);
+                document.getElementById('bulkCustomerBar').style.display = 'none';
+                loadCustomers();
+            } catch (e) {
+                alert('削除エラー: ' + e.message);
+                btn.disabled = false;
+                btn.textContent = '🗑 一括削除';
+            }
         }
 
         function openModal(cust = null) {

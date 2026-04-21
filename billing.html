@@ -624,11 +624,14 @@
         </div>
     </div><!-- /.billing-content -->
 
-    <!-- 一括メール送信バー -->
+    <!-- 一括アクションバー -->
     <div id="bulkEmailBar"
         style="display:none; position:fixed; bottom: 80px; left:50%; transform:translateX(-50%); width: 90%; max-width: 600px; background:#2c3e50; color:#fff; border-radius:var(--r-xl); padding:16px 20px; z-index:2000; align-items:center; justify-content:space-between; box-shadow:0 10px 40px rgba(0,0,0,0.4);">
         <span id="bulkEmailCount" style="font-weight:700; font-size:1.05rem;">0件選択中</span>
-        <button class="btn btn-sm btn-primary" onclick="sendBulkEmail()">✉️ 一括メール送信</button>
+        <div style="display:flex; gap:8px;">
+            <button class="btn btn-sm btn-primary" onclick="sendBulkEmail()">✉️ 一括メール送信</button>
+            <button class="btn btn-sm btn-danger" onclick="bulkDeleteInvoices()">🗑 一括削除</button>
+        </div>
     </div>
 
     <!-- 請求書詳細モーダル -->
@@ -934,6 +937,27 @@
                 countLabel.innerText = checks.length + '件選択中';
             } else {
                 bar.style.display = 'none';
+            }
+        }
+
+        async function bulkDeleteInvoices() {
+            const checks = document.querySelectorAll('.bulk-inv-check:checked');
+            if (checks.length === 0) return;
+            const ids = Array.from(checks).map(cb => cb.value);
+
+            if (!confirm(`選択した ${ids.length} 件の請求書を一斉に削除します。\n一度削除すると元に戻せませんがよろしいですか？\n（関連する入金データ等も削除されます）`)) return;
+
+            const btns = document.querySelectorAll('#bulkEmailBar button');
+            btns.forEach(b => b.disabled = true);
+
+            try {
+                await RyubeeAPI.bulkDeleteInvoices(ids);
+                showToast(`✅ ${ids.length}件の請求書を削除しました`);
+                document.getElementById('bulkEmailBar').style.display = 'none';
+                loadInvoices();
+            } catch (e) {
+                alert('削除エラー: ' + e.message);
+                btns.forEach(b => b.disabled = false);
             }
         }
 

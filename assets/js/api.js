@@ -315,6 +315,17 @@ const RyubeeAPI = {
     });
   },
 
+  async deleteInvoice(invoiceId) {
+    return apiFetch(`/v1/invoices/${invoiceId}`, { method: "DELETE" });
+  },
+
+  async bulkDeleteInvoices(invoiceIds) {
+    return apiFetch("/v1/invoices/bulk-delete", {
+      method: "POST",
+      body: JSON.stringify({ invoice_ids: invoiceIds })
+    });
+  },
+
   async fetchUnpaidAlerts() {
     return apiFetch("/v1/invoices/unpaid-alerts");
   },
@@ -394,6 +405,13 @@ const RyubeeAPI = {
 
   async deleteCustomer(customerId) {
     return apiFetch(`/v1/customers/${customerId}`, { method: "DELETE" });
+  },
+
+  async bulkDeleteCustomers(customerIds) {
+    return apiFetch("/v1/customers/bulk-delete", {
+      method: "POST",
+      body: JSON.stringify({ customer_ids: customerIds })
+    });
   },
 
   async fetchCustomerHistory(customerId) {

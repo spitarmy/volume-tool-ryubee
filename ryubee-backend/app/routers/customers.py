@@ -223,6 +223,23 @@ def delete_customer(
     db.commit()
 
 
+@router.post("/bulk-delete")
+def bulk_delete_customers(
+    body: dict,
+    current_user: models.User = Depends(auth.require_admin),
+    db: Session = Depends(get_db),
+):
+    customer_ids = body.get("customer_ids", [])
+    if not customer_ids:
+        return {"message": "No customers provided"}
+    db.query(models.Customer).filter(
+        models.Customer.company_id == current_user.company_id,
+        models.Customer.id.in_(customer_ids)
+    ).delete(synchronize_session=False)
+    db.commit()
+    return {"message": f"{len(customer_ids)} customers deleted"}
+
+
 @router.get("/{customer_id}/history")
 def list_customer_history(
     customer_id: str,

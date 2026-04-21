@@ -489,6 +489,29 @@ def get_invoice(
     return _invoice_to_out(inv)
 
 
+@router.post("/bulk-delete")
+def bulk_delete_invoices(
+    body: dict,
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(get_db),
+):
+    invoice_ids = body.get("invoice_ids", [])
+    if not invoice_ids:
+        return {"message": "No invoices provided"}
+    db.query(models.InvoiceItem).filter(
+        models.InvoiceItem.invoice_id.in_(invoice_ids)
+    ).delete(synchronize_session=False)
+    db.query(models.Payment).filter(
+        models.Payment.invoice_id.in_(invoice_ids)
+    ).delete(synchronize_session=False)
+    db.query(models.Invoice).filter(
+        models.Invoice.company_id == current_user.company_id,
+        models.Invoice.id.in_(invoice_ids)
+    ).delete(synchronize_session=False)
+    db.commit()
+    return {"message": f"{len(invoice_ids)} invoices deleted"}
+
+
 @router.put("/{invoice_id}", response_model=InvoiceOut)
 def update_invoice(
     invoice_id: str,
