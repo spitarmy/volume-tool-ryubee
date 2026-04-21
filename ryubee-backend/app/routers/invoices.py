@@ -1296,80 +1296,89 @@ async def send_invoice_email(
     current_user: models.User = Depends(auth.get_current_user),
     db: Session = Depends(get_db),
 ):
-    inv = db.query(models.Invoice).options(
-        joinedload(models.Invoice.items),
-        joinedload(models.Invoice.payments),
-        joinedload(models.Invoice.customer),
-    ).filter_by(id=invoice_id, company_id=current_user.company_id).first()
-
-    if not inv:
-        raise HTTPException(404, "請求書が見つかりません")
-    if not inv.customer or not inv.customer.email:
-        raise HTTPException(400, "顧客のメールアドレスが登録されていません")
-
-    company = db.query(models.Company).filter_by(id=current_user.company_id).first()
-    settings = db.query(models.CompanySettings).filter_by(company_id=current_user.company_id).first()
-
-    # Generate PDF in memory
-    env = Environment(loader=FileSystemLoader(os.path.join(os.path.dirname(__file__), "..", "templates")))
-    template = env.get_template("invoice.html")
-    html_content = template.render(
-        invoice=inv,
-        customer=inv.customer,
-        company=company,
-        settings=settings,
-        today=datetime.now().strftime("%Y年%m月%d日")
-    )
-    
-    # WeasyPrint PDF generation for email attachment
-    template_dir = os.path.join(os.path.dirname(__file__), "..", "templates")
-    pdf_bytes = None
     try:
-        pdf_bytes = weasyprint.HTML(string=html_content, base_url=template_dir).write_pdf()
+        inv = db.query(models.Invoice).options(
+            joinedload(models.Invoice.items),
+            joinedload(models.Invoice.payments),
+            joinedload(models.Invoice.customer),
+        ).filter_by(id=invoice_id, company_id=current_user.company_id).first()
+
+        if not inv:
+            raise HTTPException(404, "請求書が見つかりません")
+        if not inv.customer or not inv.customer.email:
+            raise HTTPException(400, "顧客のメールアドレスが登録されていません")
+
+        company = db.query(models.Company).filter_by(id=current_user.company_id).first()
+        settings = db.query(models.CompanySettings).filter_by(company_id=current_user.company_id).first()
+
+        # Generate PDF in memory
+        env = Environment(loader=FileSystemLoader(os.path.join(os.path.dirname(__file__), "..", "templates")))
+        template = env.get_template("invoice.html")
+        html_content = template.render(
+            invoice=inv,
+            customer=inv.customer,
+            company=company,
+            settings=settings,
+            today=datetime.now().strftime("%Y年%m月%d日")
+        )
+        
+        # WeasyPrint PDF generation for email attachment
+        template_dir = os.path.join(os.path.dirname(__file__), "..", "templates")
+        pdf_bytes = None
+        try:
+            pdf_bytes = weasyprint.HTML(string=html_content, base_url=template_dir).write_pdf()
+        except Exception as e:
+            print("WeasyPrint PDF generation failed for email:", e)
+            raise HTTPException(500, f"PDF生成に失敗しました: {e}")
+
+        # Email properties
+        # Email properties derived from database settings rather than env variables
+        smtp_host = settings.smtp_host if settings and settings.smtp_host else os.getenv("SMTP_HOST", "smtp.ocn.ne.jp")
+        smtp_port = settings.smtp_port if settings and settings.smtp_port else int(os.getenv("SMTP_PORT", "587"))
+        smtp_user = settings.smtp_user if settings and settings.smtp_user else os.getenv("SMTP_USER", "")
+        smtp_pass = settings.smtp_password if settings and settings.smtp_password else os.getenv("SMTP_PASS", "")
+
+        if not smtp_user or not smtp_pass:
+            raise HTTPException(400, "SMTP設定（メールサーバーのユーザー名・パスワード）が未設定です。設定画面から登録してください。")
+
+        msg = MIMEMultipart()
+        msg['From'] = f"{company.name} <{smtp_user}>"
+        msg['To'] = inv.customer.email
+        msg['Subject'] = body.subject
+        msg.attach(MIMEText(body.body, 'plain'))
+
+        # PDF添付
+        part = MIMEBase('application', 'octet-stream')
+        part.set_payload(pdf_bytes)
+        encoders.encode_base64(part)
+        filename = f"Invoice_{inv.month}_{inv.customer.name}.pdf".replace(" ", "_")
+        part.add_header('Content-Disposition', f'attachment; filename="{filename}"')
+        msg.attach(part)
+
+        try:
+            if smtp_port == 465:
+                server = smtplib.SMTP_SSL(smtp_host, smtp_port, timeout=15)
+            else:
+                server = smtplib.SMTP(smtp_host, smtp_port, timeout=15)
+                server.starttls()
+            server.login(smtp_user, smtp_pass)
+            server.send_message(msg)
+            server.quit()
+        except Exception as e:
+            raise HTTPException(500, f"メール送信に失敗しました: {e}")
+
+        inv.sent_at = datetime.now().isoformat()
+        db.commit()
+        db.refresh(inv)
+        return _invoice_to_out(inv)
+
+    except HTTPException:
+        raise
     except Exception as e:
-        print("WeasyPrint PDF generation failed for email:", e)
-        raise HTTPException(500, f"PDF生成に失敗しました: {e}")
-
-    # Email properties
-    # Email properties derived from database settings rather than env variables
-    smtp_host = settings.smtp_host if settings and settings.smtp_host else os.getenv("SMTP_HOST", "smtp.ocn.ne.jp")
-    smtp_port = settings.smtp_port if settings and settings.smtp_port else int(os.getenv("SMTP_PORT", "587"))
-    smtp_user = settings.smtp_user if settings and settings.smtp_user else os.getenv("SMTP_USER", "")
-    smtp_pass = settings.smtp_password if settings and settings.smtp_password else os.getenv("SMTP_PASS", "")
-
-    if not smtp_user or not smtp_pass:
-        raise HTTPException(400, "SMTP設定（メールサーバーのユーザー名・パスワード）が未設定です。設定画面から登録してください。")
-
-    msg = MIMEMultipart()
-    msg['From'] = f"{company.name} <{smtp_user}>"
-    msg['To'] = inv.customer.email
-    msg['Subject'] = body.subject
-    msg.attach(MIMEText(body.body, 'plain'))
-
-    # PDF添付
-    part = MIMEBase('application', 'octet-stream')
-    part.set_payload(pdf_bytes)
-    encoders.encode_base64(part)
-    filename = f"Invoice_{inv.month}_{inv.customer.name}.pdf".replace(" ", "_")
-    part.add_header('Content-Disposition', f'attachment; filename="{filename}"')
-    msg.attach(part)
-
-    try:
-        if smtp_port == 465:
-            server = smtplib.SMTP_SSL(smtp_host, smtp_port, timeout=15)
-        else:
-            server = smtplib.SMTP(smtp_host, smtp_port, timeout=15)
-            server.starttls()
-        server.login(smtp_user, smtp_pass)
-        server.send_message(msg)
-        server.quit()
-    except Exception as e:
-        raise HTTPException(500, f"メール送信に失敗しました: {e}")
-
-    inv.sent_at = datetime.now().isoformat()
-    db.commit()
-    db.refresh(inv)
-    return _invoice_to_out(inv)
+        import traceback
+        err_msg = traceback.format_exc()
+        print(f"Unhandled Exception in send_invoice_email: {err_msg}")
+        raise HTTPException(status_code=500, detail=f"内部エラーにより送信失敗しました: {str(e)}")
 
 
 class SendRemindersResponse(BaseModel):
@@ -1389,6 +1398,7 @@ def send_reminders(
     settings = db.query(models.CompanySettings).filter_by(
         company_id=current_user.company_id
     ).first()
+    company = db.query(models.Company).filter_by(id=current_user.company_id).first()
     
     subject_tmpl = settings.unpaid_email_subject if settings else "【重要】未入金のお知らせ"
     body_tmpl = settings.unpaid_email_body if settings else "未入金のお知らせ\n\n{{customer_name}}様\n請求月: {{month}}\n金額: ¥{{amount}}\n期限: {{due_date}}"
