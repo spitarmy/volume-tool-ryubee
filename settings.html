@@ -572,12 +572,19 @@
                 </div>
 
                 <div class="form-group">
-                    <label>送信元メールアドレス（ログインID兼用）</label>
+                    <label>SMTP認証ユーザー名</label>
                     <input type="email" id="smtpUser" placeholder="yamabun@sirius.ocn.ne.jp">
                 </div>
 
                 <div class="form-group">
-                    <label>メールパスワード</label>
+                    <label>送信元（From）メールアドレス ※任意</label>
+                    <p class="small-text" style="margin-top: -6px; margin-bottom: 6px;">認証ユーザー名と異なる場合（ResendやAmazon
+                        SESなど）に入力してください。空の場合は認証ユーザー名が送信元になります。</p>
+                    <input type="email" id="smtpFromEmail" placeholder="info@yourdomain.com">
+                </div>
+
+                <div class="form-group">
+                    <label>メールパスワード / APIキー</label>
                     <input type="password" id="smtpPassword" placeholder="パスワードを入力">
                 </div>
 
@@ -840,6 +847,7 @@
                     document.getElementById('smtpHost').value = saved.smtp_host || 'smtp.ocn.ne.jp';
                     document.getElementById('smtpPort').value = saved.smtp_port || 587;
                     document.getElementById('smtpUser').value = saved.smtp_user || 'yamabun@sirius.ocn.ne.jp';
+                    document.getElementById('smtpFromEmail').value = saved.smtp_from_email || '';
                     document.getElementById('smtpPassword').value = saved.smtp_password || '';
                 }
             } catch (e) {
@@ -878,10 +886,10 @@
                 wastePricingData = {};
             }
             renderWastePricing();
-            
+
             // 処分先マスタの反映
             contractorsMaster = Array.isArray(saved.contractors_master) ? saved.contractors_master : [];
-            if(contractorsMaster.length === 0) {
+            if (contractorsMaster.length === 0) {
                 // 初期データがなければハードコードのものをセットする(移行用)
                 contractorsMaster = ['ホームケルン', '光アスコン', '旭興産業', '木材開発', '厳本金属', '京都有機資源', 'HIRAYAMA', '大剛', '京都環境保全公社', '西山環境サービス', '家電リサイクル'];
             }
@@ -932,6 +940,7 @@
                     smtp_host: document.getElementById('smtpHost').value.trim(),
                     smtp_port: parseInt(document.getElementById('smtpPort').value) || 587,
                     smtp_user: document.getElementById('smtpUser').value.trim(),
+                    smtp_from_email: document.getElementById('smtpFromEmail').value.trim(),
                     smtp_password: document.getElementById('smtpPassword').value.trim()
                 };
                 await RyubeeAPI.updateSettings(body);

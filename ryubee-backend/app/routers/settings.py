@@ -54,6 +54,7 @@ class SettingsSchema(BaseModel):
     smtp_port: int = 587
     smtp_user: str = "yamabun@sirius.ocn.ne.jp"
     smtp_password: str = ""
+    smtp_from_email: str = ""
 
     model_config = {"from_attributes": True}
     # ロゴ・電子角印 (Base64 data URL)

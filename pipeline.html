@@ -535,7 +535,7 @@
             const typeLabel = TYPE_LABELS[job.job_type] || 'その他';
             const price = job.price_total ? `¥${job.price_total.toLocaleString()}` : '–';
             const stageIdx = STAGES.findIndex(s => s.key === currentStage);
-            const nextStage = stageIdx < STAGES.length - 2 ? STAGES[stageIdx + 1] : null;
+            const nextStage = stageIdx < STAGES.length - 1 ? STAGES[stageIdx + 1] : null;
             const prevStage = stageIdx > 0 ? STAGES[stageIdx - 1] : null;
 
             const createdText = job.created_at ? new Date(job.created_at).toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
@@ -621,6 +621,15 @@
 
         async function moveJob(jobId, newStage) {
             try {
+                if (newStage === 'completed') {
+                    if (confirm('この案件を完了とします。\n定期回収の契約へ移行し、パイプラインから非表示にしますか？\n（[OK]: 定期契約にして非表示 / [キャンセル]: スポット案件完了としてボードに残す）')) {
+                        await RyubeeAPI.archiveAndSubscribeJob(jobId);
+                        await loadPipeline();
+                        showToast('✅ 定期契約へ移行し、案件をアーカイブしました');
+                        return;
+                    }
+                }
+
                 await RyubeeAPI.updateJobStage(jobId, newStage);
                 await loadPipeline();
                 showToast(`✅ ステージを「${STAGES.find(s => s.key === newStage)?.label}」に変更`);
@@ -657,7 +666,7 @@
                 if (assigned_to) {
                     payload.assigned_to = assigned_to;
                 }
-                
+
                 await RyubeeAPI.createJob(payload);
                 document.getElementById('newJobModal').classList.remove('show');
                 showToast("✅ 新規案件を手動追加しました");

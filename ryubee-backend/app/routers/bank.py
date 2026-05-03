@@ -1,7 +1,7 @@
 """銀行入金取込ルーター: CSVアップロード・自動マッチング・消し込み"""
 import csv
 import io
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from sqlalchemy import func
@@ -25,11 +25,12 @@ class MatchResult(BaseModel):
 @router.post("/upload")
 async def upload_bank_csv(
     file: UploadFile = File(...),
+    bank_type: str = Form("kyoto"),
     current_user: models.User = Depends(auth.get_current_user),
     db: Session = Depends(get_db),
 ):
     """
-    京都銀行CSVをアップロードして入金データを取り込む
+    銀行CSVをアップロードして入金データを取り込む
     対応フォーマット: 日付, 振込人名義, 入金額 (カンマ区切り)
     """
     content = await file.read()
@@ -59,12 +60,14 @@ async def upload_bank_csv(
         if amount <= 0:
             continue
 
+        bank_name_str = "京都中央信用金庫" if bank_type == "kyoto_chuo" else "京都銀行"
         txn = models.BankTransaction(
             company_id=current_user.company_id,
             transaction_date=date_str,
             amount=amount,
             payer_name=payer,
             payer_name_kana=payer,  # CSVが全角カナの場合そのまま使用
+            bank_name=bank_name_str,
             status="unmatched",
         )
         db.add(txn)
@@ -134,7 +137,7 @@ def auto_match(
                     amount=txn.amount,
                     payment_date=txn.transaction_date,
                     payment_method="bank_transfer",
-                    notes=f"京都銀行自動消込 ({txn.payer_name})",
+                    notes=f"{txn.bank_name}自動消込 ({txn.payer_name})",
                 )
                 db.add(payment)
 

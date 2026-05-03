@@ -141,6 +141,7 @@ def list_jobs(
     q: str | None = Query(None, description="案件名・顧客名の検索"),
     pipeline_stage: str | None = Query(None),
     job_type: str | None = Query(None),
+    customer_id: str | None = Query(None),
     current_user: models.User = Depends(auth.get_current_user),
     db: Session = Depends(get_db),
 ):
@@ -152,6 +153,8 @@ def list_jobs(
         query = query.filter(models.Job.pipeline_stage == pipeline_stage)
     if job_type:
         query = query.filter(models.Job.job_type == job_type)
+    if customer_id:
+        query = query.filter(models.Job.customer_id == customer_id)
     if q:
         like = f"%{q}%"
         query = query.filter(
@@ -306,6 +309,28 @@ def add_comment(
         "content": comment.content,
         "created_at": comment.created_at.isoformat() if comment.created_at else None,
     }
+
+
+@router.put("/{job_id}/archive-and-subscribe")
+def archive_and_subscribe(
+    job_id: str,
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(get_db),
+):
+    """案件を完了・非表示（archived）にし、顧客を定期契約へ移行する"""
+    job = _get_own_job(job_id, current_user, db)
+    job.pipeline_stage = "archived"
+    job.status = "completed"
+
+    if job.customer_id:
+        customer = db.query(models.Customer).filter_by(
+            id=job.customer_id, company_id=current_user.company_id
+        ).first()
+        if customer:
+            customer.contract_type = "subscription"
+            
+    db.commit()
+    return {"message": "Job archived and customer subscribed successfully"}
 
 
 # ── Helper ─────────────────────────────────────────────

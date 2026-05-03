@@ -418,7 +418,7 @@
             <div class="action-bar" style="display:grid; grid-template-columns:1fr 1fr; gap:8px; padding:12px 20px;">
                 <button class="btn btn-xs btn-primary" onclick="showOcrModal()"
                     style="width:100%; grid-column: span 2; font-size: 1.05rem; padding: 12px;">📸 写真から請求書自動作成</button>
-                <button class="btn btn-xs btn-success" onclick="generateInvoices()" style="width:100%;">📄
+                <button class="btn btn-xs btn-success" onclick="showMonthlyBulkModal()" style="width:100%;">📄
                     月次一括生成</button>
                 <button class="btn btn-xs btn-success" onclick="showRegularBulkModal()"
                     style="width:100%; border-color:var(--green); background:var(--green-light); color:var(--green-dark);">📅
@@ -458,7 +458,7 @@
                     </div>
                 </div>
                 <!-- 締め日フィルター -->
-                <div style="display:flex; gap:8px;">
+                <div style="display:flex; gap:8px; margin-bottom:8px;">
                     <button class="btn btn-xs btn-primary" id="btn-tab-all" style="flex:1"
                         onclick="setInvTab('all')">全て</button>
                     <button class="btn btn-xs btn-secondary" id="btn-tab-a" style="flex:1"
@@ -469,6 +469,15 @@
                         onclick="setInvTab('group_end')">末日</button>
                     <button class="btn btn-xs btn-secondary" id="btn-tab-auto" style="flex:1"
                         onclick="setInvTab('auto')">自動振替</button>
+                </div>
+                <!-- 請求種別フィルター -->
+                <div style="display:flex; gap:8px;">
+                    <button class="btn btn-xs btn-primary" id="btn-type-all" style="flex:1"
+                        onclick="setInvType('all')">全て</button>
+                    <button class="btn btn-xs btn-secondary" id="btn-type-spot" style="flex:1"
+                        onclick="setInvType('spot')">スポット</button>
+                    <button class="btn btn-xs btn-secondary" id="btn-type-subscription" style="flex:1"
+                        onclick="setInvType('subscription')">定期</button>
                 </div>
             </div>
             <!-- 月別支払状況 -->
@@ -531,8 +540,15 @@
             <div class="payment-modal-overlay" id="bankOverlay">
                 <div class="payment-modal">
                     <div class="modal-drag-handle"></div>
-                    <h3 class="card-title">🏦 京都銀行 入金データ取込</h3>
+                    <h3 class="card-title">🏦 銀行 入金データ取込</h3>
                     <p class="small-text mb-2">CSVファイルをアップロードして入金データを取り込みます。<br>フォーマット: 日付, 振込人名義, 入金額</p>
+                    <div class="form-group">
+                        <label>対象銀行</label>
+                        <select id="bankType" style="padding:10px; width:100%; border:1px solid var(--border); border-radius:var(--r-sm);">
+                            <option value="kyoto">京都銀行</option>
+                            <option value="kyoto_chuo">京都中央信用金庫</option>
+                        </select>
+                    </div>
                     <div class="form-group">
                         <label>CSVファイル</label>
                         <input type="file" id="bankFile" accept=".csv" style="padding:10px;">
@@ -568,6 +584,32 @@
                     <button class="btn btn-primary" id="ocrSubmitBtn" onclick="submitOcrInvoice()">📤
                         AIで読み取って作成</button>
                     <button class="btn btn-secondary mt-1" onclick="closeOcrModal()">キャンセル</button>
+                </div>
+            </div>
+
+            <!-- 月次一括生成モーダル -->
+            <div class="payment-modal-overlay" id="monthlyBulkOverlay">
+                <div class="payment-modal" style="max-width: 400px;">
+                    <div class="modal-drag-handle"></div>
+                    <h3 class="card-title">📄 月次一括生成</h3>
+                    <p class="small-text mb-2">生成する請求書の締日を選択してください。<br>（対象締日のスポット・定期請求書が一括で作成され、それぞれ分離されて表示されます）</p>
+                    <div class="form-group">
+                        <label>対象月</label>
+                        <input type="month" id="mbMonth">
+                    </div>
+                    <div class="form-group">
+                        <label>対象の締日</label>
+                        <select id="mbClosingDay">
+                            <option value="">すべて（全締日を一括処理）</option>
+                            <option value="10">10日</option>
+                            <option value="15">15日</option>
+                            <option value="20">20日</option>
+                            <option value="25">25日</option>
+                            <option value="31">月末 (31日)</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-primary" onclick="submitMonthlyBulk()">一括生成する</button>
+                    <button class="btn btn-secondary mt-1" onclick="closeMonthlyBulkModal()">キャンセル</button>
                 </div>
             </div>
 
@@ -663,6 +705,7 @@
         let allCustomers = [];
         let allUsers = [];
         let currentInvTab = 'all';
+        let currentInvType = 'all';
         let currentStaffFilter = 'all';
         let companySettings = {};
 
@@ -691,6 +734,16 @@
                 if (!el) return;
                 const tabKey = k === 'a' ? 'group_a' : k === '20' ? 'group_20' : k === 'end' ? 'group_end' : k;
                 el.className = 'btn btn-xs ' + (tab === tabKey ? 'btn-primary' : 'btn-secondary');
+            });
+            renderInvoices();
+        }
+
+        function setInvType(type) {
+            currentInvType = type;
+            ['all', 'spot', 'subscription'].forEach(k => {
+                const el = document.getElementById('btn-type-' + k);
+                if (!el) return;
+                el.className = 'btn btn-xs ' + (type === k ? 'btn-primary' : 'btn-secondary');
             });
             renderInvoices();
         }
@@ -849,7 +902,12 @@
                     if (cust.assigned_user_id !== currentStaffFilter) matchS = false;
                 }
 
-                return matchQ && matchT && matchS;
+                let matchType = true;
+                if (currentInvType !== 'all') {
+                    if (inv.invoice_type !== currentInvType) matchType = false;
+                }
+
+                return matchQ && matchT && matchS && matchType;
             });
 
             if (!filtered.length) {
@@ -888,6 +946,8 @@
                     <div class="inv-top">
                         <span class="inv-customer">${utils.escapeHtml(inv.customer_name || '顧客')}</span>
                         <div style="display: flex; align-items: center; gap: 4px;">
+                            ${inv.invoice_type === 'spot' ? '<span class="badge" style="background:#E0F2FE; color:#0284C7; border: 1px solid #7DD3FC; padding: 2px 6px; font-size: 0.75rem; border-radius: 4px;">スポット・産廃</span>' : ''}
+                            ${inv.invoice_type === 'subscription' ? '<span class="badge" style="background:#DCFCE7; color:#166534; border: 1px solid #86EFAC; padding: 2px 6px; font-size: 0.75rem; border-radius: 4px;">定期回収</span>' : ''}
                             <span class="inv-status ${inv.status}">${statusLabel[inv.status] || inv.status}</span>
                             <button title="PDFダウンロード" class="btn btn-xs" style="padding: 2px 6px; font-size: 0.85rem; border: 1px solid var(--border); background: #fff;" onclick="event.stopPropagation(); downloadPdf('${inv.id}')">📄</button>
                             <button title="メールで送信" class="btn btn-xs" style="padding: 2px 6px; font-size: 0.85rem; border: 1px solid var(--border); background: #fff;" onclick="event.stopPropagation(); sendEmail('${inv.id}')">✉️</button>
@@ -995,17 +1055,33 @@
             const remaining = inv.total_amount - inv.paid_total;
 
             let itemsHtml = '';
+            let emptyRowsHtml = '';
             if (inv.items && inv.items.length) {
                 itemsHtml = inv.items.map(it => `
-                    <tr>
-                        <td>${utils.escapeHtml(it.description)}</td>
-                        <td class="num">${it.quantity} ${it.unit || '式'}</td>
-                        <td class="num">¥${Number(it.unit_price).toLocaleString()}</td>
-                        <td class="num">¥${Number(it.amount).toLocaleString()}</td>
+                    <tr style="height:32px;">
+                        <td style="border:1px solid #000; padding:6px; font-size:13px; text-align:center;">${inv.month || ''}</td>
+                        <td style="border:1px solid #000; padding:6px; font-size:13px;">${utils.escapeHtml(it.description)}</td>
+                        <td style="border:1px solid #000; padding:6px; font-size:13px; text-align:center;">${it.quantity} ${it.unit || '式'}</td>
+                        <td style="border:1px solid #000; padding:6px; font-size:13px; text-align:right;">${Number(it.unit_price).toLocaleString()}</td>
+                        <td style="border:1px solid #000; padding:6px; font-size:13px; text-align:right;">${Number(it.amount).toLocaleString()}</td>
                     </tr>
                 `).join('');
+                
+                // Add empty rows to match the image's fixed grid look
+                const minRows = 12;
+                const emptyCount = Math.max(0, minRows - inv.items.length);
+                for (let i = 0; i < emptyCount; i++) {
+                    emptyRowsHtml += `
+                    <tr style="height:32px;">
+                        <td style="border:1px solid #000;"></td>
+                        <td style="border:1px solid #000;"></td>
+                        <td style="border:1px solid #000;"></td>
+                        <td style="border:1px solid #000;"></td>
+                        <td style="border:1px solid #000;"></td>
+                    </tr>`;
+                }
             } else {
-                itemsHtml = `<tr><td colspan="4" style="text-align:center;color:var(--text-tertiary);">明細なし</td></tr>`;
+                itemsHtml = `<tr><td colspan="5" style="border:1px solid #000; text-align:center; padding:12px; color:var(--text-tertiary);">明細なし</td></tr>`;
             }
 
             let paymentsHtml = '';
@@ -1023,85 +1099,145 @@
                 `;
             }
 
-            let companyHtml = '';
-            if (companySettings.company_logo || companySettings.company_name) {
-                companyHtml = `<div style="text-align:right; margin-bottom:12px; position:relative;">`;
-                if (companySettings.company_logo) {
-                    companyHtml += `<img src="${companySettings.company_logo}" alt="ロゴ" style="max-width:120px; max-height:60px; margin-bottom:8px;">`;
-                }
-                companyHtml += `<div style="font-size:0.85rem; line-height:1.7;">`;
-                companyHtml += `<strong>${utils.escapeHtml(companySettings.company_name || '')}</strong><br>`;
-                if (companySettings.company_address) companyHtml += `${utils.escapeHtml(companySettings.company_address)}<br>`;
-                if (companySettings.company_phone) companyHtml += `TEL: ${utils.escapeHtml(companySettings.company_phone)}<br>`;
-                if (companySettings.company_invoice_no) companyHtml += `登録番号: ${utils.escapeHtml(companySettings.company_invoice_no)}`;
-                companyHtml += `</div>`;
-                if (companySettings.company_stamp) {
-                    companyHtml += `<img src="${companySettings.company_stamp}" alt="角印" style="max-width:80px; max-height:80px; position:absolute; right:0; bottom:-10px; opacity:0.85;">`;
-                }
-                companyHtml += `</div>`;
-            }
+            const customer = allCustomers.find(c => c.id === inv.customer_id) || {};
+            let cfd = {};
+            try { cfd = JSON.parse(customer.form_data || "{}"); } catch(e) {}
+            const customerNo = cfd.yamabun_management_number || "未設定";
 
-            // 小計・消費税・合計の計算
-            const subtotal = inv.total_amount - (inv.tax_amount || 0);
-            const taxAmt = inv.tax_amount || Math.round(subtotal * 0.1);
-            const totalWithTax = subtotal + taxAmt;
-            const notesText = inv.notes || '';
-
-            document.getElementById('invDocContent').innerHTML = `
-                <div class="inv-doc-header">
-                    <h2 style="background:var(--primary); color:#fff; display:inline-block; padding:4px 20px; font-size:1.1rem; letter-spacing:4px;">御請求書</h2>
-                    <span class="inv-status ${inv.status} print-hide" style="font-size:0.85rem;">${statusLabel[inv.status] || inv.status}</span>
+            // Company html mapping exactly to Yamabun's logo and info layout
+            const companyHtml = `
+                <div style="font-size:13px; line-height:1.6; position:relative;">
+                    <div style="font-size:16px; margin-bottom:8px; letter-spacing:2px;">株式会社　山　文</div>
+                    <div>〒612-0029<br>京都市伏見区深草西浦町2丁目61番地<br>TEL: 075-643-3456</div>
+                    ${companySettings.company_stamp ? `<img src="${companySettings.company_stamp}" alt="角印" style="max-width:80px; max-height:80px; position:absolute; right:10px; top:-10px; opacity:0.85; mix-blend-mode: multiply;">` : ''}
                 </div>
+            `;
 
-                <div style="font-size:1.05rem; font-weight:700; margin:12px 0 16px; border-bottom:2px solid #333; padding-bottom:6px;">
-                    ${utils.escapeHtml(inv.customer_name || '顧客')} <span style="font-size:0.9rem; font-weight:400;">御中</span>
-                </div>
-
-                <div style="display:flex; gap:20px; margin-bottom:20px;">
-                    <!-- 左: 挨拶文・請求情報 -->
-                    <div style="flex:1; border:1px solid #ccc; padding:16px; border-radius:4px; font-size:0.85rem; line-height:1.9;">
-                        <div style="margin-bottom:12px;">平素は格別のお引き立てを賜り厚く御礼申し上げます。下記の通りご請求申し上げます。</div>
-                        <table style="width:100%; border:none; font-size:0.85rem;">
-                            <tr><td style="border:none; padding:2px 0; width:90px; color:var(--text-secondary);">請求日</td><td style="border:none; padding:2px 0;">${inv.month ? inv.month.replace('-', '/') + '/01' : '-'}</td></tr>
-                            <tr><td style="border:none; padding:2px 0; color:var(--text-secondary);">振込期限</td><td style="border:none; padding:2px 0;">${inv.due_date || '未設定'}</td></tr>
-                            <tr><td style="border:none; padding:2px 0; color:var(--text-secondary);">請求月</td><td style="border:none; padding:2px 0;">${inv.month || '-'}</td></tr>
-                        </table>
-                        <div style="margin-top:12px; font-size:1.1rem; font-weight:800; text-align:center; background:#f0f4ff; padding:10px; border-radius:6px;">
-                            御請求金額（税込）<br>¥${totalWithTax.toLocaleString()}-
+            // Bank details / Subscription details
+            let paymentBoxHtml = '';
+            if (inv.invoice_type === 'subscription') {
+                const autoDate = inv.due_date || '未設定';
+                paymentBoxHtml = `
+                    <div style="border:2px solid #000; border-radius:6px; display:flex; margin-bottom:16px; overflow:hidden;">
+                        <div style="width:25%; border-right:2px solid #000; background:#f8f9fa;">
+                            <div style="border-bottom:1px solid #000; text-align:center; padding:4px; font-weight:bold; font-size:13px;">振替日</div>
+                            <div style="text-align:center; padding:16px 4px; font-size:14px; font-weight:bold;">${autoDate}</div>
+                        </div>
+                        <div style="width:75%;">
+                            <div style="border-bottom:1px solid #000; text-align:center; padding:4px; font-weight:bold; font-size:13px;">自動振替</div>
+                            <div style="padding:8px 12px; font-size:12px; line-height:1.5;">
+                                毎月27日に口座より引落させていただきます。<br>
+                                (金融機関休業日の場合翌営業日)つきましては、26<br>
+                                日までに口座残高のご確認をお願いします。
+                            </div>
                         </div>
                     </div>
-                    <!-- 右: 会社情報 -->
-                    ${companyHtml}
+                `;
+            } else {
+                paymentBoxHtml = `
+                    <div style="border:2px solid #000; border-radius:6px; display:flex; margin-bottom:16px; overflow:hidden;">
+                        <div style="width:25%; border-right:2px solid #000; background:#f8f9fa;">
+                            <div style="border-bottom:1px solid #000; text-align:center; padding:4px; font-weight:bold; font-size:13px;">入金期日</div>
+                            <div style="text-align:center; padding:16px 4px; font-size:14px; font-weight:bold;">${inv.due_date || '未設定'}</div>
+                        </div>
+                        <div style="width:75%;">
+                            <div style="border-bottom:1px solid #000; text-align:center; padding:4px; font-weight:bold; font-size:13px;">振込先</div>
+                            <div style="padding:8px 12px; font-size:12px; line-height:1.5;">
+                                カ)ヤマブン<br>
+                                京都銀行　九条支店　普通　473798<br>
+                                京都中央信用金庫　西陣支店　普通　5226936
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+
+            document.getElementById('invDocContent').innerHTML = `
+                <style>
+                    #invDocContent { font-family: "MS Mincho", "Noto Serif JP", serif; color:#000; padding:20px; }
+                    .inv-top-table td { border: 1px solid #000; padding:4px 8px; font-size:13px; text-align:right; }
+                    .inv-top-table th { border: 1px solid #000; padding:4px 8px; font-size:13px; background:#f8f9fa; text-align:center; font-weight:normal; }
+                </style>
+                <div style="text-align:center; margin-bottom:30px; letter-spacing:16px; font-size:24px;">請求書</div>
+                
+                <!-- ヘッダーエリア -->
+                <div style="display:flex; justify-content:space-between; margin-bottom:20px;">
+                    <!-- 左: お客様名 -->
+                    <div style="width:50%;">
+                        <div style="font-size:18px; border-bottom:1px solid #000; margin-bottom:8px; padding-bottom:4px;">
+                            ${utils.escapeHtml(inv.customer_name || '顧客')} <span style="float:right;">御中</span>
+                        </div>
+                        <div style="font-size:12px; margin-bottom:16px;">
+                            ${customer.address || ''}
+                        </div>
+                        <div style="font-size:12px;">下記の通りご請求申し上げます。</div>
+                    </div>
+                    <!-- 右: 請求日・会社情報 -->
+                    <div style="width:40%;">
+                        <table style="width:100%; border:none; font-size:12px; margin-bottom:20px;">
+                            <tr><td style="text-align:right; padding:2px;">請求締日</td><td style="text-align:right; padding:2px;">${(inv.month && customer.billing_closing_day) ? inv.month.replace('-', '/') + '/' + String(customer.billing_closing_day).padStart(2, '0') : (inv.month ? inv.month.replace('-', '/') + '/月末' : '-')}</td></tr>
+                            <tr><td style="text-align:right; padding:2px;">お客様番号</td><td style="text-align:right; padding:2px;">${customerNo}</td></tr>
+                            <tr><td style="text-align:right; padding:2px;">登録番号</td><td style="text-align:right; padding:2px;">${companySettings.company_invoice_no || '-'}</td></tr>
+                        </table>
+                        ${companyHtml}
+                    </div>
+                </div>
+
+                <!-- 金額サマリーテーブル (Loading...) -->
+                <div id="dynamic-summary-table" style="margin-bottom:20px;">
+                    <table class="inv-top-table" style="width:100%; border-collapse:collapse;">
+                        <tr>
+                            <th>前回ご請求額</th><th>入金額</th><th>値引</th><th>繰越金額</th><th>今回ご請求額（合算）</th>
+                        </tr>
+                        <tr>
+                            <td>計算中...</td><td>計算中...</td><td>計算中...</td><td>計算中...</td>
+                            <td style="font-size:20px; font-weight:bold;">¥${totalWithTax.toLocaleString()}</td>
+                        </tr>
+                    </table>
+                </div>
+
+                <!-- 振込先・振替日等 & ゾウさんロゴ -->
+                <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:10px;">
+                    <div style="width:60%;">
+                        ${paymentBoxHtml}
+                    </div>
+                    <div style="width:30%; text-align:right;">
+                        <img src="assets/images/yamabun_elephant.png" alt="Yamabun Logo" style="max-height:80px;" onerror="this.style.display='none'">
+                    </div>
                 </div>
 
                 <!-- 明細テーブル -->
-                <table>
+                <table style="width:100%; border-collapse:collapse; border:2px solid #000;">
                     <thead>
-                        <tr><th>品目</th><th style="width:70px;">数量</th><th style="width:90px;">単価</th><th style="width:100px;">金額</th><th style="width:30px;"></th></tr>
+                        <tr>
+                            <th style="border:1px solid #000; border-bottom:2px solid #000; padding:6px; font-size:13px; font-weight:normal; width:15%;">取引日</th>
+                            <th style="border:1px solid #000; border-bottom:2px solid #000; padding:6px; font-size:13px; font-weight:normal; width:40%;">内　容</th>
+                            <th style="border:1px solid #000; border-bottom:2px solid #000; padding:6px; font-size:13px; font-weight:normal; width:15%;">数　量</th>
+                            <th style="border:1px solid #000; border-bottom:2px solid #000; padding:6px; font-size:13px; font-weight:normal; width:15%;">単　価</th>
+                            <th style="border:1px solid #000; border-bottom:2px solid #000; padding:6px; font-size:13px; font-weight:normal; width:15%;">金額</th>
+                        </tr>
                     </thead>
-                    <tbody id="invItemsBody">${itemsHtml}</tbody>
+                    <tbody id="invItemsBody">
+                        ${itemsHtml}
+                        ${emptyRowsHtml}
+                    </tbody>
                 </table>
 
-                <!-- 小計・消費税・合計 -->
-                <table style="width:50%; margin-left:auto; margin-top:0; border-collapse:collapse;" id="invSummaryTable">
-                    <tr style="border-bottom:1px solid #ccc;">
-                        <td style="padding:8px; font-weight:700; background:#f8f9fa; border:1px solid #ccc;">小計</td>
-                        <td style="padding:8px; text-align:right; border:1px solid #ccc;" id="invSumSubtotal">¥${subtotal.toLocaleString()}円</td>
-                    </tr>
-                    <tr style="border-bottom:1px solid #ccc;">
-                        <td style="padding:8px; font-weight:700; background:#f8f9fa; border:1px solid #ccc;">消費税</td>
-                        <td style="padding:8px; text-align:right; border:1px solid #ccc;" id="invSumTax">¥${taxAmt.toLocaleString()}円</td>
-                    </tr>
-                    <tr style="border-bottom:2px solid #333;">
-                        <td style="padding:8px; font-weight:800; background:#f0f4ff; border:1px solid #ccc;">合計</td>
-                        <td style="padding:8px; text-align:right; font-weight:800; font-size:1.05rem; border:1px solid #ccc;" id="invSumTotal">¥${totalWithTax.toLocaleString()}円</td>
-                    </tr>
-                    <tr>
-                        <td colspan="2" style="padding:4px 8px; font-size:0.75rem; color:var(--text-secondary); border:1px solid #eee;" id="invSumDetail">
-                            10%対象 ¥${subtotal.toLocaleString()}円 ／ 消費税額 ¥${taxAmt.toLocaleString()}円
-                        </td>
-                    </tr>
-                </table>
+                <!-- 下部サマリー (内訳) -->
+                <div style="display:flex; justify-content:flex-end; margin-top:0;">
+                    <table style="width:50%; border-collapse:collapse; border:2px solid #000; border-top:none;">
+                        <tr>
+                            <td style="border-right:1px solid #000; padding:6px 12px; font-size:13px; background:#f8f9fa;">内訳</td>
+                            <td style="padding:6px 12px; font-size:13px;">10%対象(税抜)</td>
+                            <td style="padding:6px 12px; font-size:14px; text-align:right;">${subtotal.toLocaleString()}円</td>
+                        </tr>
+                        <tr>
+                            <td style="border-right:1px solid #000; background:#f8f9fa;"></td>
+                            <td style="padding:6px 12px; font-size:11px;">10%消費税</td>
+                            <td style="padding:6px 12px; font-size:13px; text-align:right;">${taxAmt.toLocaleString()}円</td>
+                        </tr>
+                    </table>
+                </div>
 
                 <!-- 備考 (印刷時非表示) -->
                 ${notesText ? `
@@ -1111,7 +1247,41 @@
                 </div>
                 ` : ''}
 
-                <div class="print-hide">${paymentsHtml}</div>
+                <div class="print-hide" style="margin-top:20px;">${paymentsHtml}</div>
+            `;
+
+            // Asynchronously fetch and calculate carryover amounts
+            RyubeeAPI.fetchInvoices({ customer_id: inv.customer_id }).then(cInvs => {
+                let prevAmount = 0;
+                let prevPaid = 0;
+                let discount = 0; // if discount is tracked later, we can pull it here
+                
+                cInvs.forEach(ci => {
+                    // All invoices for this customer before the current month
+                    if (ci.month < inv.month) {
+                        prevAmount += ci.total_amount;
+                        prevPaid += ci.paid_total;
+                    }
+                });
+                
+                const carryover = prevAmount - prevPaid - discount;
+                const grandTotal = carryover + totalWithTax;
+                
+                document.getElementById('dynamic-summary-table').innerHTML = `
+                    <table class="inv-top-table" style="width:100%; border-collapse:collapse;">
+                        <tr>
+                            <th>前回ご請求額</th><th>入金額</th><th>値引</th><th>繰越金額</th><th>今回ご請求額（合算）</th>
+                        </tr>
+                        <tr>
+                            <td>${prevAmount > 0 ? Number(prevAmount).toLocaleString() : ''}</td>
+                            <td>${prevPaid > 0 ? Number(prevPaid).toLocaleString() : ''}</td>
+                            <td>${discount > 0 ? Number(discount).toLocaleString() : ''}</td>
+                            <td>${carryover > 0 ? Number(carryover).toLocaleString() : ''}</td>
+                            <td style="font-size:20px; font-weight:bold;">¥${grandTotal.toLocaleString()}</td>
+                        </tr>
+                    </table>
+                `;
+            });
 
                 <!-- 入金状況 (印刷時非表示) -->
                 <div class="print-hide" style="margin-top:16px; display:flex; gap:12px; font-size:0.85rem;">
@@ -1330,13 +1500,28 @@
             }
         }
 
-        async function generateInvoices() {
-            const month = document.getElementById('monthFilter').value;
+        function showMonthlyBulkModal() {
+            const now = new Date();
+            const currentFilter = document.getElementById('monthFilter').value;
+            document.getElementById('mbMonth').value = currentFilter || `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+            document.getElementById('monthlyBulkOverlay').classList.add('show');
+        }
+
+        function closeMonthlyBulkModal() {
+            document.getElementById('monthlyBulkOverlay').classList.remove('show');
+        }
+
+        async function submitMonthlyBulk() {
+            const month = document.getElementById('mbMonth').value;
+            let closingDay = document.getElementById('mbClosingDay').value;
+            if (!closingDay) closingDay = null; // null represents 'All'
+            
             if (!month) { alert('月を選択してください'); return; }
-            if (!confirm(`${month} の請求書を自動生成しますか？\n（産廃マニフェストの重量×単価から自動計算）`)) return;
+            if (!confirm(`${month} ${closingDay ? closingDay + '日締め' : '全締日'} の請求書を自動生成しますか？\n（スポット・定期が自動分離して作成されます）`)) return;
             try {
-                const result = await RyubeeAPI.generateMonthlyInvoices(month);
+                const result = await RyubeeAPI.generateMonthlyInvoices(month, null, closingDay);
                 alert(`${result.length}件の請求書を生成しました`);
+                closeMonthlyBulkModal();
                 loadInvoices();
                 loadAlerts();
             } catch (e) { alert('エラー: ' + e.message); }
@@ -1539,9 +1724,10 @@
 
         async function uploadBankCSV() {
             const file = document.getElementById('bankFile').files[0];
+            const bankType = document.getElementById('bankType') ? document.getElementById('bankType').value : 'kyoto';
             if (!file) { alert('CSVファイルを選択してください'); return; }
             try {
-                const result = await RyubeeAPI.uploadBankCSV(file);
+                const result = await RyubeeAPI.uploadBankCSV(file, bankType);
                 showToast(`✅ ${result.imported}件の入金データを取込みました`);
             } catch (e) { alert('エラー: ' + e.message); }
         }

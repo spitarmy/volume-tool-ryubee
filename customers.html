@@ -601,6 +601,25 @@
                 if (!cust) addPricingRow('', '', 'kg');
             }
 
+            // 処分先リストの展開
+            const contractorsListDiv = document.getElementById('custContractorsList');
+            contractorsListDiv.innerHTML = '';
+            const activeCbs = Array.isArray(fd.active_contractors) ? fd.active_contractors : [];
+            const masterList = Array.isArray(appSettings.contractors_master) && appSettings.contractors_master.length > 0
+                ? appSettings.contractors_master
+                : ['ホームケルン', '光アスコン', '旭興産業', '木材開発', '厳本金属', '京都有機資源', 'HIRAYAMA', '大剛', '京都環境保全公社', '西山環境サービス', '家電リサイクル'];
+
+            const allContractors = [...masterList];
+            activeCbs.forEach(ct => { if (ct && !allContractors.includes(ct)) allContractors.push(ct); });
+
+            allContractors.forEach(ct => {
+                const isChecked = activeCbs.includes(ct);
+                const label = document.createElement('label');
+                label.style.cssText = 'display:flex; align-items:center; gap:4px; font-size:0.85rem; padding:4px 8px; background:#fff; border:1px solid var(--border); border-radius:4px; cursor:pointer;';
+                label.innerHTML = `<input type="checkbox" class="cust-contractor-cb" value="${utils.escapeHtml(ct)}" ${isChecked ? 'checked' : ''}> ${utils.escapeHtml(ct)}`;
+                contractorsListDiv.appendChild(label);
+            });
+
             document.getElementById('custOverlay').classList.add('show');
         }
 
@@ -629,6 +648,9 @@
             let history = [];
             try { history = await RyubeeAPI.fetchCustomerHistory(id); } catch (e) { }
 
+            let jobsInfo = [];
+            try { jobsInfo = await RyubeeAPI.fetchJobs({ customer_id: id }); } catch (e) { }
+
             let settings = {};
             try { settings = await RyubeeAPI.fetchSettings(); } catch (e) { }
 
@@ -637,7 +659,6 @@
                 ? [...settings.contractors_master]
                 : ['ホームケルン', '光アスコン', '旭興産業', '木材開発', '厳本金属', '京都有機資源', 'HIRAYAMA', '大剛', '京都環境保全公社', '西山環境サービス', '家電リサイクル'];
 
-            // 顧客専用のイレギュラーな処分先があれば追加
             const activeCbs = Array.isArray(fd.active_contractors) ? fd.active_contractors : [];
             const existingDisposers = new Set(dynamicDisposers);
             customerContracts.forEach(ct => {
@@ -720,6 +741,37 @@
                 <div style="margin-top:16px; display:grid; grid-template-columns:1fr 1fr; gap:8px;">
                     <a href="manifests.html?customer_id=${c.id}" class="btn btn-sm btn-secondary" style="text-align:center;text-decoration:none;padding:12px;">♻️ マニフェスト発行</a>
                     <a href="contract-form.html?id=${c.id}" class="btn btn-sm btn-secondary" style="text-align:center;text-decoration:none;padding:12px;">📄 新規 契約書作成</a>
+                </div>
+
+                <!-- 過去案件履歴 -->
+                <div style="margin-top:24px; padding-top:16px; border-top:1px solid var(--border);">
+                    <h4 style="font-size:1rem;color:var(--text-primary);margin-bottom:12px;">🗂 これまでの案件・作業履歴</h4>
+                    <div style="display:flex;flex-direction:column;gap:8px;">
+                        ${jobsInfo.length === 0 ? '<div style="font-size:0.85rem;color:var(--text-tertiary);text-align:center;padding:10px;">関連する案件はありません</div>' :
+                    jobsInfo.map(j => {
+                        const dateStr = j.work_date ? new Date(j.work_date).toLocaleDateString('ja-JP') : (j.created_at ? new Date(j.created_at).toLocaleDateString('ja-JP') : '日程未定');
+                        let badgeStr = '';
+                        if (j.status === 'completed' || j.pipeline_stage === 'completed') badgeStr = '<span class="badge" style="background:#DCFCE7; color:#166534; font-size: 0.70rem;">完了</span>';
+                        else if (j.pipeline_stage === 'scheduled') badgeStr = '<span class="badge" style="background:#DBEAFE; color:#1D4ED8; font-size: 0.70rem;">作業予定</span>';
+                        else if (j.pipeline_stage === 'waiting_manifest') badgeStr = '<span class="badge" style="background:#FEF3C7; color:#B45309; font-size: 0.70rem;">マニフェスト待</span>';
+                        else badgeStr = `<span class="badge" style="background:#F3F4F6; color:#4B5563; font-size: 0.70rem;">進行中</span>`;
+                        const priceText = j.final_price ? `¥${j.final_price.toLocaleString()}` : (j.estimated_price ? `¥${j.estimated_price.toLocaleString()}(見込)` : '');
+
+                        return `
+                              <div style="background:#fff; border:1px solid var(--border); padding:10px; border-radius:8px; display:flex; flex-direction:column; gap:4px; font-size:0.85rem;">
+                                  <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                                      <a href="jobs.html?id=${j.job_id}&mode=preview" target="_blank" style="font-weight:600; color:var(--primary); text-decoration:none;">${utils.escapeHtml(j.job_name)} ${badgeStr}</a>
+                                      <span style="color:var(--text-tertiary); font-size:0.75rem;">${dateStr}</span>
+                                  </div>
+                                  <div style="display:flex; justify-content:space-between;">
+                                      <span style="color:var(--text-secondary);">${utils.escapeHtml(j.assigned_to_name || '担当未定')}</span>
+                                      <span style="font-weight:600;">${priceText}</span>
+                                  </div>
+                              </div>
+                            `;
+                    }).join('')
+                }
+                    </div>
                 </div>
 
                 <!-- 履歴・対応ログ (CRM Timeline) -->

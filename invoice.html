@@ -32,156 +32,163 @@
             background: #fff;
             width: 100%;
             max-width: 800px;
-            /* A4比率に近い形 */
             margin: 20px auto;
             padding: 40px;
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
             box-sizing: border-box;
-            color: #333;
-            font-family: 'Noto Sans JP', sans-serif;
+            color: #000;
+            font-family: "MS Mincho", "Noto Serif JP", serif;
         }
 
-        .inv-header {
-            display: flex;
-            justify-content: space-between;
-            border-bottom: 2px solid #333;
-            padding-bottom: 16px;
-            margin-bottom: 24px;
+        /* --- タイトル部 --- */
+        .inv-title-container {
+            text-align: center;
+            margin-bottom: 20px;
         }
-
         .inv-title {
+            display: inline-block;
+            border: 1px solid #000;
+            padding: 4px 60px;
             font-size: 24px;
-            font-weight: bold;
-            letter-spacing: 8px;
+            letter-spacing: 16px;
+            font-weight: normal;
         }
-
         .inv-date {
-            font-size: 14px;
             text-align: right;
+            font-size: 13px;
+            margin-top: 10px;
         }
 
+        /* --- ヘッダー部 --- */
         .inv-top-wrapper {
             display: flex;
             justify-content: space-between;
-            margin-bottom: 40px;
+            margin-bottom: 30px;
         }
-
-        /* 左側：お客様名など */
         .inv-customer {
             width: 50%;
         }
-
-        .inv-customer-name {
-            font-size: 20px;
-            font-weight: bold;
-            border-bottom: 1px solid #ccc;
+        .inv-customer-name-wrapper {
+            border-bottom: 1px solid #000;
             padding-bottom: 4px;
-            margin-bottom: 16px;
+            margin-bottom: 8px;
+            font-size: 20px;
         }
-
+        .inv-greeting {
+            font-size: 13px;
+            margin-bottom: 20px;
+        }
+        
+        /* 合計金額ボックス */
         .inv-total-box {
-            background: #f0f4f8;
-            padding: 16px;
-            text-align: center;
-            border-radius: 8px;
+            display: flex;
+            border: 2px solid #000;
+            width: 90%;
+            margin-bottom: 4px;
         }
-
         .inv-total-label {
-            font-size: 12px;
-            color: #555;
+            width: 40%;
+            padding: 10px;
+            text-align: center;
+            font-size: 16px;
+            letter-spacing: 4px;
+            border-right: 1px solid #000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
         }
-
         .inv-total-price {
-            font-size: 28px;
+            width: 60%;
+            padding: 10px;
+            text-align: center;
+            font-size: 22px;
             font-weight: bold;
-            color: #000;
-            margin-top: 4px;
+        }
+        .inv-tax-note {
+            text-align: right;
+            font-size: 11px;
+            width: 90%;
+            margin-bottom: 20px;
         }
 
-        /* 右側：自社情報（テンプレ） */
+        /* 詳細情報ライン */
+        .inv-info-line {
+            display: flex;
+            align-items: center;
+            border-bottom: 1px solid #000;
+            padding: 6px 0;
+            font-size: 13px;
+            margin-bottom: 4px;
+        }
+        .inv-info-line-label {
+            width: 100px;
+            letter-spacing: 2px;
+        }
+        .inv-info-line-val {
+            flex: 1;
+        }
+
+        /* --- 自社情報 --- */
         .inv-company {
             width: 40%;
             font-size: 13px;
             line-height: 1.6;
+            text-align: center;
+            padding-top: 50px;
+            position: relative;
+        }
+        .inv-company-name {
+            font-size: 18px;
+            letter-spacing: 4px;
+            margin-bottom: 8px;
+        }
+        .inv-company-address {
+            margin-bottom: 4px;
         }
 
-        .inv-company h3 {
-            font-size: 16px;
-            font-weight: bold;
-            margin: 0 0 8px 0;
-        }
-
-        .inv-company div {
-            font-size: 13px;
-            line-height: 1.8;
-        }
-
-        /* テーブル */
+        /* --- テーブル --- */
         table.inv-table {
             width: 100%;
             border-collapse: collapse;
+            border: 2px solid #000;
             margin-bottom: 32px;
         }
-
         .inv-table th,
         .inv-table td {
-            border: 1px solid #ccc;
-            padding: 12px 8px;
-            font-size: 14px;
+            border: 1px solid #000;
+            padding: 8px;
+            font-size: 13px;
         }
-
         .inv-table th {
-            background: #f8f9fa;
-            font-weight: bold;
+            text-align: center;
+            letter-spacing: 4px;
+            font-weight: normal;
+            border-bottom: 2px solid #000;
+        }
+        .inv-table td.center {
             text-align: center;
         }
-
-        .inv-table td.qty,
+        .inv-table td.right {
+            text-align: right;
+        }
+        .inv-table td.qty {
+            text-align: center;
+        }
         .inv-table td.price {
             text-align: right;
         }
-
-        /* 備考と振込先 */
-        .inv-footer-info {
-            display: flex;
-            gap: 20px;
+        
+        /* 15行固定にするためのスタイル */
+        .inv-table tbody tr {
+            height: 32px;
         }
 
-        .inv-info-box {
-            flex: 1;
-            border: 1px solid #ccc;
-            padding: 16px;
-            border-radius: 4px;
-            font-size: 13px;
-            white-space: pre-wrap;
+        /* まとめ行 */
+        .summary-row td {
+            border-top: 1px solid #000;
         }
-
-        .inv-info-title {
-            font-weight: bold;
-            border-bottom: 1px solid #eee;
-            padding-bottom: 4px;
-            margin-bottom: 8px;
-        }
-
-        /* サイン画像エリア */
-        .inv-signature-box {
-            margin-top: 16px;
-            display: flex;
-            flex-direction: column;
-            align-items: flex-end;
-        }
-
-        .inv-sig-label {
-            font-size: 13px;
-            margin-bottom: 8px;
-            margin-right: 40px;
-        }
-
-        .inv-sig-img {
-            max-width: 200px;
-            max-height: 80px;
-            border-bottom: 1px solid #000;
-            padding-bottom: 4px;
+        .summary-label {
+            text-align: center;
+            letter-spacing: 8px;
         }
 
         @media print {
@@ -264,19 +271,19 @@
 
         /* Editable row controls */
         .inv-table input {
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            padding: 6px 8px;
+            border: 1px solid transparent;
+            padding: 4px 6px;
             font-size: 13px;
-            background: #fafbfc;
+            background: transparent;
             width: 100%;
             box-sizing: border-box;
+            font-family: inherit;
         }
 
         .inv-table input:focus {
             outline: none;
-            border-color: #2563eb;
-            background: #fff;
+            border-color: #ccc;
+            background: #fafbfc;
         }
 
         .row-delete-btn {
@@ -349,7 +356,10 @@
     </div>
 
     <div class="action-buttons mt-3">
-        <button class="btn btn-primary" onclick="generatePDF()" style="flex:1;">
+        <button class="btn btn-secondary" onclick="saveEstimateItems()" style="flex:1; margin-right:8px;" id="saveEstBtn">
+            💾 内容を保存
+        </button>
+        <button class="btn btn-primary" onclick="generatePDF()" style="flex:2;">
             📄 PDFを生成 / 共有
         </button>
     </div>
@@ -357,83 +367,102 @@
     <!-- PDF化される領域 -->
     <div class="invoice-container" id="invoice-doc">
 
-        <div class="inv-header">
-            <div class="inv-title"
-                style="background:#2563eb; color:#fff; display:inline-block; padding:4px 20px; letter-spacing:8px;">御見積書
-            </div>
-            <div class="inv-date">発行日: <span id="out-date">-</span></div>
-        </div>
-
-        <div
-            style="font-size:18px; font-weight:700; margin:12px 0 16px; border-bottom:2px solid #333; padding-bottom:6px;">
-            <span id="out-customer-name">〇〇 〇〇</span> 様
+        <div class="inv-title-container">
+            <div class="inv-title">御見積書</div>
+            <div class="inv-date"><span id="out-date">2025年10月16日</span></div>
         </div>
 
         <div class="inv-top-wrapper">
-            <div class="inv-customer" style="border:1px solid #ccc; padding:16px; border-radius:4px; line-height:1.9;">
-                <div style="margin-bottom:12px; font-size:13px;">平素は格別のお引き立てを賭り厚く御礼申し上げます。下記の通り御見積申し上げます。</div>
-                <table style="width:100%; border:none; font-size:13px;">
-                    <tr>
-                        <td style="border:none; padding:2px 0; width:80px; color:#888;">発行日</td>
-                        <td style="border:none; padding:2px 0;" id="out-issue-date">-</td>
-                    </tr>
-                    <tr>
-                        <td style="border:none; padding:2px 0; color:#888;">有効期限</td>
-                        <td style="border:none; padding:2px 0;">発行日から30日</td>
-                    </tr>
-                    <tr>
-                        <td style="border:none; padding:2px 0; color:#888;">件名</td>
-                        <td style="border:none; padding:2px 0;" id="out-job-name">-</td>
-                    </tr>
-                </table>
-                <div class="inv-total-box" style="margin-top:12px;">
-                    <div class="inv-total-label">御見積金額（税込）</div>
-                    <div class="inv-total-price">￥<span id="out-total-price">0</span>-</div>
+            <div class="inv-customer">
+                <div class="inv-customer-name-wrapper">
+                    <span id="out-customer-name">特別養護老人ホーム<br>アムールうずまさ</span><span style="float:right;">様</span>
+                </div>
+                <div class="inv-greeting">下記の通り御見積り申し上げます。</div>
+                
+                <div class="inv-total-box">
+                    <div class="inv-total-label">合計金額</div>
+                    <div class="inv-total-price">￥<span id="out-total-price">163,020</span></div>
+                </div>
+                <div class="inv-tax-note">（税込）</div>
+
+                <div class="inv-info-line">
+                    <div class="inv-info-line-label">担当者様：</div>
+                    <div class="inv-info-line-val"><input type="text" id="out-pic" value="" placeholder="シマダ 様" style="border:none; border-bottom:1px solid #ccc; font-family:inherit;"></div>
+                </div>
+                <div class="inv-info-line">
+                    <div class="inv-info-line-label">収集場所：</div>
+                    <div class="inv-info-line-val"><input type="text" id="out-address" value="" placeholder="京都市右京区..." style="border:none; border-bottom:1px solid #ccc; font-family:inherit; width:100%;"></div>
+                </div>
+                <div class="inv-info-line">
+                    <div class="inv-info-line-label">収集期間：</div>
+                    <div class="inv-info-line-val"><input type="text" id="out-period" value="" style="border:none; border-bottom:1px solid #ccc; font-family:inherit; width:100%;"></div>
+                </div>
+                <div class="inv-info-line">
+                    <div class="inv-info-line-label">見積有効期限：</div>
+                    <div class="inv-info-line-val"><input type="text" id="out-validity" value="発行日より3か月" style="border:none; border-bottom:1px solid #ccc; font-family:inherit; width:100%;"></div>
                 </div>
             </div>
 
             <div class="inv-company">
-                <img id="out-company-logo" src="" alt=""
-                    style="max-width:120px; max-height:60px; margin-bottom:8px; display:none;">
-                <h3 id="out-company-name">株式会社未設定</h3>
-                <div id="out-company-address">住所未設定</div>
-                <div>TEL: <span id="out-company-phone">-</span></div>
-                <div style="margin-top: 4px;">登録番号: <span id="out-company-invoice">-</span></div>
-                <img id="out-company-stamp" src="" alt=""
-                    style="max-width:80px; max-height:80px; margin-top:8px; opacity:0.85; display:none;">
+                <div class="inv-company-name" id="out-company-name">株式会社　山　文</div>
+                <div class="inv-company-address" id="out-company-address">京都市伏見区深草西浦町2丁目61番地</div>
+                <div class="inv-company-address">代表取締役　山本　和広</div>
+                <div>TEL : <span id="out-company-phone">075-643-3456</span></div>
+                <div>FAX : <span id="out-company-fax">075-643-3455</span></div>
+                <!-- 登録番号などはデザインにないが、設定があれば裏に持っておくか小さく表示 -->
+                <div style="margin-top: 4px; font-size: 10px; display:none;">登録番号: <span id="out-company-invoice">-</span></div>
+                <img id="out-company-stamp" src="" alt="" style="max-width:80px; max-height:80px; position:absolute; right:10px; top:40px; opacity:0.85; display:none;">
             </div>
         </div>
+
+        <datalist id="item-presets">
+            <option value="産業廃棄物処理費（４ｔ）"></option>
+            <option value="人件費"></option>
+            <option value="収集運搬費"></option>
+            <option value="マニフェスト"></option>
+            <option value="リサイクル運搬料（洗濯機・ＴＶ・衣類乾燥機）"></option>
+            <option value="不用品回収・運搬費一式"></option>
+            <option value="金額調整"></option>
+        </datalist>
 
         <table class="inv-table" id="inv-items-table">
             <thead>
                 <tr>
-                    <th style="width: 40%;">項目・品目</th>
-                    <th style="width: 10%;">数量</th>
-                    <th style="width: 15%;">単価</th>
-                    <th style="width: 20%;">金額 (円)</th>
-                    <th style="width: 5%;" class="row-delete-btn"></th>
+                    <th style="width: 40%;">品　　目</th>
+                    <th style="width: 15%;">数　量</th>
+                    <th style="width: 15%;">単　価</th>
+                    <th style="width: 15%;">金　額</th>
+                    <th style="width: 15%;">備　考<span class="row-delete-btn" style="float:right; opacity:0;">✕</span></th>
                 </tr>
             </thead>
-            <tbody id="out-table-body"></tbody>
+            <tbody id="out-table-body">
+                <!-- Rows will be injected here. Fixed 10 rows minimum visually. -->
+            </tbody>
+            <tbody id="out-summary-body">
+                <tr class="summary-row">
+                    <td colspan="2" class="summary-label">小計</td>
+                    <td></td>
+                    <td class="price" id="out-subtotal">0</td>
+                    <td></td>
+                </tr>
+                <tr class="summary-row">
+                    <td colspan="2" class="summary-label">消費税</td>
+                    <td class="center">10 %</td>
+                    <td class="price" id="out-tax">0</td>
+                    <td></td>
+                </tr>
+                <tr class="summary-row">
+                    <td colspan="2" class="summary-label" style="border-bottom: 2px solid #000;">合　　計</td>
+                    <td style="border-bottom: 2px solid #000;"></td>
+                    <td class="price" id="out-total-bottom" style="border-bottom: 2px solid #000;">0</td>
+                    <td style="border-bottom: 2px solid #000;"></td>
+                </tr>
+            </tbody>
         </table>
 
         <div class="add-row-bar" id="addRowBar">
-            <button onclick="addItemRow('', 1, 0)">＋ 行を追加</button>
+            <button onclick="addItemRow('', 1, 0, '式', '')">＋ 行を追加</button>
         </div>
-
-        <!-- 小計・消費税・合計 -->
-        <table class="inv-table" style="width:50%; margin-left:auto; margin-top:0;">
-            <tbody id="out-summary-body"></tbody>
-        </table>
-
-        <div style="margin-top:16px; border:1px solid #ccc;">
-            <div
-                style="padding:6px 12px; font-weight:bold; background:#f8f9fa; border-bottom:1px solid #ccc; font-size:13px;">
-                備考・作業環境等</div>
-            <div style="padding:10px 12px; font-size:13px; min-height:30px;" id="out-notes">特になし</div>
-        </div>
-
-
 
         <!-- サイン印字エリア -->
         <div class="inv-signature-box" id="sig-container" style="display: none;">
@@ -496,22 +525,35 @@
                 const job = await RyubeeAPI.fetchJob(jobId);
 
                 // ヘッダー・宛名情報
-                const today = new Date().toLocaleDateString('ja-JP');
-                document.getElementById('out-date').textContent = today;
-                if (document.getElementById('out-issue-date')) {
-                    document.getElementById('out-issue-date').textContent = today;
-                }
-                document.getElementById('out-customer-name').textContent = job.customer_name || 'お客様';
-                document.getElementById('out-job-name').textContent = job.job_name || '不用品回収作業';
-                document.getElementById('out-notes').textContent = job.notes || '-';
+                const today = new Date();
+                const todayStr = `${today.getFullYear()}年${today.getMonth() + 1}月${today.getDate()}日`;
+                document.getElementById('out-date').textContent = todayStr;
+                
+                const rawName = job.customer_name || 'お客様';
+                // Convert spaces to br if needed or just display as is
+                document.getElementById('out-customer-name').innerHTML = utils.escapeHtml(rawName).replace(/\s/g, '<br>');
+                document.getElementById('out-address').value = job.address || '';
+
+                let fd = {};
+                try { fd = JSON.parse(job.form_data || "{}"); } catch(e) {}
+
+                if (fd.pic_name) document.getElementById('out-pic').value = fd.pic_name;
+                if (fd.period) document.getElementById('out-period').value = fd.period;
+                if (fd.validity) document.getElementById('out-validity').value = fd.validity;
 
                 // 明細テーブル作成
-                const priceTotal = job.price_total || 0;
-                const subtotal = Math.round(priceTotal / 1.1);
+                if (fd.estimate_items && fd.estimate_items.length > 0) {
+                    fd.estimate_items.forEach(item => {
+                        addItemRow(item.description, item.quantity, item.unit_price, item.unit || '', item.notes || '');
+                    });
+                } else {
+                    const priceTotal = job.price_total || 0;
+                    const subtotal = Math.round(priceTotal / 1.1);
+                    addItemRow('不用品回収・運搬費一式', 1, subtotal, '式', '');
+                }
 
-                addItemRow('不用品回収・運搬費一式', 1, subtotal);
-
-                // サインの反映
+                // 10行に満たない場合は空行を追加して見た目を整える
+                fillEmptyRows();
                 if (job.signature_data) {
                     const sigImg = document.getElementById('out-signature');
                     sigImg.src = job.signature_data;
@@ -527,27 +569,66 @@
         // ── Editable Row System ──
         let rowCounter = 0;
 
-        function addItemRow(name, qty, unitPrice) {
+        function addItemRow(name, qty, unitPrice, unit, notes) {
             rowCounter++;
             const rid = 'row-' + rowCounter;
             const tbody = document.getElementById('out-table-body');
+            
+            // Remove empty filler rows if any
+            document.querySelectorAll('.empty-filler-row').forEach(e => e.remove());
+
             const tr = document.createElement('tr');
             tr.id = rid;
+            tr.className = "item-row";
+            // 数量と単位を一つのカラムに表示させるため、inputを2つ並べる
+            const unitVal = unit || '';
+            const notesVal = notes || '';
             tr.innerHTML = `
-                <td><input type="text" value="${escAttr(name)}" oninput="recalcAll()" placeholder="品目名"></td>
-                <td><input type="number" value="${qty}" min="1" style="width:60px; text-align:right;" oninput="recalcAll()"></td>
-                <td><input type="number" value="${unitPrice}" style="text-align:right;" oninput="recalcAll()"></td>
-                <td class="price" id="${rid}-amt">0</td>
-                <td style="text-align:center;"><button class="row-delete-btn" onclick="deleteRow('${rid}')" title="削除">✕</button></td>
+                <td><input type="text" list="item-presets" value="${escAttr(name)}" oninput="recalcAll()" placeholder="品目名" class="desc-input"></td>
+                <td style="display:flex; align-items:center; justify-content:center; height:100%;">
+                    <input type="number" value="${qty}" style="width:40px; text-align:right;" oninput="recalcAll()" class="qty-input">
+                    <input type="text" value="${escAttr(unitVal)}" placeholder="単位" style="width:30px; text-align:center; margin-left:4px;" class="unit-input">
+                </td>
+                <td><input type="number" value="${unitPrice}" style="text-align:right;" oninput="recalcAll()" class="price-input"></td>
+                <td class="price amt-cell" style="text-align:right;">0</td>
+                <td style="display:flex; align-items:center; height:100%;">
+                    <input type="text" value="${escAttr(notesVal)}" placeholder="備考" style="width:100%;" class="notes-input">
+                    <button class="row-delete-btn" onclick="deleteRow('${rid}')" title="削除">✕</button>
+                </td>
             `;
             tbody.appendChild(tr);
             recalcAll();
+            fillEmptyRows();
+        }
+
+        function fillEmptyRows() {
+            const tbody = document.getElementById('out-table-body');
+            const MIN_ROWS = 10;
+            const currentRows = document.querySelectorAll('.item-row').length;
+            
+            // Remove existing fillers
+            document.querySelectorAll('.empty-filler-row').forEach(e => e.remove());
+
+            const rowsToAdd = MIN_ROWS - currentRows;
+            for(let i=0; i<rowsToAdd; i++) {
+                const tr = document.createElement('tr');
+                tr.className = 'empty-filler-row';
+                tr.innerHTML = `
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                    <td></td>
+                `;
+                tbody.appendChild(tr);
+            }
         }
 
         function deleteRow(rid) {
             const row = document.getElementById(rid);
             if (row) row.remove();
             recalcAll();
+            fillEmptyRows();
         }
 
         function escAttr(s) {
@@ -555,17 +636,20 @@
         }
 
         function recalcAll() {
-            const rows = document.querySelectorAll('#out-table-body tr');
+            const rows = document.querySelectorAll('.item-row');
             let subtotal = 0;
 
             rows.forEach(tr => {
-                const inputs = tr.querySelectorAll('input');
-                if (inputs.length < 3) return;
-                const qty = parseFloat(inputs[1].value) || 0;
-                const unit = parseFloat(inputs[2].value) || 0;
+                const qtyInput = tr.querySelector('.qty-input');
+                const priceInput = tr.querySelector('.price-input');
+                if (!qtyInput || !priceInput) return;
+                
+                const qty = parseFloat(qtyInput.value) || 0;
+                const unit = parseFloat(priceInput.value) || 0;
                 const amt = Math.round(qty * unit);
                 subtotal += amt;
-                const amtCell = tr.querySelector('td.price');
+                
+                const amtCell = tr.querySelector('.amt-cell');
                 if (amtCell) amtCell.textContent = amt.toLocaleString();
             });
 
@@ -576,27 +660,52 @@
             document.getElementById('out-total-price').textContent = total.toLocaleString();
 
             // Update summary table
-            const summaryBody = document.getElementById('out-summary-body');
-            if (summaryBody) {
-                summaryBody.innerHTML = `
-                    <tr>
-                        <td style="padding:8px; font-weight:700; background:#f8f9fa; border:1px solid #ccc;">小計</td>
-                        <td style="padding:8px; text-align:right; border:1px solid #ccc;">¥${subtotal.toLocaleString()}円</td>
-                    </tr>
-                    <tr>
-                        <td style="padding:8px; font-weight:700; background:#f8f9fa; border:1px solid #ccc;">消費税</td>
-                        <td style="padding:8px; text-align:right; border:1px solid #ccc;">¥${taxAmt.toLocaleString()}円</td>
-                    </tr>
-                    <tr>
-                        <td style="padding:8px; font-weight:800; background:#f0f4ff; border:1px solid #ccc;">合計</td>
-                        <td style="padding:8px; text-align:right; font-weight:800; font-size:15px; border:1px solid #ccc;">¥${total.toLocaleString()}円</td>
-                    </tr>
-                    <tr>
-                        <td colspan="2" style="padding:4px 8px; font-size:11px; color:#888; border:1px solid #eee;">
-                            10%対象 ¥${subtotal.toLocaleString()}円 ／ 消費税額 ¥${taxAmt.toLocaleString()}円
-                        </td>
-                    </tr>
-                `;
+            document.getElementById('out-subtotal').textContent = subtotal.toLocaleString();
+            document.getElementById('out-tax').textContent = taxAmt.toLocaleString();
+            document.getElementById('out-total-bottom').textContent = total.toLocaleString();
+        }
+
+        async function saveEstimateItems() {
+            const btn = document.getElementById('saveEstBtn');
+            const origText = btn.textContent;
+            btn.disabled = true;
+            btn.textContent = "保存中...";
+
+            const rows = document.querySelectorAll('.item-row');
+            const items = [];
+            rows.forEach(tr => {
+                const desc = tr.querySelector('.desc-input')?.value.trim();
+                const qty = parseFloat(tr.querySelector('.qty-input')?.value) || 0;
+                const unit = tr.querySelector('.unit-input')?.value.trim() || '式';
+                const price = parseFloat(tr.querySelector('.price-input')?.value) || 0;
+                const notes = tr.querySelector('.notes-input')?.value.trim() || '';
+                
+                if (desc) {
+                    items.push({ description: desc, quantity: qty, unit_price: price, unit: unit, notes: notes });
+                }
+            });
+
+            const picName = document.getElementById('out-pic').value;
+            const period = document.getElementById('out-period').value;
+            const validity = document.getElementById('out-validity').value;
+            
+            try {
+                const job = await RyubeeAPI.fetchJob(jobId);
+                let fd = {};
+                try { fd = JSON.parse(job.form_data || "{}"); } catch (e) {}
+                
+                fd.estimate_items = items;
+                fd.pic_name = picName;
+                fd.period = period;
+                fd.validity = validity;
+                
+                await RyubeeAPI.updateJob(jobId, { form_data: JSON.stringify(fd) });
+                alert("✅ 見積書の内容を保存しました！\n（請求書を発行する際、この項目が引き継がれます）");
+            } catch (err) {
+                alert("保存に失敗しました: " + err.message);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = origText;
             }
         }
 
@@ -609,6 +718,8 @@
             // Hide edit controls for PDF
             document.getElementById('addRowBar').style.display = 'none';
             document.querySelectorAll('.row-delete-btn').forEach(b => b.style.display = 'none');
+            const saveBtn = document.getElementById('saveEstBtn');
+            if (saveBtn) saveBtn.style.display = 'none';
 
             // Freeze inputs to plain text
             const allInputs = element.querySelectorAll('input');
@@ -616,11 +727,29 @@
             allInputs.forEach(inp => {
                 savedData.push({ el: inp, parent: inp.parentNode, val: inp.value });
                 const span = document.createElement('span');
-                span.textContent = inp.type === 'number' ? Number(inp.value).toLocaleString() : inp.value;
+                
+                let valStr = inp.value;
+                if(inp.type === 'number') {
+                    valStr = Number(inp.value).toLocaleString();
+                }
+                span.innerHTML = valStr;
                 span.style.fontSize = '13px';
+                
+                // Inherit alignment and bold
                 if (inp.style.textAlign === 'right') span.style.textAlign = 'right';
+                if (inp.style.textAlign === 'center') span.style.textAlign = 'center';
+                if (inp.style.fontWeight === 'bold') span.style.fontWeight = 'bold';
+                
                 inp.parentNode.replaceChild(span, inp);
                 span._origInput = inp;
+            });
+
+            // Adjust borders for PDF
+            const bordersToRestore = [];
+            element.querySelectorAll('.inv-info-line-val span').forEach(s => {
+                s.style.display = 'inline-block';
+                s.style.width = '100%';
+                s.style.borderBottom = '1px solid #ccc';
             });
 
             const opt = {
@@ -640,6 +769,8 @@
                 });
                 document.getElementById('addRowBar').style.display = '';
                 document.querySelectorAll('.row-delete-btn').forEach(b => b.style.display = '');
+                const saveBtn = document.getElementById('saveEstBtn');
+                if (saveBtn) saveBtn.style.display = '';
             };
 
             html2pdf().set(opt).from(element).outputPdf('blob').then((pdfBlob) => {

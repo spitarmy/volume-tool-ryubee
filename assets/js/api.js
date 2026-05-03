@@ -163,10 +163,11 @@ const RyubeeAPI = {
 
   // ── Jobs ────────────────────────────────────────────────────
 
-  async fetchJobs({ status = null, q = null } = {}) {
+  async fetchJobs({ status = null, q = null, customer_id = null } = {}) {
     const params = new URLSearchParams();
     if (status) params.set("status", status);
     if (q) params.set("q", q);
+    if (customer_id) params.set("customer_id", customer_id);
     const qs = params.toString();
     return apiFetch(`/v1/jobs${qs ? "?" + qs : ""}`);
   },
@@ -294,10 +295,10 @@ const RyubeeAPI = {
     });
   },
 
-  async generateMonthlyInvoices(month, dueDate = null) {
+  async generateMonthlyInvoices(month, dueDate = null, closingDay = null) {
     return apiFetch("/v1/invoices/generate-monthly", {
       method: "POST",
-      body: JSON.stringify({ month, due_date: dueDate }),
+      body: JSON.stringify({ month, due_date: dueDate, closing_day: closingDay ? parseInt(closingDay) : null }),
     });
   },
 
@@ -357,6 +358,12 @@ const RyubeeAPI = {
     return apiFetch(`/v1/jobs/${jobId}`, {
       method: "PUT",
       body: JSON.stringify({ pipeline_stage: pipelineStage }),
+    });
+  },
+
+  async archiveAndSubscribeJob(jobId) {
+    return apiFetch(`/v1/jobs/${jobId}/archive-and-subscribe`, {
+      method: "PUT"
     });
   },
 
@@ -482,11 +489,12 @@ const RyubeeAPI = {
 
   // ── Bank (銀行入金取込) ─────────────────────────────────────
 
-  async uploadBankCSV(file) {
+  async uploadBankCSV(file, bankType = "kyoto") {
     const formData = new FormData();
     formData.append("file", file);
-    const token = localStorage.getItem("token");
-    const resp = await fetch(`${BASE}/v1/bank/upload`, {
+    formData.append("bank_type", bankType);
+    const token = localStorage.getItem("ryubee_token");
+    const resp = await fetch(`${API_BASE}/v1/bank/upload`, {
       method: "POST",
       headers: { Authorization: `Bearer ${token}` },
       body: formData,

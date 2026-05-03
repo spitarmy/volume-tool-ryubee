@@ -84,6 +84,7 @@ class InvoiceOut(BaseModel):
     total_amount: int
     tax_amount: int
     status: str
+    invoice_type: str = "mixed"
     due_date: str | None
     sent_at: str | None
     notes: str
@@ -99,6 +100,7 @@ class InvoiceOut(BaseModel):
 class MonthlyGenerateRequest(BaseModel):
     month: str  # YYYY-MM
     due_date: str | None = None
+    closing_day: int | None = None
 
 
 class CustomCustomerInvoiceData(BaseModel):
@@ -149,6 +151,7 @@ def _invoice_to_out(inv: models.Invoice) -> InvoiceOut:
         total_amount=inv.total_amount,
         tax_amount=inv.tax_amount,
         status=inv.status,
+        invoice_type=inv.invoice_type,
         due_date=inv.due_date,
         sent_at=inv.sent_at,
         notes=inv.notes,
@@ -608,9 +611,10 @@ def generate_monthly_invoices(
     current_user: models.User = Depends(auth.get_current_user),
     db: Session = Depends(get_db),
 ):
-    """指定月の産廃マニフェスト（重量課金）に基づいて請求書を一括生成"""
+    """指定月の産廃マニフェスト等に基づいて請求書を一括生成（スポット・定期分離対応）"""
     company_id = current_user.company_id
     month = body.month  # YYYY-MM
+    closing_day_req = body.closing_day
 
     # この月に発行された産廃マニフェストを取得
     customers = db.query(models.Customer).filter_by(company_id=company_id).all()
@@ -621,16 +625,15 @@ def generate_monthly_invoices(
 
     manifests = db.query(models.Manifest).filter(
         models.Manifest.customer_id.in_(c_ids),
-        models.Manifest.issue_date.like(f"{month}%"),
+        models.Manifest.issue_date.like(f"{month}%")
     ).all()
 
-    # この月に完了した一般案件（産廃マニフェスト以外）も取得
+    # 一般案件取得
     jobs = db.query(models.Job).filter(
         models.Job.customer_id.in_(c_ids),
         models.Job.work_date.like(f"{month}%")
     ).all()
 
-    # 顧客ごとにグルーピング
     from collections import defaultdict
     cust_manifests: dict[str, list[models.Manifest]] = defaultdict(list)
     cust_jobs: dict[str, list[models.Job]] = defaultdict(list)
@@ -639,18 +642,13 @@ def generate_monthly_invoices(
     for j in jobs:
         cust_jobs[j.customer_id].append(j)
 
-    # 処理対象の顧客IDリスト
     target_cust_ids = set(list(cust_manifests.keys()) + list(cust_jobs.keys()))
     for c in customers:
         if c.contract_type == "subscription":
             target_cust_ids.add(c.id)
 
     created = []
-    
-    # 前月計算ロジック
-    import datetime
-    import calendar
-    import json
+    import datetime, calendar, json
     from dateutil.relativedelta import relativedelta
     try:
         curr_d = datetime.datetime.strptime(month, "%Y-%m").date()
@@ -659,103 +657,85 @@ def generate_monthly_invoices(
     except Exception:
         prev_month_str = ""
 
-    for cust_id in target_cust_ids:
-        # 既存請求書チェック（重複防止）
-        existing = db.query(models.Invoice).filter_by(
-            company_id=company_id, customer_id=cust_id, month=month
+    def _get_carryover(cust_id: str, inv_type: str) -> int:
+        if not prev_month_str: return 0
+        prev = db.query(models.Invoice).options(joinedload(models.Invoice.payments)).filter_by(
+            company_id=company_id, customer_id=cust_id, month=prev_month_str, invoice_type=inv_type
         ).first()
-        if existing:
+        if prev:
+            paid = sum(p.amount for p in prev.payments)
+            if prev.total_amount - paid > 0:
+                return prev.total_amount - paid
+        return 0
+
+    for cust_id in target_cust_ids:
+        c = c_map.get(cust_id)
+        if not c: continue
+        
+        c_closing_day = c.billing_closing_day or 31
+        if closing_day_req is not None and c_closing_day != closing_day_req:
             continue
 
-        items = []
-        sales_total = 0
-        
-        # 産廃マニフェスト分
+        # スポット集計
+        spot_items = []
+        spot_sales = 0
         for m in cust_manifests.get(cust_id, []):
-            if m.weight_kg and m.unit_price_per_kg:
-                amt = int(m.weight_kg * m.unit_price_per_kg)
-            else:
-                amt = 0
-            # weight_kgが設定されているもののみ請求対象とする
+            amt = int((m.weight_kg or 0) * (m.unit_price_per_kg or 0))
             if amt > 0:
-                items.append(models.InvoiceItem(
+                spot_items.append(models.InvoiceItem(
                     description=f"産廃: {m.waste_type or '廃棄物'} ({m.weight_kg or 0}kg) [No.{m.manifest_number}]",
-                    quantity=m.weight_kg or 0,
-                    unit="kg",
-                    unit_price=m.unit_price_per_kg or 0,
-                    amount=amt,
-                    manifest_id=m.id,
+                    quantity=m.weight_kg or 0, unit="kg", unit_price=m.unit_price_per_kg or 0,
+                    amount=amt, manifest_id=m.id,
                 ))
-                sales_total += amt
+                spot_sales += amt
 
-        # 一般案件分
         for j in cust_jobs.get(cust_id, []):
             j_amt = j.final_price or j.estimated_price or j.price_total or 0
             if j_amt > 0:
-                items.append(models.InvoiceItem(
-                    description=f"案件: {j.job_name or '回収作業'}",
-                    quantity=1,
-                    unit="式",
-                    unit_price=j_amt,
-                    amount=j_amt,
+                spot_items.append(models.InvoiceItem(
+                    description=f"案件: {j.job_name or '回収作業'}", quantity=1, unit="式", unit_price=j_amt, amount=j_amt,
                 ))
-                sales_total += j_amt
-
+                spot_sales += j_amt
                 if j.discount_amount and j.discount_amount > 0:
-                    items.append(models.InvoiceItem(
-                        description="値引き", quantity=1, unit="式",
-                        unit_price=-j.discount_amount, amount=-j.discount_amount
-                    ))
-                    sales_total -= j.discount_amount
-
+                    spot_items.append(models.InvoiceItem(description="値引き", quantity=1, unit="式", unit_price=-j.discount_amount, amount=-j.discount_amount))
+                    spot_sales -= j.discount_amount
                 if j.surcharge_amount and j.surcharge_amount > 0:
-                    items.append(models.InvoiceItem(
-                        description="追加料金", quantity=1, unit="式",
-                        unit_price=j.surcharge_amount, amount=j.surcharge_amount
-                    ))
-                    sales_total += j.surcharge_amount
+                    spot_items.append(models.InvoiceItem(description="追加料金", quantity=1, unit="式", unit_price=j.surcharge_amount, amount=j.surcharge_amount))
+                    spot_sales += j.surcharge_amount
 
-        # 一般廃棄物（定期契約）の固定月額・日割り計算
-        c = c_map.get(cust_id)
-        if c and c.contract_type == "subscription":
-            try:
-                fd = json.loads(c.form_data) if c.form_data else {}
-                pricing_list = fd.get("pricing_list", [])
-                end_date_str = fd.get("collection_end_date", "")
-            except:
-                pricing_list = []
-                end_date_str = ""
+        # 定期集計
+        sub_items = []
+        sub_sales = 0
+        if c.contract_type == "subscription":
+            fd = {}
+            try: fd = json.loads(c.form_data) if c.form_data else {}
+            except: pass
+            pricing_list = fd.get("pricing_list", [])
+            end_date_str = fd.get("collection_end_date", "")
 
             if pricing_list:
-                closing_day = c.billing_closing_day or 31
                 try:
                     c_year, c_month = int(month[:4]), int(month[5:7])
-                    if closing_day >= 28:
+                    if c_closing_day >= 28:
                         _, last_day = calendar.monthrange(c_year, c_month)
                         p_start = datetime.date(c_year, c_month, 1)
                         p_end = datetime.date(c_year, c_month, last_day)
                     else:
-                        p_end = datetime.date(c_year, c_month, closing_day)
-                        if c_month == 1:
-                            p_start = datetime.date(c_year - 1, 12, closing_day + 1)
-                        else:
-                            p_start = datetime.date(c_year, c_month - 1, closing_day + 1)
+                        p_end = datetime.date(c_year, c_month, c_closing_day)
+                        if c_month == 1: p_start = datetime.date(c_year - 1, 12, c_closing_day + 1)
+                        else: p_start = datetime.date(c_year, c_month - 1, c_closing_day + 1)
                 except Exception:
                     p_start, p_end = None, None
 
                 end_date = None
                 if end_date_str:
-                    try:
-                        end_date = datetime.datetime.strptime(end_date_str, "%Y-%m-%d").date()
-                    except:
-                        pass
+                    try: end_date = datetime.datetime.strptime(end_date_str, "%Y-%m-%d").date()
+                    except: pass
 
                 if p_start and p_end:
                     should_charge_fixed = True
                     ratio = 1.0
-
-                    if end_date and end_date < p_start:
-                        should_charge_fixed = False
+                    if end_date and end_date < p_start: should_charge_fixed = False
                     elif end_date and end_date <= p_end:
                         active_days = (end_date - p_start).days + 1
                         total_days = (p_end - p_start).days + 1
@@ -767,88 +747,84 @@ def generate_monthly_invoices(
                             if raw_price > 0:
                                 prorated = int(raw_price * ratio)
                                 desc = p.get("item", "定期回収諸費用")
-                                if ratio < 1.0:
-                                    desc += f" (日割: {p_start.strftime('%m/%d')}〜{end_date.strftime('%m/%d')})"
-                                
-                                items.append(models.InvoiceItem(
-                                    description=desc,
-                                    quantity=1,
-                                    unit=p.get("unit", "式"),
-                                    unit_price=prorated,
-                                    amount=prorated,
+                                if ratio < 1.0: desc += f" (日割: {p_start.strftime('%m/%d')}〜{end_date.strftime('%m/%d')})"
+                                sub_items.append(models.InvoiceItem(
+                                    description=desc, quantity=1, unit=p.get("unit", "式"), unit_price=prorated, amount=prorated,
                                 ))
-                                sales_total += prorated
+                                sub_sales += prorated
 
-        # 売上がなければスキップ（ただし繰越だけあるパターンは今回考慮外とする）
-        if sales_total <= 0:
-            continue
-
-        # 前月繰越の計算
-        carry_over = 0
-        if prev_month_str:
-            prev_inv = db.query(models.Invoice).options(joinedload(models.Invoice.payments)).filter_by(
-                company_id=company_id, customer_id=cust_id, month=prev_month_str
-            ).first()
-            if prev_inv:
-                paid = sum(p.amount for p in prev_inv.payments)
-                carry_over_calc = prev_inv.total_amount - paid
-                if carry_over_calc > 0:
-                    carry_over = carry_over_calc
-                    # 繰越項目として追加 (非課税扱いのため sales_totalには入れない)
-                    items.append(models.InvoiceItem(
-                        description="前回繰越額",
-                        quantity=1,
-                        unit="式",
-                        unit_price=carry_over,
-                        amount=carry_over,
-                    ))
-
-        tax = int(sales_total * 0.1)
-        # 最終請求額 = 当月売上 + 当月消費税 + 前回繰越額
-        grand_total = sales_total + tax + carry_over
+        # DB作成処理用インナーループ
+        to_create = [
+            ("spot", spot_sales, spot_items),
+            ("subscription", sub_sales, sub_items)
+        ]
 
         customer_fd = {}
-        if c_map.get(cust_id) and c_map.get(cust_id).form_data:
-            try:
-                customer_fd = json.loads(c_map.get(cust_id).form_data)
-            except:
-                pass
+        try: customer_fd = json.loads(c.form_data) if c.form_data else {}
+        except: pass
         persistent_note = customer_fd.get("persistent_invoice_note", "")
 
-        notes_text = f"【内訳】今回請求額: ¥{(sales_total+tax):,}, 前回繰越: ¥{carry_over:,}" if carry_over > 0 else "月次一括生成"
-        if persistent_note:
-            notes_text += f"\n\n{persistent_note}"
+        for itype, isales, iitems in to_create:
+            if isales <= 0: continue
+            
+            existing = db.query(models.Invoice).filter_by(
+                company_id=company_id, customer_id=cust_id, month=month, invoice_type=itype
+            ).first()
+            if existing: continue
 
-        inv = models.Invoice(
-            company_id=company_id,
-            customer_id=cust_id,
-            month=month,
-            total_amount=grand_total,
-            tax_amount=tax,
-            status="draft",
-            due_date=body.due_date or _auto_due_date(c_map[cust_id], month),
-            notes=notes_text,
-        )
-        db.add(inv)
-        db.flush()
+            # 前月繰越の計算 (invoice_type毎に見るか、mixedを見るか)
+            # 互換性のためmixedも見るべきだが、既存システムからの移行なので、とりあえずそのまま
+            prev_inv = db.query(models.Invoice).options(joinedload(models.Invoice.payments)).filter_by(
+                company_id=company_id, customer_id=cust_id, month=prev_month_str, invoice_type=itype
+            ).first()
+            if not prev_inv and itype == "spot": # 移行措置：過去のmixedはspotに寄せるなど…今回は両方確認
+                prev_inv = db.query(models.Invoice).options(joinedload(models.Invoice.payments)).filter_by(
+                    company_id=company_id, customer_id=cust_id, month=prev_month_str, invoice_type="mixed"
+                ).first()
+                if prev_inv: # mixedがあったら今回移行で一回だけ見る。しかし2つの請求書に二重計上を防ぐため、spot側だけで繰り越す
+                    pass
+            
+            carryover = 0
+            if prev_inv:
+                paid = sum(p.amount for p in prev_inv.payments)
+                if prev_inv.total_amount - paid > 0:
+                    carryover = prev_inv.total_amount - paid
+                    # mixedの場合、二重計上を防ぐために1度処理したら無視したいが、今回は簡易的に
+                    iitems.append(models.InvoiceItem(description="前回繰越額", quantity=1, unit="式", unit_price=carryover, amount=carryover))
 
-        for item in items:
-            item.invoice_id = inv.id
-            db.add(item)
+            tax = int(isales * 0.1)
+            grand_total = isales + tax + carryover
+            desc_prefix = "月次一括生成" if itype == "spot" else "定期一括生成"
+            notes_text = f"【内訳】今回請求額: ¥{(isales+tax):,}, 前回繰越: ¥{carryover:,}" if carryover > 0 else desc_prefix
+            if persistent_note: notes_text += f"\n\n{persistent_note}"
 
-        created.append(inv)
+            inv = models.Invoice(
+                company_id=company_id,
+                customer_id=cust_id,
+                month=month,
+                total_amount=grand_total,
+                tax_amount=tax,
+                status="draft",
+                invoice_type=itype,
+                due_date=body.due_date or _auto_due_date(c, month),
+                notes=notes_text,
+            )
+            db.add(inv)
+            db.flush()
+            for item in iitems:
+                item.invoice_id = inv.id
+                db.add(item)
+            created.append(inv)
 
     db.commit()
-
     result = []
     for inv in created:
         loaded = db.query(models.Invoice).options(
             joinedload(models.Invoice.items),
             joinedload(models.Invoice.payments),
-            joinedload(models.Invoice.customer),
+            joinedload(models.Invoice.customer)
         ).filter_by(id=inv.id).first()
         result.append(_invoice_to_out(loaded))
-
     return result
 
 
@@ -871,7 +847,8 @@ def generate_custom_subscriptions(
         existing = db.query(models.Invoice).filter(
             models.Invoice.company_id == company_id,
             models.Invoice.month == month,
-            models.Invoice.customer_id.in_(cust_ids)
+            models.Invoice.customer_id.in_(cust_ids),
+            models.Invoice.invoice_type.in_(["subscription", "mixed"])
         ).all()
         existing_map = {i.customer_id: i for i in existing}
 
@@ -887,7 +864,10 @@ def generate_custom_subscriptions(
 
         for cust_data in body.customers:
             cust_id = cust_data.customer_id
-            if cust_id in existing_map:
+            
+            existing_inv = existing_map.get(cust_id)
+            if existing_inv and existing_inv.status != "draft":
+                # すでに送信済み・入金済みの場合はスキップ
                 continue
                 
             c = c_map.get(cust_id)
@@ -941,18 +921,29 @@ def generate_custom_subscriptions(
             if persistent_note: notes_text += f"\n\n{persistent_note}"
             if cust_data.notes: notes_text += f"\n\n【特記事項】\n{cust_data.notes}"
 
-            inv = models.Invoice(
-                company_id=company_id,
-                customer_id=cust_id,
-                month=month,
-                total_amount=grand_total,
-                tax_amount=tax,
-                status="draft",
-                due_date=body.due_date or _auto_due_date(c, month),
-                notes=notes_text,
-            )
-            db.add(inv)
-            db.flush()
+            if existing_inv:
+                # 既存の明細を削除して上書き
+                db.query(models.InvoiceItem).filter_by(invoice_id=existing_inv.id).delete()
+                existing_inv.total_amount = grand_total
+                existing_inv.tax_amount = tax
+                existing_inv.due_date = body.due_date or _auto_due_date(c, month)
+                existing_inv.notes = notes_text
+                existing_inv.invoice_type = "subscription"
+                inv = existing_inv
+            else:
+                inv = models.Invoice(
+                    company_id=company_id,
+                    customer_id=cust_id,
+                    month=month,
+                    total_amount=grand_total,
+                    tax_amount=tax,
+                    status="draft",
+                    invoice_type="subscription",
+                    due_date=body.due_date or _auto_due_date(c, month),
+                    notes=notes_text,
+                )
+                db.add(inv)
+                db.flush()
 
             for item in items:
                 item.invoice_id = inv.id
@@ -1131,6 +1122,16 @@ def create_invoice_from_estimate(
     due_date_str = _auto_due_date(customer, month)
 
     tax = int(amount * 0.1)
+    form_data = {}
+    if job.form_data:
+        try:
+            form_data = json.loads(job.form_data)
+        except:
+            pass
+            
+    estimate_notes = form_data.get("estimate_notes", "")
+    inv_notes = estimate_notes if estimate_notes else f"案件「{job.job_name}」より変換"
+
     inv = models.Invoice(
         company_id=current_user.company_id,
         customer_id=customer_id,
@@ -1139,19 +1140,49 @@ def create_invoice_from_estimate(
         tax_amount=tax,
         status="draft",
         due_date=due_date_str,
-        notes=f"案件「{job.job_name}」より変換",
+        notes=inv_notes,
     )
     db.add(inv)
     db.flush()
 
-    db.add(models.InvoiceItem(
-        invoice_id=inv.id,
-        description=job.job_name or "業務委託",
-        quantity=1,
-        unit="式",
-        unit_price=amount,
-        amount=amount,
-    ))
+    estimate_items = form_data.get("estimate_items", [])
+    
+    if estimate_items:
+        items_subtotal = 0
+        for item in estimate_items:
+            qty = item.get("quantity", 1)
+            uprice = item.get("unit_price", 0)
+            item_amt = int(qty * uprice)
+            items_subtotal += item_amt
+            
+            db.add(models.InvoiceItem(
+                invoice_id=inv.id,
+                description=item.get("description", "業務委託"),
+                quantity=qty,
+                unit=item.get("unit", "式"),
+                unit_price=uprice,
+                amount=item_amt,
+            ))
+            
+        if items_subtotal != amount:
+            adj = amount - items_subtotal
+            db.add(models.InvoiceItem(
+                invoice_id=inv.id,
+                description="金額調整",
+                quantity=1,
+                unit="式",
+                unit_price=adj,
+                amount=adj,
+            ))
+    else:
+        db.add(models.InvoiceItem(
+            invoice_id=inv.id,
+            description=job.job_name or "業務委託",
+            quantity=1,
+            unit="式",
+            unit_price=amount,
+            amount=amount,
+        ))
 
     if job.discount_amount and job.discount_amount > 0:
         db.add(models.InvoiceItem(
@@ -1213,6 +1244,16 @@ def record_cash_collection(
     tax = int(amount * 0.1)
     total_with_tax = amount + tax
 
+    form_data = {}
+    if job.form_data:
+        try:
+            form_data = json.loads(job.form_data)
+        except:
+            pass
+
+    estimate_notes = form_data.get("estimate_notes", "")
+    inv_notes = estimate_notes if estimate_notes else f"案件「{job.job_name}」より変換 (現場現金回収)"
+
     inv = models.Invoice(
         company_id=current_user.company_id,
         customer_id=customer_id,
@@ -1221,19 +1262,49 @@ def record_cash_collection(
         tax_amount=tax,
         status="paid",  # 現金回収なのですぐにpaid
         due_date=due_date_str,
-        notes=f"案件「{job.job_name}」より変換 (現場現金回収)",
+        notes=inv_notes,
     )
     db.add(inv)
     db.flush()
 
-    db.add(models.InvoiceItem(
-        invoice_id=inv.id,
-        description=job.job_name or "業務委託",
-        quantity=1,
-        unit="式",
-        unit_price=amount,
-        amount=amount,
-    ))
+    estimate_items = form_data.get("estimate_items", [])
+    
+    if estimate_items:
+        items_subtotal = 0
+        for item in estimate_items:
+            qty = item.get("quantity", 1)
+            uprice = item.get("unit_price", 0)
+            item_amt = int(qty * uprice)
+            items_subtotal += item_amt
+            
+            db.add(models.InvoiceItem(
+                invoice_id=inv.id,
+                description=item.get("description", "業務委託"),
+                quantity=qty,
+                unit=item.get("unit", "式"),
+                unit_price=uprice,
+                amount=item_amt,
+            ))
+            
+        if items_subtotal != amount:
+            adj = amount - items_subtotal
+            db.add(models.InvoiceItem(
+                invoice_id=inv.id,
+                description="金額調整",
+                quantity=1,
+                unit="式",
+                unit_price=adj,
+                amount=adj,
+            ))
+    else:
+        db.add(models.InvoiceItem(
+            invoice_id=inv.id,
+            description=job.job_name or "業務委託",
+            quantity=1,
+            unit="式",
+            unit_price=amount,
+            amount=amount,
+        ))
 
     if job.discount_amount and job.discount_amount > 0:
         db.add(models.InvoiceItem(
@@ -1374,9 +1445,7 @@ async def send_invoice_email(
         if not smtp_user or not smtp_pass:
             raise HTTPException(400, "SMTP設定（メールサーバーのユーザー名・パスワード）が未設定です。設定画面から登録してください。")
 
-        from_email = smtp_user
-        if "amazonaws.com" in smtp_host:
-            from_email = "info@yamabun-ryubee.jp"
+        from_email = settings.smtp_from_email if settings and settings.smtp_from_email else smtp_user
 
         msg = MIMEMultipart()
         msg['From'] = formataddr((str(Header(company.name, 'utf-8')), from_email))
@@ -1470,9 +1539,7 @@ def send_reminders(
         smtp_pass = settings.smtp_password if settings and settings.smtp_password else os.getenv("SMTP_PASS", "")
 
         if smtp_user and smtp_pass:
-            from_email = smtp_user
-            if "amazonaws.com" in smtp_host:
-                from_email = "info@yamabun-ryubee.jp"
+            from_email = settings.smtp_from_email if settings and settings.smtp_from_email else smtp_user
 
             try:
                 msg = MIMEMultipart()

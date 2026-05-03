@@ -96,6 +96,7 @@ class CompanySettings(Base):
     smtp_port: Mapped[int] = mapped_column(Integer, default=587)
     smtp_user: Mapped[str] = mapped_column(String(255), default="yamabun@sirius.ocn.ne.jp")
     smtp_password: Mapped[str] = mapped_column(String(255), default="")
+    smtp_from_email: Mapped[str] = mapped_column(String(255), default="")
 
     # 処分先・委託先マスター (JSON array of strings)
     contractors_master: Mapped[str] = mapped_column(Text, default="[\"ホームケルン\", \"光アスコン\", \"旭興産業\", \"木材開発\", \"厳本金属\", \"京都有機資源\", \"HIRAYAMA\", \"大剛\", \"京都環境保全公社\", \"西山環境サービス\", \"家電リサイクル\"]")
@@ -268,6 +269,7 @@ class Invoice(Base):
     tax_amount: Mapped[int] = mapped_column(Integer, default=0)
     # draft / sent / paid / partial / overdue
     status: Mapped[str] = mapped_column(String(50), default="draft")
+    invoice_type: Mapped[str] = mapped_column(String(20), default="mixed") # "spot", "subscription", "mixed"
     due_date: Mapped[str | None] = mapped_column(String(20), nullable=True)
     sent_at: Mapped[str | None] = mapped_column(String(20), nullable=True) # 請求書送付日
     last_reminded_at: Mapped[str | None] = mapped_column(String(20), nullable=True) # 未入金リマインド送信日時
