@@ -38,24 +38,93 @@
 
         .alert-panel {
             margin: 16px 20px;
-            padding: 20px;
             background: var(--red-light);
             border-radius: var(--r-xl);
             border: 1px solid rgba(239, 68, 68, 0.2);
+            overflow: hidden;
         }
 
-        .alert-panel h3 {
+        .alert-summary-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 14px 20px;
+            cursor: pointer;
+            user-select: none;
+            transition: background 0.15s;
+        }
+
+        .alert-summary-bar:hover {
+            background: rgba(239, 68, 68, 0.08);
+        }
+
+        .alert-summary-left {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .alert-summary-left h3 {
             color: #B00B06;
+            font-size: 0.95rem;
+            margin: 0;
+        }
+
+        .alert-badge {
+            background: #DC2626;
+            color: #fff;
+            font-size: 0.75rem;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 10px;
+            min-width: 22px;
+            text-align: center;
+        }
+
+        .alert-summary-total {
+            color: #B91C1C;
+            font-weight: 700;
             font-size: 1rem;
-            margin-bottom: 12px;
+        }
+
+        .alert-chevron {
+            font-size: 0.8rem;
+            color: #B00B06;
+            transition: transform 0.2s;
+            margin-left: 8px;
+        }
+
+        .alert-panel.expanded .alert-chevron {
+            transform: rotate(180deg);
+        }
+
+        .alert-detail-wrap {
+            max-height: 0;
+            overflow: hidden;
+            transition: max-height 0.3s ease;
+        }
+
+        .alert-panel.expanded .alert-detail-wrap {
+            max-height: 2000px;
+        }
+
+        .alert-detail-inner {
+            padding: 0 20px 16px;
+        }
+
+        .alert-actions-bar {
+            display: flex;
+            justify-content: flex-end;
+            margin-bottom: 8px;
         }
 
         .alert-item {
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 10px 0;
+            padding: 8px 0;
             border-bottom: 1px solid rgba(239, 68, 68, 0.1);
+            font-size: 0.9rem;
         }
 
         .alert-item:last-child {
@@ -64,13 +133,28 @@
 
         .alert-customer {
             font-weight: 600;
-            font-size: 0.95rem;
+            font-size: 0.9rem;
         }
 
         .alert-amount {
             color: var(--red);
             font-weight: 700;
-            font-size: 1.05rem;
+            font-size: 0.95rem;
+            white-space: nowrap;
+        }
+
+        .alert-show-more {
+            text-align: center;
+            padding: 8px;
+            font-size: 0.85rem;
+            color: #B91C1C;
+            font-weight: 600;
+            cursor: pointer;
+            border-top: 1px solid rgba(239, 68, 68, 0.15);
+        }
+
+        .alert-show-more:hover {
+            text-decoration: underline;
         }
 
         .fiscal-badge {
@@ -407,11 +491,22 @@
 
             <!-- 未入金アラートパネル -->
             <div class="alert-panel" id="alertPanel" style="display:none;">
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
-                    <h3 style="margin:0;">🔴 未入金アラート</h3>
-                    <button class="btn btn-xs btn-primary" onclick="sendReminders()">✉️ リマインド一斉送信</button>
+                <div class="alert-summary-bar" onclick="toggleAlertPanel()">
+                    <div class="alert-summary-left">
+                        <h3>🔴 未入金アラート</h3>
+                        <span class="alert-badge" id="alertCount">0</span>
+                        <span class="alert-summary-total" id="alertTotalAmount"></span>
+                    </div>
+                    <span class="alert-chevron">▼</span>
                 </div>
-                <div id="alertList"></div>
+                <div class="alert-detail-wrap">
+                    <div class="alert-detail-inner">
+                        <div class="alert-actions-bar">
+                            <button class="btn btn-xs btn-primary" onclick="event.stopPropagation(); sendReminders()">✉️ リマインド一斉送信</button>
+                        </div>
+                        <div id="alertList"></div>
+                    </div>
+                </div>
             </div>
 
             <!-- アクションバー -->
@@ -802,28 +897,55 @@
             }
         }
 
+        let alertsExpanded = false;
+        let allAlerts = [];
+        const ALERT_PREVIEW_COUNT = 5;
+
+        function toggleAlertPanel() {
+            const panel = document.getElementById('alertPanel');
+            alertsExpanded = !alertsExpanded;
+            panel.classList.toggle('expanded', alertsExpanded);
+        }
+
+        function renderAlertItems(showAll) {
+            const list = document.getElementById('alertList');
+            const displayAlerts = showAll ? allAlerts : allAlerts.slice(0, ALERT_PREVIEW_COUNT);
+            list.innerHTML = displayAlerts.map(a => `
+                <div class="alert-item">
+                    <div>
+                        <span class="alert-customer">${utils.escapeHtml(a.customer_name)}</span>
+                        <span class="inv-meta" style="margin-left:8px">${a.month}</span>
+                        ${a.is_fiscal_crossover ? '<span class="fiscal-badge">売掛金</span>' : ''}
+                        ${a.days_overdue > 0 ? `<span style="color:var(--red);font-size:0.75rem;margin-left:6px">${a.days_overdue}日超過</span>` : ''}
+                        ${a.last_reminded_at ? `<br><span style="font-size:0.72rem;color:var(--text-muted);">✉️ ${a.last_reminded_at.slice(5, 16).replace('T', ' ')}</span>` : ''}
+                    </div>
+                    <span class="alert-amount">¥${a.remaining.toLocaleString()}</span>
+                </div>
+            `).join('');
+            if (!showAll && allAlerts.length > ALERT_PREVIEW_COUNT) {
+                list.innerHTML += `<div class="alert-show-more" onclick="renderAlertItems(true)">他 ${allAlerts.length - ALERT_PREVIEW_COUNT} 件を表示 ▾</div>`;
+            } else if (showAll && allAlerts.length > ALERT_PREVIEW_COUNT) {
+                list.innerHTML += `<div class="alert-show-more" onclick="renderAlertItems(false)">折りたたむ ▴</div>`;
+            }
+        }
+
         async function loadAlerts() {
             try {
-                const alerts = await RyubeeAPI.fetchUnpaidAlerts();
+                allAlerts = await RyubeeAPI.fetchUnpaidAlerts();
                 const panel = document.getElementById('alertPanel');
-                const list = document.getElementById('alertList');
-                if (!alerts.length) { panel.style.display = 'none'; return; }
+                if (!allAlerts.length) { panel.style.display = 'none'; return; }
                 panel.style.display = 'block';
-                list.innerHTML = alerts.map(a => `
-                    <div class="alert-item">
-                        <div>
-                            <span class="alert-customer">${utils.escapeHtml(a.customer_name)}</span>
-                            <span class="inv-meta" style="margin-left:8px">${a.month}</span>
-                            ${a.is_fiscal_crossover ? '<span class="fiscal-badge">売掛金</span>' : ''}
-                            ${a.days_overdue > 0 ? `<span style="color:var(--red);font-size:0.8rem;margin-left:6px">${a.days_overdue}日超過</span>` : ''}
-                            ${a.last_reminded_at ? `<br><span style="font-size:0.75rem;color:var(--text-muted);">✉️ 送信済: ${a.last_reminded_at.slice(5, 16).replace('T', ' ')}</span>` : ''}
-                        </div>
-                        <span class="alert-amount">¥${a.remaining.toLocaleString()}</span>
-                    </div>
-                `).join('');
+
+                // サマリー更新
+                const totalAmount = allAlerts.reduce((sum, a) => sum + a.remaining, 0);
+                document.getElementById('alertCount').textContent = allAlerts.length;
+                document.getElementById('alertTotalAmount').textContent = `合計 ¥${totalAmount.toLocaleString()}`;
+
+                // リスト描画
+                renderAlertItems(false);
 
                 // 月別グリッド更新
-                updateMonthGrid(alerts);
+                updateMonthGrid(allAlerts);
             } catch (e) { console.error(e); }
         }
 
