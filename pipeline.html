@@ -922,9 +922,7 @@
                 // Update final price on Job if changed
                 if (newPrice !== currentPrice) {
                     job.final_price = newPrice;
-                    await fetch(`${RyubeeAPI.baseUrl}/jobs/${jobId}`, {
-                        method: 'PUT', headers: RyubeeAPI.getHeaders(), body: JSON.stringify({ final_price: newPrice })
-                    });
+                    await RyubeeAPI.updateJob(jobId, { final_price: newPrice });
                 }
 
                 const inv = await RyubeeAPI.createInvoiceFromEstimate(jobId);
@@ -953,9 +951,7 @@
 
             try {
                 if (newPrice !== currentPrice) {
-                    await fetch(`${RyubeeAPI.baseUrl}/jobs/${jobId}`, {
-                        method: 'PUT', headers: RyubeeAPI.getHeaders(), body: JSON.stringify({ final_price: newPrice })
-                    });
+                    await RyubeeAPI.updateJob(jobId, { final_price: newPrice });
                 }
 
                 const inv = await RyubeeAPI.createInvoiceAndCollectCash(jobId);

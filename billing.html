@@ -1053,6 +1053,10 @@
             const statusLabel = { draft: '下書き', sent: '送付済', paid: '入金済', partial: '一部入金', overdue: '期限超過' };
             const methodLabels = { bank_transfer: '銀行振込', cash: '現金', other: 'その他' };
             const remaining = inv.total_amount - inv.paid_total;
+            const subtotal = inv.total_amount - (inv.tax_amount || 0);
+            const taxAmt = inv.tax_amount || Math.round(subtotal * 0.1);
+            const totalWithTax = subtotal + taxAmt;
+            const notesText = inv.notes || '';
 
             let itemsHtml = '';
             let emptyRowsHtml = '';
