@@ -1441,15 +1441,23 @@ async def send_invoice_email(
         smtp_user = settings.smtp_user if settings and settings.smtp_user else os.getenv("SMTP_USER", "")
         smtp_pass = settings.smtp_password if settings and settings.smtp_password else os.getenv("SMTP_PASS", "")
 
-        if not smtp_user or not smtp_pass:
-            raise HTTPException(400, "SMTP設定（メールサーバーのユーザー名・パスワード）が未設定です。設定画面から登録してください。")
+        if not smtp_pass:
+            raise HTTPException(400, "SMTP設定（メールサーバーのパスワード/APIキー）が未設定です。設定画面から登録してください。")
 
         from_email = settings.smtp_from_email if settings and settings.smtp_from_email else smtp_user
-        # Reply-To: お客様が返信した場合の宛先（OCNアドレスなど）
+
+        # Resend SMTP: 認証ユーザー名は必ず 'resend'。設定のsmtp_userはReply-Toとして利用
+        auth_user = smtp_user
         reply_to = os.getenv("REPLY_TO_EMAIL", None)
-        if not reply_to and settings and settings.smtp_user and '@' in (settings.smtp_user or ''):
-            if settings.smtp_from_email and settings.smtp_user != settings.smtp_from_email:
-                reply_to = settings.smtp_user
+        if 'resend.com' in smtp_host:
+            auth_user = 'resend'
+            # smtp_user にメールアドレスが入っていればそれをReply-Toにする
+            if '@' in (smtp_user or '') and smtp_user != from_email:
+                reply_to = smtp_user
+        else:
+            # Resend以外のSMTP: smtp_user と from_email が違えばReply-Toに
+            if not reply_to and '@' in (smtp_user or '') and settings and settings.smtp_from_email and smtp_user != settings.smtp_from_email:
+                reply_to = smtp_user
 
         msg = MIMEMultipart()
         msg['From'] = formataddr((str(Header(company.name, 'utf-8')), from_email))
@@ -1474,7 +1482,7 @@ async def send_invoice_email(
             else:
                 server = smtplib.SMTP(smtp_host, smtp_port, timeout=15)
                 server.starttls()
-            server.login(smtp_user, smtp_pass)
+            server.login(auth_user, smtp_pass)
             server.send_message(msg)
             server.quit()
         except Exception as e:
@@ -1544,12 +1552,17 @@ def send_reminders(
         smtp_user = settings.smtp_user if settings and settings.smtp_user else os.getenv("SMTP_USER", "")
         smtp_pass = settings.smtp_password if settings and settings.smtp_password else os.getenv("SMTP_PASS", "")
 
-        if smtp_user and smtp_pass:
+        if smtp_pass:
             from_email = settings.smtp_from_email if settings and settings.smtp_from_email else smtp_user
+            auth_user = smtp_user
             reply_to = os.getenv("REPLY_TO_EMAIL", None)
-            if not reply_to and settings and settings.smtp_user and '@' in (settings.smtp_user or ''):
-                if settings.smtp_from_email and settings.smtp_user != settings.smtp_from_email:
-                    reply_to = settings.smtp_user
+            if 'resend.com' in smtp_host:
+                auth_user = 'resend'
+                if '@' in (smtp_user or '') and smtp_user != from_email:
+                    reply_to = smtp_user
+            else:
+                if not reply_to and '@' in (smtp_user or '') and settings and settings.smtp_from_email and smtp_user != settings.smtp_from_email:
+                    reply_to = smtp_user
 
             try:
                 msg = MIMEMultipart()
@@ -1565,7 +1578,7 @@ def send_reminders(
                 else:
                     server = smtplib.SMTP(smtp_host, smtp_port, timeout=15)
                     server.starttls()
-                server.login(smtp_user, smtp_pass)
+                server.login(auth_user, smtp_pass)
                 server.send_message(msg)
                 server.quit()
                 logs.append(f"Sent successfully to {alert.email} ({alert.customer_name})")
