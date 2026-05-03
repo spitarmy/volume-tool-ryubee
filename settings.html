@@ -556,36 +556,36 @@
             <div class="card">
                 <div class="card-title">送信元メールサーバー (SMTP) 接続設定</div>
                 <p class="small-text mb-2">
-                    お客様ご自身のメールアドレスから直接顧客へ請求書などを送信するための認証情報です。<br>
-                    ※指定された OCNメール 以外を利用する場合はサーバー名を変更してください。
+                    Resend や他のメールサービスを利用して、請求書メールを自動送信するための認証情報です。<br>
+                    ※ Resend を使用する場合：サーバー <code>smtp.resend.com</code>、ポート <code>465</code>、ユーザー名 <code>resend</code>、パスワードに APIキー を入力してください。
                 </p>
 
                 <div style="display:flex; gap:8px;">
                     <div class="form-group" style="flex:2;">
                         <label>SMTPサーバー</label>
-                        <input type="text" id="smtpHost" placeholder="smtp.ocn.ne.jp">
+                        <input type="text" id="smtpHost" placeholder="smtp.resend.com">
                     </div>
                     <div class="form-group" style="flex:1;">
                         <label>ポート番号</label>
-                        <input type="number" id="smtpPort" placeholder="587">
+                        <input type="number" id="smtpPort" placeholder="465">
                     </div>
                 </div>
 
                 <div class="form-group">
                     <label>SMTP認証ユーザー名</label>
-                    <input type="email" id="smtpUser" placeholder="yamabun@sirius.ocn.ne.jp">
+                    <p class="small-text" style="margin-top:-6px;margin-bottom:6px;">Resendの場合は <code>resend</code> と入力。返信先アドレス（Reply-To）に使いたいメールアドレスがある場合はそちらを入力。</p>
+                    <input type="text" id="smtpUser" placeholder="resend">
                 </div>
 
                 <div class="form-group">
-                    <label>送信元（From）メールアドレス ※任意</label>
-                    <p class="small-text" style="margin-top: -6px; margin-bottom: 6px;">認証ユーザー名と異なる場合（ResendやAmazon
-                        SESなど）に入力してください。空の場合は認証ユーザー名が送信元になります。</p>
-                    <input type="email" id="smtpFromEmail" placeholder="info@yourdomain.com">
+                    <label>送信元（From）メールアドレス</label>
+                    <p class="small-text" style="margin-top: -6px; margin-bottom: 6px;">Resendで認証済みドメインのアドレスを指定してください。<br>例: <code>info@yamabun-ryubee.jp</code></p>
+                    <input type="email" id="smtpFromEmail" placeholder="info@yamabun-ryubee.jp">
                 </div>
 
                 <div class="form-group">
                     <label>メールパスワード / APIキー</label>
-                    <input type="password" id="smtpPassword" placeholder="パスワードを入力">
+                    <input type="password" id="smtpPassword" placeholder="Resend APIキーまたはパスワードを入力">
                 </div>
 
                 <button class="btn btn-primary mt-1" id="save-smtp-btn" onclick="saveEmailSettings()">💾

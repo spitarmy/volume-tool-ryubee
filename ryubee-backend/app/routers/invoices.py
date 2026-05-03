@@ -1435,10 +1435,9 @@ async def send_invoice_email(
             print("WeasyPrint PDF generation failed for email:", e)
             raise HTTPException(500, f"PDF生成に失敗しました: {e}")
 
-        # Email properties
-        # Email properties derived from database settings rather than env variables
-        smtp_host = settings.smtp_host if settings and settings.smtp_host else os.getenv("SMTP_HOST", "smtp.ocn.ne.jp")
-        smtp_port = settings.smtp_port if settings and settings.smtp_port else int(os.getenv("SMTP_PORT", "587"))
+        # Email properties derived from database settings
+        smtp_host = settings.smtp_host if settings and settings.smtp_host else os.getenv("SMTP_HOST", "smtp.resend.com")
+        smtp_port = settings.smtp_port if settings and settings.smtp_port else int(os.getenv("SMTP_PORT", "465"))
         smtp_user = settings.smtp_user if settings and settings.smtp_user else os.getenv("SMTP_USER", "")
         smtp_pass = settings.smtp_password if settings and settings.smtp_password else os.getenv("SMTP_PASS", "")
 
@@ -1446,11 +1445,18 @@ async def send_invoice_email(
             raise HTTPException(400, "SMTP設定（メールサーバーのユーザー名・パスワード）が未設定です。設定画面から登録してください。")
 
         from_email = settings.smtp_from_email if settings and settings.smtp_from_email else smtp_user
+        # Reply-To: お客様が返信した場合の宛先（OCNアドレスなど）
+        reply_to = os.getenv("REPLY_TO_EMAIL", None)
+        if not reply_to and settings and settings.smtp_user and '@' in (settings.smtp_user or ''):
+            if settings.smtp_from_email and settings.smtp_user != settings.smtp_from_email:
+                reply_to = settings.smtp_user
 
         msg = MIMEMultipart()
         msg['From'] = formataddr((str(Header(company.name, 'utf-8')), from_email))
         msg['To'] = inv.customer.email
         msg['Subject'] = body.subject
+        if reply_to:
+            msg['Reply-To'] = reply_to
         body_text = body.body.replace('\\n', '\n')
         msg.attach(MIMEText(body_text, 'plain'))
 
@@ -1533,19 +1539,25 @@ def send_reminders(
         due_str = alert.due_date or "指定なし"
         body = body.replace("{{due_date}}", due_str)
         
-        smtp_host = settings.smtp_host if settings and settings.smtp_host else os.getenv("SMTP_HOST", "smtp.ocn.ne.jp")
-        smtp_port = settings.smtp_port if settings and settings.smtp_port else int(os.getenv("SMTP_PORT", "587"))
+        smtp_host = settings.smtp_host if settings and settings.smtp_host else os.getenv("SMTP_HOST", "smtp.resend.com")
+        smtp_port = settings.smtp_port if settings and settings.smtp_port else int(os.getenv("SMTP_PORT", "465"))
         smtp_user = settings.smtp_user if settings and settings.smtp_user else os.getenv("SMTP_USER", "")
         smtp_pass = settings.smtp_password if settings and settings.smtp_password else os.getenv("SMTP_PASS", "")
 
         if smtp_user and smtp_pass:
             from_email = settings.smtp_from_email if settings and settings.smtp_from_email else smtp_user
+            reply_to = os.getenv("REPLY_TO_EMAIL", None)
+            if not reply_to and settings and settings.smtp_user and '@' in (settings.smtp_user or ''):
+                if settings.smtp_from_email and settings.smtp_user != settings.smtp_from_email:
+                    reply_to = settings.smtp_user
 
             try:
                 msg = MIMEMultipart()
                 msg['From'] = formataddr((str(Header(company.name, 'utf-8')), from_email))
                 msg['To'] = alert.email
                 msg['Subject'] = subject_tmpl
+                if reply_to:
+                    msg['Reply-To'] = reply_to
                 msg.attach(MIMEText(body, 'plain'))
                 
                 if smtp_port == 465:
