@@ -333,7 +333,8 @@
                 document.getElementById('dsNotes').textContent = notes;
 
                 document.getElementById('dsAddress').textContent = job.address ? `現場住所: ${job.address}` : '';
-                document.getElementById('dsPrice').textContent = job.price_total ? job.price_total.toLocaleString() : '          ';
+                const displayPrice = job.final_price || job.estimated_price || job.price_total || 0;
+                document.getElementById('dsPrice').textContent = displayPrice ? displayPrice.toLocaleString() : '          ';
 
                 if (customer) {
                     let codeText = `C-${customer.id.substring(0, 4).toUpperCase()} / `;
