@@ -533,7 +533,8 @@
       jobs.forEach(j => {
         const date = new Date(j.created_at).toLocaleDateString('ja-JP');
         const vol = j.total_volume_m3 != null ? `${j.total_volume_m3} ㎥` : '-';
-        const price = j.price_total != null ? `${Number(j.price_total).toLocaleString()} 円` : '-';
+        const dp = j.final_price || j.estimated_price || j.price_total;
+        const price = dp != null ? `${Number(dp).toLocaleString()} 円` : '-';
         const wdate = j.work_date ? `作業日: ${j.work_date}` : '作業日: 未定';
 
         const STAGE_LABELS = { inquiry: '問合せ', estimate: '見積', negotiation: '商談', contract: '契約', scheduled: '作業予定', waiting_manifest: 'マニ待ち', completed: '完了', lost: '不成約' };

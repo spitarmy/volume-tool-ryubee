@@ -533,7 +533,8 @@
         function renderCard(job, currentStage) {
             const typeClass = job.job_type || 'other';
             const typeLabel = TYPE_LABELS[job.job_type] || 'その他';
-            const price = job.price_total ? `¥${job.price_total.toLocaleString()}` : '–';
+            const displayPrice = job.final_price || job.estimated_price || job.price_total || 0;
+            const price = displayPrice ? `¥${displayPrice.toLocaleString()}` : '–';
             const stageIdx = STAGES.findIndex(s => s.key === currentStage);
             const nextStage = stageIdx < STAGES.length - 1 ? STAGES[stageIdx + 1] : null;
             const prevStage = stageIdx > 0 ? STAGES[stageIdx - 1] : null;
@@ -723,8 +724,8 @@
             try { fd = JSON.parse(job.form_data || "{}"); } catch (e) { }
 
             // Photos parsing
-            let photos = [];
-            try { photos = JSON.parse(job.photos || "[]"); } catch (e) { }
+            let photos = Array.isArray(job.photos) ? job.photos : [];
+            try { if (typeof job.photos === 'string') photos = JSON.parse(job.photos); } catch (e) { }
 
             body.innerHTML = `
                 <div style="display:flex;justify-content:space-between;align-items:flex-start;">

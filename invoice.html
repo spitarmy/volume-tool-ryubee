@@ -547,7 +547,7 @@
                         addItemRow(item.description, item.quantity, item.unit_price, item.unit || '', item.notes || '');
                     });
                 } else {
-                    const priceTotal = job.price_total || 0;
+                    const priceTotal = job.final_price || job.estimated_price || job.price_total || 0;
                     const subtotal = Math.round(priceTotal / 1.1);
                     addItemRow('不用品回収・運搬費一式', 1, subtotal, '式', '');
                 }
