@@ -701,7 +701,32 @@ const RyubeeAPI = {
     });
     if (!res.ok) throw new Error(await res.text());
     return res.json();
-  }
+  },
+
+  // ── Photo URL Helper ──────────────────────────────────────
+  /**
+   * 写真URLを解決する。
+   * - /uploads/... のような相対パスはバックエンドの完全URLに変換
+   * - data:image/... (base64) やhttps://... はそのまま返す
+   */
+  resolvePhotoUrl(url) {
+    if (!url) return '';
+    if (url.startsWith('data:') || url.startsWith('http://') || url.startsWith('https://')) {
+      return url;
+    }
+    if (url.startsWith('/uploads/')) {
+      return API_BASE + url;
+    }
+    return url;
+  },
+
+  /**
+   * 写真URL配列を一括解決する
+   */
+  resolvePhotoUrls(photos) {
+    if (!Array.isArray(photos)) return [];
+    return photos.map(p => this.resolvePhotoUrl(p));
+  },
 };
 
 // グローバルに公開

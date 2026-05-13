@@ -101,35 +101,40 @@
             opacity: 0.5;
         }
 
-        .pc-name {
+        .pc-customer {
             font-weight: 700;
-            font-size: 0.95rem;
-            margin-bottom: 4px;
+            font-size: 1rem;
+            margin-bottom: 2px;
+            color: var(--text-primary);
+            line-height: 1.3;
         }
 
-        .pc-customer {
+        .pc-name {
             font-size: 0.82rem;
             color: var(--text-secondary);
             margin-bottom: 6px;
+            font-weight: 500;
         }
 
-        .pc-bottom {
+        .pc-assignee {
+            font-size: 0.78rem;
+            color: var(--text-tertiary);
+            margin-top: 6px;
+        }
+
+        .pc-dates {
             display: flex;
-            justify-content: space-between;
-            align-items: center;
+            gap: 8px;
+            font-size: 0.68rem;
+            color: var(--text-tertiary);
+            margin: 4px 0 6px;
         }
 
-        .pc-price {
-            font-weight: 700;
-            color: var(--blue-dark);
-            font-size: 0.9rem;
+        .pc-dates span {
+            white-space: nowrap;
         }
 
         .pc-type {
-            font-size: 0.7rem;
-            font-weight: 600;
-            padding: 2px 8px;
-            border-radius: 10px;
             background: var(--bg-secondary);
             color: var(--text-secondary);
         }
@@ -154,10 +159,14 @@
             color: #C06000;
         }
 
-        .pc-assignee {
-            font-size: 0.75rem;
-            color: var(--text-tertiary);
-            margin-top: 6px;
+        .pc-type.large_waste {
+            background: #FEF3C7;
+            color: #92400E;
+        }
+
+        .pc-type.industrial_waste {
+            background: #EDE9FE;
+            color: #6D28D9;
         }
 
         .stage-btn {
@@ -547,23 +556,26 @@
             try { fd = JSON.parse(cust.form_data || "{}"); } catch (e) { }
             const yamaNum = fd.yamabun_management_number || '';
 
+            const photoCount = Array.isArray(job.photos) ? job.photos.length : 0;
+
             return `
                 <div class="pipeline-card" draggable="true" data-job-id="${job.job_id}" data-stage="${currentStage}" onclick="openJobDetail('${job.job_id}')">
+                    <div class="pc-customer">
+                        ${utils.escapeHtml(job.customer_name || '未設定')}
+                    </div>
                     <div class="pc-name">
-                        ${utils.escapeHtml(job.job_name || '案件')}
+                        🏠 ${utils.escapeHtml(job.job_name || '案件')}
                         ${job.comment_count ? `<span class="pc-comments-badge">💬 ${job.comment_count}</span>` : ''}
-                        ${(Array.isArray(job.photos) ? job.photos.length : 0) > 0 ? `<span class="pc-comments-badge">📷 ${Array.isArray(job.photos) ? job.photos.length : 0}</span>` : ''}
+                        ${photoCount > 0 ? `<span class="pc-comments-badge">📷 ${photoCount}</span>` : ''}
                     </div>
-                    ${yamaNum ? `<div style="font-size:0.75rem; font-weight:700; color:var(--primary); margin:2px 0 4px;">🎫 管理番号: ${utils.escapeHtml(yamaNum)}</div>` : ''}
-                    <div class="pc-customer">👤 ${utils.escapeHtml(job.customer_name || '未設定')}</div>
-                    
-                    <div style="font-size:0.65rem; color:var(--text-tertiary); margin:4px 0;">
-                        受付: ${createdText} | 更新: ${updatedText}
+                    ${yamaNum ? `<div style="font-size:0.72rem; font-weight:600; color:var(--primary); margin-bottom:4px;">🎫 ${utils.escapeHtml(yamaNum)}</div>` : ''}
+                    <div class="pc-dates">
+                        <span>受付: ${createdText}</span>
+                        <span>更新: ${updatedText}</span>
                     </div>
-
-                    <div class="pc-bottom">
-                        <span class="pc-price">${price}</span>
-                        <span class="pc-type ${typeClass}">${typeLabel}</span>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                        <span style="font-weight:700; color:var(--blue-dark); font-size:0.95rem;">${price}</span>
+                        <span style="font-size:0.7rem;font-weight:600;padding:2px 8px;border-radius:10px;" class="pc-type ${typeClass}">${typeLabel}</span>
                     </div>
                     ${(job.estimated_price && job.final_price && job.estimated_price !== job.final_price) ? `
                         <div class="pc-deal-amounts">
@@ -726,6 +738,8 @@
             // Photos parsing
             let photos = Array.isArray(job.photos) ? job.photos : [];
             try { if (typeof job.photos === 'string') photos = JSON.parse(job.photos); } catch (e) { }
+            // Resolve relative /uploads/ paths to full backend URL
+            photos = RyubeeAPI.resolvePhotoUrls(photos);
 
             body.innerHTML = `
                 <div style="display:flex;justify-content:space-between;align-items:flex-start;">
@@ -737,11 +751,18 @@
                     ${job.address ? `<br>📍 ${utils.escapeHtml(job.address)} <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(job.address)}" target="_blank" style="margin-left:4px;text-decoration:none;font-size:0.75rem;background:#E2E8F0;padding:2px 6px;border-radius:4px;color:var(--text-primary);">🗺 マップ</a>` : ''}
                     ${!job.customer_id ? `
                         <br><div id="customerLinkSection" style="margin-top:8px;">
-                            <div style="display:flex;gap:6px;align-items:center;">
-                                <select id="customerLinkSelect" style="flex:1;padding:6px;border-radius:6px;border:1px solid var(--border);font-size:0.8rem;">
-                                    <option value="">📋 既存の顧客を選択...</option>
-                                    <option value="__new__">➕ 新規顧客として登録</option>
-                                </select>
+                            <div style="position:relative;">
+                                <input type="text" id="customerSearchInput" placeholder="🔍 顧客名で検索..." autocomplete="off"
+                                    oninput="filterCustomerDropdown()"
+                                    onfocus="document.getElementById('customerDropdownList').style.display='block'"
+                                    style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--border);font-size:0.85rem;box-sizing:border-box;">
+                                <div id="customerDropdownList" style="display:none;position:absolute;top:100%;left:0;right:0;max-height:200px;overflow-y:auto;background:#fff;border:1px solid var(--border);border-radius:0 0 8px 8px;box-shadow:0 4px 12px rgba(0,0,0,0.12);z-index:100;">
+                                    <div class="cust-dd-item" style="padding:10px 12px;cursor:pointer;font-size:0.85rem;color:var(--primary);font-weight:600;border-bottom:1px solid var(--border);" onclick="selectCustomerOption('__new__', '➕ 新規顧客として登録')">➕ 新規顧客として登録</div>
+                                </div>
+                                <input type="hidden" id="customerLinkSelect" value="">
+                            </div>
+                            <div style="display:flex;gap:6px;align-items:center;margin-top:6px;">
+                                <span id="selectedCustomerLabel" style="flex:1;font-size:0.8rem;color:var(--text-tertiary);">未選択</span>
                                 <button class="btn btn-xs btn-primary" style="white-space:nowrap;" onclick="linkCustomerToJob('${jobId}')">紐づけ</button>
                             </div>
                             <p style="font-size:0.68rem;color:var(--text-tertiary);margin:4px 0 0;">⚠️ 請求書の発行には顧客の紐づけが必要です</p>
@@ -828,18 +849,56 @@
 
         let _cachedCustomers = null;
         async function populateCustomerDropdown() {
-            const sel = document.getElementById('customerLinkSelect');
-            if (!sel) return;
+            const list = document.getElementById('customerDropdownList');
+            if (!list) return;
             if (!_cachedCustomers) {
                 try { _cachedCustomers = await RyubeeAPI.fetchCustomers(); } catch (e) { _cachedCustomers = []; }
             }
+            // Clear existing items (keep the '新規顧客' option)
+            list.innerHTML = `<div class="cust-dd-item" data-value="__new__" style="padding:10px 12px;cursor:pointer;font-size:0.85rem;color:var(--primary);font-weight:600;border-bottom:1px solid var(--border);" onclick="selectCustomerOption('__new__', '➕ 新規顧客として登録')">➕ 新規顧客として登録</div>`;
             _cachedCustomers.forEach(c => {
-                const opt = document.createElement('option');
-                opt.value = c.id;
-                opt.textContent = `${c.name}${c.address ? ' — ' + c.address : ''}`;
-                sel.appendChild(opt);
+                const label = `${c.name}${c.address ? ' — ' + c.address : ''}`;
+                const div = document.createElement('div');
+                div.className = 'cust-dd-item';
+                div.dataset.value = c.id;
+                div.dataset.search = (c.name + ' ' + (c.address || '')).toLowerCase();
+                div.style.cssText = 'padding:8px 12px;cursor:pointer;font-size:0.82rem;border-bottom:1px solid rgba(0,0,0,0.04);transition:background 0.15s;';
+                div.textContent = label;
+                div.onmouseenter = () => div.style.background = '#f0f4ff';
+                div.onmouseleave = () => div.style.background = '';
+                div.onclick = () => selectCustomerOption(c.id, c.name);
+                list.appendChild(div);
             });
         }
+
+        function filterCustomerDropdown() {
+            const q = (document.getElementById('customerSearchInput')?.value || '').toLowerCase();
+            const list = document.getElementById('customerDropdownList');
+            if (!list) return;
+            list.style.display = 'block';
+            list.querySelectorAll('.cust-dd-item').forEach(item => {
+                if (item.dataset.value === '__new__') { item.style.display = ''; return; }
+                const search = item.dataset.search || '';
+                item.style.display = search.includes(q) ? '' : 'none';
+            });
+        }
+
+        function selectCustomerOption(value, label) {
+            document.getElementById('customerLinkSelect').value = value;
+            document.getElementById('customerSearchInput').value = label;
+            document.getElementById('selectedCustomerLabel').textContent = value === '__new__' ? '新規登録' : `✅ ${label}`;
+            document.getElementById('selectedCustomerLabel').style.color = 'var(--primary)';
+            document.getElementById('customerDropdownList').style.display = 'none';
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            const section = document.getElementById('customerLinkSection');
+            if (section && !section.contains(e.target)) {
+                const list = document.getElementById('customerDropdownList');
+                if (list) list.style.display = 'none';
+            }
+        });
 
         async function linkCustomerToJob(jobId) {
             const sel = document.getElementById('customerLinkSelect');
@@ -1045,7 +1104,7 @@
 
             let pArr = [];
             try {
-                pArr = Array.isArray(job.photos) ? job.photos : JSON.parse(job.photos || "[]");
+                pArr = Array.isArray(job.photos) ? [...job.photos] : JSON.parse(job.photos || "[]");
             } catch (e) { }
             pArr.splice(index, 1);
             const photosStr = JSON.stringify(pArr);

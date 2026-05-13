@@ -345,9 +345,10 @@
                 }
 
                 if (Array.isArray(job.photos) && job.photos.length) {
+                    const resolvedPhotos = RyubeeAPI.resolvePhotoUrls(job.photos);
                     document.getElementById('photoSection').style.display = 'block';
                     document.getElementById('photoSection').classList.add('hidden-for-print');
-                    document.getElementById('dsPhotos').innerHTML = job.photos.map(url =>
+                    document.getElementById('dsPhotos').innerHTML = resolvedPhotos.map(url =>
                         `<img src="${utils.escapeHtml(url)}" alt="現場写真">`
                     ).join('');
                     document.getElementById('photoToggleLabel').style.display = 'inline-flex';
