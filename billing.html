@@ -1072,7 +1072,6 @@
                             ${inv.invoice_type === 'subscription' ? '<span class="badge" style="background:#DCFCE7; color:#166534; border: 1px solid #86EFAC; padding: 2px 6px; font-size: 0.75rem; border-radius: 4px;">定期回収</span>' : ''}
                             <span class="inv-status ${inv.status}">${statusLabel[inv.status] || inv.status}</span>
                             <button title="PDFダウンロード" class="btn btn-xs" style="padding: 2px 6px; font-size: 0.85rem; border: 1px solid var(--border); background: #fff;" onclick="event.stopPropagation(); downloadPdf('${inv.id}')">📄</button>
-                            <button title="メールで送信" class="btn btn-xs" style="padding: 2px 6px; font-size: 0.85rem; border: 1px solid var(--border); background: #fff;" onclick="event.stopPropagation(); sendEmail('${inv.id}')">✉️</button>
                         </div>
                     </div>
                     ${inv._yamaNum ? `<div class="inv-meta" style="font-weight:700; color:var(--primary); margin-top:2px; font-size:13px;">🎫 山文管理番号: ${utils.escapeHtml(inv._yamaNum)}</div>` : ''}
@@ -1100,11 +1099,17 @@
         async function sendEmail(invoiceId) {
             const inv = allInvoices.find(i => i.id === invoiceId);
             if (!inv) return;
-            if (!confirm(`「${inv.customer_name}」に請求書PDFをメール送信しますか？`)) return;
+            if (!confirm(`⚠️ 「${inv.customer_name}」に請求書PDFをメール送信しますか？\n\n※実際に送信されます。取り消しできません。`)) return;
+            // 二重確認: 顧客名を入力させる
+            const typed = prompt(`確認: 送信先のお客様名「${inv.customer_name}」を入力してください:`);
+            if (!typed || typed.trim() !== inv.customer_name.trim()) {
+                alert('お客様名が一致しません。送信を中止しました。');
+                return;
+            }
             try {
                 await RyubeeAPI.sendInvoiceEmail(invoiceId);
                 alert("✅ メールを送信しました！");
-                loadInvoices(); // Reload to show sent_at badge
+                loadInvoices();
             } catch (e) {
                 alert("メール送信エラー: " + e.message);
             }
@@ -1146,7 +1151,9 @@
         async function sendBulkEmail() {
             const checks = document.querySelectorAll('.bulk-inv-check:checked');
             if (!checks.length) return;
-            if (!confirm(`選択された ${checks.length} 件の請求書をメール送信しますか？\\n※メール未設定の顧客はスキップされます。`)) return;
+            if (!confirm(`⚠️ 選択された ${checks.length} 件の請求書をメール送信しますか？\n\n※実際にお客様へメールが送信されます。取り消しできません。`)) return;
+            const typed = prompt(`確認: 送信を実行するには「送信」と入力してください:`);
+            if (typed !== '送信') { alert('送信を中止しました。'); return; }
 
             const ids = Array.from(checks).map(c => c.value);
             let successCount = 0;
@@ -1437,6 +1444,8 @@
             const actionsDiv = document.querySelector('.inv-doc-actions');
             actionsDiv.innerHTML = `
                 <button class="btn btn-xs btn-success" onclick="enterEditMode('${inv.id}')">✏️ 編集</button>
+                <button class="btn btn-xs" style="background:#fff; border:1px solid var(--border);" onclick="downloadPdf('${inv.id}')">📄 PDF</button>
+                <button class="btn btn-xs" style="background:#fff; border:1px solid var(--border);" onclick="sendEmail('${inv.id}')">✉️ メール送信</button>
                 <button class="btn btn-xs btn-primary" onclick="window.print()">🖨 印刷</button>
                 <button class="btn btn-xs btn-secondary" onclick="closeInvDetail()">閉じる</button>
             `;
