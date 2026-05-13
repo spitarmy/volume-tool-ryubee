@@ -386,8 +386,9 @@
                 <td colspan="5" class="center" style="padding: 12px; color: #666;">明細なし</td>
             </tr>
             {% endfor %}
-            <!-- Padding rows to fill table -->
-            {% for _ in range(max(0, 5 - invoice.items|length)) %}
+            {% set padding_rows = 5 - invoice.items|length %}
+            {% if padding_rows > 0 %}
+            {% for _ in range(padding_rows) %}
             <tr>
                 <td><br></td>
                 <td></td>
@@ -396,6 +397,7 @@
                 <td></td>
             </tr>
             {% endfor %}
+            {% endif %}
         </tbody>
     </table>
 
