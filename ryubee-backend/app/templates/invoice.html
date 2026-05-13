@@ -1,6 +1,5 @@
 <!DOCTYPE html>
 <html lang="ja">
-
 <head>
     <meta charset="UTF-8">
     <title>請求書</title>
@@ -12,286 +11,415 @@
             font-style: normal;
         }
 
-        @font-face {
-            font-family: 'Noto Sans JP';
-            src: url('./NotoSansJP-Regular.ttf') format('truetype');
-            font-weight: 700;
-            font-style: normal;
-        }
-
         @page {
             size: A4;
-            margin: 20mm;
-
-            @bottom-center {
-                content: counter(page) "/" counter(pages);
-                font-family: 'Noto Sans JP', sans-serif;
-                font-size: 10pt;
-                color: #555;
-            }
+            margin: 15mm;
         }
 
         body {
-            font-family: 'Noto Sans JP', 'Hiragino Kaku Gothic ProN', 'Yu Gothic', sans-serif;
+            font-family: 'Noto Sans JP', 'MS Mincho', sans-serif;
             margin: 0;
             padding: 0;
-            color: #333;
+            color: #000;
+            font-size: 11pt;
             line-height: 1.5;
         }
 
-        .header {
+        .title {
             text-align: center;
             margin-bottom: 30px;
+            letter-spacing: 16px;
+            font-size: 20pt;
         }
 
-        .header h1 {
-            margin: 0;
-            font-size: 24pt;
-            letter-spacing: 5px;
-            color: #2c3e50;
-            border-bottom: 2px solid #2c3e50;
-            display: inline-block;
-            padding-bottom: 5px;
-        }
-
-        .top-info {
-            width: 100%;
-            margin-bottom: 40px;
+        .top-section {
             display: table;
+            width: 100%;
+            margin-bottom: 20px;
         }
 
-        .customer-info {
+        .left-box {
             display: table-cell;
             width: 50%;
             vertical-align: top;
+        }
+
+        .right-box {
+            display: table-cell;
+            width: 50%;
+            vertical-align: top;
+            text-align: right;
         }
 
         .customer-name {
             font-size: 16pt;
-            font-weight: bold;
             border-bottom: 1px solid #000;
-            padding-bottom: 5px;
-            margin-bottom: 10px;
+            margin-bottom: 8px;
+            padding-bottom: 4px;
             width: 90%;
         }
 
-        .company-info {
+        .customer-name-inner {
+            display: table;
+            width: 100%;
+        }
+
+        .customer-name-left {
             display: table-cell;
-            width: 50%;
-            vertical-align: top;
+            text-align: left;
+        }
+
+        .customer-name-right {
+            display: table-cell;
             text-align: right;
         }
 
-        .company-name {
-            font-size: 14pt;
-            font-weight: bold;
-            margin-bottom: 5px;
-        }
-
-        .meta-info {
-            text-align: right;
+        .meta-table {
+            width: 100%;
+            border: none;
             font-size: 10pt;
             margin-bottom: 20px;
         }
 
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-bottom: 30px;
-            font-size: 10pt;
-        }
-
-        th,
-        td {
-            border: 1px solid #ccc;
-            padding: 8px;
-        }
-
-        th {
-            background-color: #f7f9fa;
-            color: #2c3e50;
-            text-align: center;
-        }
-
-        .desc {
-            width: 45%;
-        }
-
-        .qty {
-            width: 10%;
-            text-align: center;
-        }
-
-        .unit {
-            width: 10%;
-            text-align: center;
-        }
-
-        .uprice {
-            width: 15%;
+        .meta-table td {
             text-align: right;
+            padding: 2px;
         }
 
-        .amt {
-            width: 20%;
-            text-align: right;
+        .company-box {
+            font-size: 11pt;
+            line-height: 1.6;
+            position: relative;
+            text-align: left;
+            margin-left: 15%;
+        }
+
+        .company-name {
+            font-size: 14pt;
+            margin-bottom: 8px;
+            letter-spacing: 2px;
         }
 
         .summary-table {
-            width: 40%;
-            float: right;
-            font-size: 12pt;
-        }
-
-        .summary-table th,
-        .summary-table td {
-            border: 1px solid #ccc;
-            padding: 8px;
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+            text-align: center;
         }
 
         .summary-table th {
-            background-color: #f7f9fa;
-            text-align: left;
+            border: 1px solid #000;
+            padding: 4px 8px;
+            font-size: 11pt;
+            background: #f8f9fa;
+            font-weight: normal;
         }
 
         .summary-table td {
-            text-align: right;
+            border: 1px solid #000;
+            padding: 8px;
+            font-size: 11pt;
+        }
+
+        .summary-table td.total-cell {
+            font-size: 16pt;
             font-weight: bold;
         }
 
-        .total-highlight {
-            font-size: 14pt;
-            color: #e74c3c;
-            background-color: #fdf5f5;
+        .middle-section {
+            display: table;
+            width: 100%;
+            margin-bottom: 10px;
         }
 
-        .notes-area {
-            clear: both;
-            padding-top: 50px;
-            font-size: 10pt;
+        .bank-box {
+            display: table-cell;
+            width: 60%;
+            vertical-align: bottom;
         }
 
-        .bank-info {
-            margin-top: 20px;
-            padding: 15px;
-            border: 1px solid #ccc;
-            background-color: #fdfdfd;
-            border-radius: 4px;
+        .elephant-box {
+            display: table-cell;
+            width: 40%;
+            text-align: right;
+            vertical-align: bottom;
         }
 
-        .bank-info h3 {
-            margin-top: 0;
+        .bank-inner {
+            border: 2px solid #000;
+            border-radius: 6px;
+            display: table;
+            width: 100%;
+            overflow: hidden;
+        }
+
+        .bank-left {
+            display: table-cell;
+            width: 25%;
+            border-right: 2px solid #000;
+            background: #f8f9fa;
+            vertical-align: top;
+        }
+
+        .bank-right {
+            display: table-cell;
+            width: 75%;
+            vertical-align: top;
+        }
+
+        .bank-header {
+            border-bottom: 1px solid #000;
+            text-align: center;
+            padding: 4px;
+            font-weight: bold;
             font-size: 11pt;
-            color: #2c3e50;
+        }
+
+        .bank-content {
+            padding: 8px 12px;
+            font-size: 10pt;
+            line-height: 1.5;
+        }
+        
+        .bank-date-content {
+            text-align: center;
+            padding: 16px 4px;
+            font-size: 12pt;
+            font-weight: bold;
+        }
+
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            border: 2px solid #000;
+            margin-bottom: 0;
+        }
+
+        .items-table th {
+            border: 1px solid #000;
+            border-bottom: 2px solid #000;
+            padding: 6px;
+            font-size: 11pt;
+            font-weight: normal;
+        }
+
+        .items-table td {
+            border: 1px solid #000;
+            padding: 6px;
+            font-size: 11pt;
+        }
+
+        .items-table .num {
+            text-align: right;
+        }
+        
+        .items-table .center {
+            text-align: center;
+        }
+
+        .totals-table {
+            width: 50%;
+            border-collapse: collapse;
+            border: 2px solid #000;
+            border-top: none;
+            float: right;
+        }
+
+        .totals-table td {
+            padding: 6px 12px;
+            font-size: 11pt;
+        }
+
+        .totals-table .label {
+            border-right: 1px solid #000;
+            background: #f8f9fa;
+        }
+
+        .totals-table .num {
+            text-align: right;
+            font-size: 12pt;
+        }
+        
+        .clearfix::after {
+            content: "";
+            display: table;
+            clear: both;
+        }
+        
+        .notes-area {
+            margin-top: 20px;
+            border: 1px solid #ccc;
+            padding: 6px 12px;
         }
     </style>
 </head>
-
 <body>
-    <div class="meta-info">
-        発行日：{{ today }}<br>
-        請求書番号：INV-{{ invoice.month.replace('-', '') }}-{{ invoice.id[:6].upper() }}
-    </div>
+    <div class="title">請求書</div>
 
-    <div class="header">
-        <h1>請 求 書</h1>
-    </div>
-
-    <div class="top-info">
-        <div class="customer-info">
-            <div class="customer-name">{{ customer.customer_name }} 御中</div>
+    <div class="top-section">
+        <div class="left-box">
+            <div class="customer-name">
+                <div class="customer-name-inner">
+                    <div class="customer-name-left">{{ customer.customer_name }}</div>
+                    <div class="customer-name-right">御中</div>
+                </div>
+            </div>
             {% if customer.building_name %}
-            <div style="font-size: 10pt; padding-left: 5px;">{{ customer.building_name }}</div>
+            <div style="font-size: 10pt; padding-left: 5px; margin-bottom: 16px;">{{ customer.building_name }}</div>
+            {% else %}
+            <div style="margin-bottom: 16px;">&nbsp;</div>
             {% endif %}
-            <div style="margin-top: 20px; font-size: 12pt;">
-                下記の通りご請求申し上げます。
-            </div>
-            <div
-                style="margin-top: 15px; font-size: 14pt; font-weight: bold; border-bottom: 2px solid #000; width: 90%; padding-bottom: 5px;">
-                ご請求金額: ￥ {{ "{:,}".format((invoice.total_amount or 0) + (invoice.tax_amount or 0)) }} -
-            </div>
-            <div style="margin-top: 5px; font-size: 10pt;">
-                お支払期限: {{ invoice.due_date if invoice.due_date else "----年--月--日" }}
-            </div>
+            <div style="font-size: 10pt;">下記の通りご請求申し上げます。</div>
         </div>
-        <div class="company-info">
-            <div class="company-name">{{ company.name }}</div>
-            {% if settings and settings.company_address %}
-            <div style="font-size: 10pt;">
-                {{ settings.company_address.replace('\n', '<br>') | safe }}
+
+        <div class="right-box">
+            <table class="meta-table">
+                <tr>
+                    <td>請求締日</td>
+                    <td>
+                        {% if invoice.month and customer.billing_closing_day %}
+                            {{ invoice.month.replace('-', '/') }}/{{ "%02d"|format(customer.billing_closing_day) }}
+                        {% elif invoice.month %}
+                            {{ invoice.month.replace('-', '/') }}/月末
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                </tr>
+                <tr>
+                    <td>お客様番号</td>
+                    <td>{{ yamabun_no }}</td>
+                </tr>
+                <tr>
+                    <td>登録番号</td>
+                    <td>{{ settings.company_invoice_no if settings and settings.company_invoice_no else '-' }}</td>
+                </tr>
+            </table>
+
+            <div class="company-box">
+                <div class="company-name">株式会社　山　文</div>
+                <div>〒612-0029<br>京都市伏見区深草西浦町2丁目61番地<br>TEL: 075-643-3456</div>
+                {% if settings and settings.company_stamp %}
+                    <img src="{{ settings.company_stamp }}" alt="角印" style="max-width:80px; max-height:80px; position:absolute; right:10px; top:-10px; opacity:0.85; mix-blend-mode: multiply;">
+                {% endif %}
             </div>
-            {% endif %}
-            {% if settings and settings.company_phone %}
-            <div style="font-size: 10pt;">TEL: {{ settings.company_phone }}</div>
-            {% endif %}
-            {% if settings and settings.invoice_invoice_number %}
-            <div style="font-size: 10pt;">適格請求書発行事業者登録番号: {{ settings.invoice_invoice_number }}</div>
-            {% endif %}
         </div>
     </div>
 
-    <table>
+    <table class="summary-table">
+        <tr>
+            <th>前回ご請求額</th>
+            <th>入金額</th>
+            <th>値引</th>
+            <th>繰越金額</th>
+            <th>今回ご請求額（合算）</th>
+        </tr>
+        <tr>
+            <td>{{ ("¥" ~ "{:,}".format(prev_amount)) if prev_amount > 0 else "" }}</td>
+            <td>{{ ("¥" ~ "{:,}".format(prev_paid)) if prev_paid > 0 else "" }}</td>
+            <td></td>
+            <td>{{ ("¥" ~ "{:,}".format(carryover)) if carryover > 0 else "" }}</td>
+            <td class="total-cell">¥{{ "{:,}".format(invoice.total_amount + carryover) }}</td>
+        </tr>
+    </table>
+
+    <div class="middle-section">
+        <div class="bank-box">
+            {% if invoice.invoice_type == 'subscription' %}
+            <div class="bank-inner">
+                <div class="bank-left">
+                    <div class="bank-header">振替日</div>
+                    <div class="bank-date-content">{{ invoice.due_date if invoice.due_date else '未設定' }}</div>
+                </div>
+                <div class="bank-right">
+                    <div class="bank-header">自動振替</div>
+                    <div class="bank-content">
+                        毎月27日に口座より引落させていただきます。<br>
+                        (金融機関休業日の場合翌営業日)つきましては、26<br>
+                        日までに口座残高のご確認をお願いします。
+                    </div>
+                </div>
+            </div>
+            {% else %}
+            <div class="bank-inner">
+                <div class="bank-left">
+                    <div class="bank-header">入金期日</div>
+                    <div class="bank-date-content">{{ invoice.due_date if invoice.due_date else '未設定' }}</div>
+                </div>
+                <div class="bank-right">
+                    <div class="bank-header">振込先</div>
+                    <div class="bank-content">
+                        カ)ヤマブン<br>
+                        京都銀行　九条支店　普通　473798<br>
+                        京都中央信用金庫　西陣支店　普通　5226936
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        <div class="elephant-box">
+            <img src="../../../assets/images/yamabun_elephant.png" alt="Yamabun Logo" style="max-height:80px;">
+        </div>
+    </div>
+
+    <table class="items-table">
         <thead>
             <tr>
-                <th class="desc">品名 / 明細</th>
-                <th class="qty">数量</th>
-                <th class="unit">単位</th>
-                <th class="uprice">単価</th>
-                <th class="amt">金額</th>
+                <th style="width:15%;">取引日</th>
+                <th style="width:40%;">内　容</th>
+                <th style="width:15%;">数　量</th>
+                <th style="width:15%;">単　価</th>
+                <th style="width:15%;">金額</th>
             </tr>
         </thead>
         <tbody>
             {% for item in invoice.items %}
             <tr>
-                <td class="desc">{{ item.description }}</td>
-                <td class="qty">{{ item.quantity }}</td>
-                <td class="unit">{{ item.unit }}</td>
-                <td class="uprice">¥ {{ "{:,}".format(item.unit_price|int) }}</td>
-                <td class="amt">¥ {{ "{:,}".format(item.amount or 0) }}</td>
+                <td class="center"></td>
+                <td>{{ item.description }}</td>
+                <td class="center">{{ item.quantity }}{{ item.unit }}</td>
+                <td class="num">¥{{ "{:,}".format(item.unit_price|int) }}</td>
+                <td class="num">¥{{ "{:,}".format(item.amount or 0) }}</td>
             </tr>
             {% else %}
             <tr>
-                <td colspan="5" style="text-align: center;">明細がありません</td>
+                <td colspan="5" class="center" style="padding: 12px; color: #666;">明細なし</td>
+            </tr>
+            {% endfor %}
+            <!-- Padding rows to fill table -->
+            {% for _ in range(max(0, 5 - invoice.items|length)) %}
+            <tr>
+                <td><br></td>
+                <td></td>
+                <td></td>
+                <td></td>
+                <td></td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
 
-    <table class="summary-table">
-        <tr>
-            <th>小計</th>
-            <td>¥ {{ "{:,}".format(invoice.total_amount or 0) }}</td>
-        </tr>
-        <tr>
-            <th>消費税 (10%)</th>
-            <td>¥ {{ "{:,}".format(invoice.tax_amount or 0) }}</td>
-        </tr>
-        <tr>
-            <th class="total-highlight">合計金額</th>
-            <td class="total-highlight">¥ {{ "{:,}".format((invoice.total_amount or 0) + (invoice.tax_amount or 0)) }}
-            </td>
-        </tr>
-    </table>
-
-    <div class="notes-area">
-        {% if invoice.notes %}
-        <div style="margin-bottom: 20px;">
-            <strong>備考:</strong><br>
-            {{ invoice.notes.replace('\n', '<br>') | safe }}
-        </div>
-        {% endif %}
-
-        {% if settings and settings.invoice_bank_info %}
-        <div class="bank-info">
-            <h3>【お振込先】</h3>
-            {{ settings.invoice_bank_info.replace('\n', '<br>') | safe }}
-            <div style="margin-top: 10px; font-size: 9pt; color: #666;">
-                ※ 誠に恐れ入りますが、お振込手数料は貴社にてご負担賜りますようお願い申し上げます。
-            </div>
-        </div>
-        {% endif %}
+    <div class="clearfix">
+        <table class="totals-table">
+            <tr>
+                <td class="label">内訳</td>
+                <td style="font-size:10pt;">10%対象(税抜)</td>
+                <td class="num">{{ "{:,}".format((invoice.total_amount or 0) - (invoice.tax_amount or 0)) }}円</td>
+            </tr>
+            <tr>
+                <td class="label"></td>
+                <td style="font-size:9pt;">10%消費税</td>
+                <td class="num">{{ "{:,}".format(invoice.tax_amount or 0) }}円</td>
+            </tr>
+        </table>
     </div>
 
-</body>
+    {% if filtered_notes %}
+    <div class="notes-area">
+        <div style="font-weight:bold; background:#f8f9fa; border-bottom:1px solid #ccc; padding:4px; font-size:10pt;">備考</div>
+        <div style="padding:8px; font-size:10pt; white-space:pre-wrap;">{{ filtered_notes }}</div>
+    </div>
+    {% endif %}
 
+</body>
 </html>

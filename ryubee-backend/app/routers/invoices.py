@@ -1374,6 +1374,56 @@ class SendInvoiceRequest(BaseModel):
     body: str = "いつも大変お世話になっております。\n添付の通り、ご請求書を送付いたします。\nご確認のほどよろしくお願い申し上げます。"
 
 
+def _get_pdf_context(db: Session, inv: models.Invoice, company: models.Company, settings: models.CompanySettings) -> dict:
+    """PDF（WeasyPrint）描画に必要なコンテキスト変数をまとめて返す"""
+    yamabun_no = "未設定"
+    if inv.customer and inv.customer.form_data:
+        try:
+            cfd = json.loads(inv.customer.form_data)
+            yamabun_no = cfd.get("yamabun_management_number", "未設定")
+        except:
+            pass
+
+    # 繰越計算（対象月より前の全請求書の合計）
+    prev_invoices = db.query(models.Invoice).options(joinedload(models.Invoice.payments)).filter(
+        models.Invoice.company_id == inv.company_id,
+        models.Invoice.customer_id == inv.customer_id,
+        models.Invoice.month < inv.month
+    ).all()
+    
+    prev_amount = 0
+    prev_paid = 0
+    for pi in prev_invoices:
+        prev_amount += pi.total_amount
+        prev_paid += sum(p.amount for p in pi.payments)
+        
+    carryover = prev_amount - prev_paid
+    if carryover < 0:
+        carryover = 0
+
+    # 備考のフィルタリング（内部メモ「案件「XXX」より変換」を非表示）
+    filtered_notes_lines = []
+    if inv.notes:
+        for line in inv.notes.split('\n'):
+            if "案件「" in line and "」より変換" in line:
+                continue
+            filtered_notes_lines.append(line)
+    filtered_notes = '\n'.join(filtered_notes_lines).strip()
+
+    return {
+        "invoice": inv,
+        "customer": inv.customer,
+        "company": company,
+        "settings": settings,
+        "today": datetime.now().strftime("%Y年%m月%d日"),
+        "yamabun_no": yamabun_no,
+        "prev_amount": prev_amount,
+        "prev_paid": prev_paid,
+        "carryover": carryover,
+        "filtered_notes": filtered_notes,
+    }
+
+
 @router.get("/{invoice_id}/pdf")
 async def get_invoice_pdf(
     invoice_id: str,
@@ -1393,13 +1443,8 @@ async def get_invoice_pdf(
     # Jinja2 render
     env = Environment(loader=FileSystemLoader(os.path.join(os.path.dirname(__file__), "..", "templates")))
     template = env.get_template("invoice.html")
-    html_content = template.render(
-        invoice=inv,
-        customer=inv.customer,
-        company=company,
-        settings=settings,
-        today=datetime.now().strftime("%Y年%m月%d日")
-    )
+    context = _get_pdf_context(db, inv, company, settings)
+    html_content = template.render(**context)
 
     # WeasyPrint PDF generation
     template_dir = os.path.join(os.path.dirname(__file__), "..", "templates")
@@ -1436,13 +1481,8 @@ async def send_invoice_email(
         # Generate PDF in memory
         env = Environment(loader=FileSystemLoader(os.path.join(os.path.dirname(__file__), "..", "templates")))
         template = env.get_template("invoice.html")
-        html_content = template.render(
-            invoice=inv,
-            customer=inv.customer,
-            company=company,
-            settings=settings,
-            today=datetime.now().strftime("%Y年%m月%d日")
-        )
+        context = _get_pdf_context(db, inv, company, settings)
+        html_content = template.render(**context)
         
         # WeasyPrint PDF generation for email attachment
         template_dir = os.path.join(os.path.dirname(__file__), "..", "templates")
@@ -1486,11 +1526,10 @@ async def send_invoice_email(
         body_text = body.body.replace('\\n', '\n')
         msg.attach(MIMEText(body_text, 'plain'))
 
-        # PDF添付
         part = MIMEBase('application', 'pdf')
         part.set_payload(pdf_bytes)
         encoders.encode_base64(part)
-        filename = f"Invoice_{inv.month}_{inv.customer.name}.pdf".replace(" ", "_")
+        filename = f"Invoice_{inv.month}_{inv.customer.customer_name}.pdf".replace(" ", "_")
         part.add_header('Content-Disposition', 'attachment', filename=filename)
         msg.attach(part)
 
