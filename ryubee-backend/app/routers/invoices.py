@@ -628,11 +628,26 @@ def generate_monthly_invoices(
         models.Manifest.issue_date.like(f"{month}%")
     ).all()
 
-    # 一般案件取得
+    # 一般案件取得（契約/スケジュール/完了ステージのみ。見積・問合せ段階は除外）
+    billable_stages = ["contract", "scheduled", "waiting_manifest", "completed"]
     jobs = db.query(models.Job).filter(
         models.Job.customer_id.in_(c_ids),
-        models.Job.work_date.like(f"{month}%")
+        models.Job.work_date.like(f"{month}%"),
+        models.Job.pipeline_stage.in_(billable_stages)
     ).all()
+
+    # 既に個別請求書が作成済みの案件を除外（from-estimate/cash-collectionで作成済み）
+    existing_job_invoices = db.query(models.Invoice).filter(
+        models.Invoice.company_id == company_id,
+        models.Invoice.notes.like("%案件「%」より変換%")
+    ).all()
+    already_invoiced_job_names = set()
+    for ei in existing_job_invoices:
+        # notesから案件名を抽出
+        if "案件「" in (ei.notes or ""):
+            start = ei.notes.index("案件「") + 3
+            end = ei.notes.index("」", start)
+            already_invoiced_job_names.add(ei.notes[start:end])
 
     from collections import defaultdict
     cust_manifests: dict[str, list[models.Manifest]] = defaultdict(list)
@@ -640,6 +655,9 @@ def generate_monthly_invoices(
     for m in manifests:
         cust_manifests[m.customer_id].append(m)
     for j in jobs:
+        # 既に個別請求済みの案件はスキップ
+        if j.job_name in already_invoiced_job_names:
+            continue
         cust_jobs[j.customer_id].append(j)
 
     target_cust_ids = set(list(cust_manifests.keys()) + list(cust_jobs.keys()))
