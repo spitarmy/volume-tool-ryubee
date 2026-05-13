@@ -1529,7 +1529,7 @@ async def send_invoice_email(
         part = MIMEBase('application', 'pdf')
         part.set_payload(pdf_bytes)
         encoders.encode_base64(part)
-        filename = f"Invoice_{inv.month}_{inv.customer.customer_name}.pdf".replace(" ", "_")
+        filename = f"Invoice_{inv.month}_{inv.customer.name}.pdf".replace(" ", "_")
         part.add_header('Content-Disposition', 'attachment', filename=filename)
         msg.attach(part)
 
