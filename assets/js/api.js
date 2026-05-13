@@ -487,6 +487,22 @@ const RyubeeAPI = {
     });
   },
 
+  // ── Job Photos (写真アップロード) ────────────────────────────
+  async uploadJobPhotos(jobId, files) {
+    const formData = new FormData();
+    for (const f of files) {
+      formData.append("images", f);
+    }
+    const token = localStorage.getItem("ryubee_token");
+    const res = await fetch(`${API_BASE}/v1/jobs/${jobId}/photos`, {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${token}` },
+      body: formData,
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  },
+
   // ── Bank (銀行入金取込) ─────────────────────────────────────
 
   async uploadBankCSV(file, bankType = "kyoto") {

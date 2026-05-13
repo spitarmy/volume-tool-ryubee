@@ -556,7 +556,7 @@
             try { fd = JSON.parse(cust.form_data || "{}"); } catch (e) { }
             const yamaNum = fd.yamabun_management_number || '';
 
-            const photoCount = Array.isArray(job.photos) ? job.photos.length : 0;
+            const photoCount = job.photo_count || (Array.isArray(job.photos) ? job.photos.length : 0);
 
             return `
                 <div class="pipeline-card" draggable="true" data-job-id="${job.job_id}" data-stage="${currentStage}" onclick="openJobDetail('${job.job_id}')">
@@ -714,13 +714,22 @@
             const drawer = document.getElementById('drawerOverlay');
             const body = document.getElementById('drawerBody');
 
-            // Find job in pipeline data
+            // パイプラインキャッシュからベース情報を取得
             let job = null;
             for (const jobs of Object.values(pipelineData)) {
                 const found = jobs.find(j => j.job_id === jobId);
                 if (found) { job = found; break; }
             }
             if (!job) return;
+
+            // 個別APIからフルデータ取得（写真含む）
+            try {
+                const fullJob = await RyubeeAPI.fetchJob(jobId);
+                // 写真データをマージ
+                job = { ...job, ...fullJob };
+            } catch (e) {
+                console.warn('Failed to fetch full job data:', e);
+            }
 
             // Load comments
             let comments = [];
@@ -1047,47 +1056,11 @@
             const files = Array.from(event.target.files);
             if (!files.length) return;
 
-            // Find job to get existing photos
-            let job = null;
-            for (const jobs of Object.values(pipelineData)) {
-                job = jobs.find(j => j.job_id === jobId);
-                if (job) break;
-            }
-            if (!job) return;
-
-            let pArr = [];
-            try {
-                pArr = Array.isArray(job.photos) ? [...job.photos] : JSON.parse(job.photos || "[]");
-            } catch (e) { }
-
-            showToast(`📸 ${files.length}枚の写真を処理中...`);
-
-            // Process all files in parallel with canvas resize
-            const processFile = (file) => new Promise((resolve) => {
-                const reader = new FileReader();
-                reader.onload = function (e) {
-                    const img = new Image();
-                    img.onload = function () {
-                        const canvas = document.createElement('canvas');
-                        const MAX_WIDTH = 800;
-                        const scale = Math.min(1, MAX_WIDTH / img.width);
-                        canvas.width = img.width * scale;
-                        canvas.height = img.height * scale;
-                        const ctx = canvas.getContext('2d');
-                        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-                        resolve(canvas.toDataURL('image/jpeg', 0.8));
-                    };
-                    img.src = e.target.result;
-                };
-                reader.readAsDataURL(file);
-            });
+            showToast(`📸 ${files.length}枚の写真をアップロード中...`);
 
             try {
-                const base64Results = await Promise.all(files.map(f => processFile(f)));
-                pArr.push(...base64Results);
-                const photosStr = JSON.stringify(pArr);
-                await RyubeeAPI.updateJob(jobId, { photos: photosStr });
-                showToast(`📸 ${files.length}枚の写真を保存しました`);
+                const result = await RyubeeAPI.uploadJobPhotos(jobId, files);
+                showToast(`📸 ${result.uploaded}枚の写真を保存しました（合計: ${result.total}枚）`);
                 await loadPipeline();
                 openJobDetail(jobId);
             } catch (err) { alert("アップロード失敗: " + err.message); }
@@ -1095,25 +1068,17 @@
 
         async function deleteJobPhoto(jobId, index) {
             if (!confirm("この写真を削除しますか？")) return;
-            let job = null;
-            for (const jobs of Object.values(pipelineData)) {
-                job = jobs.find(j => j.job_id === jobId);
-                if (job) break;
-            }
-            if (!job) return;
-
-            let pArr = [];
-            try {
-                pArr = Array.isArray(job.photos) ? [...job.photos] : JSON.parse(job.photos || "[]");
-            } catch (e) { }
-            pArr.splice(index, 1);
-            const photosStr = JSON.stringify(pArr);
 
             try {
-                await RyubeeAPI.updateJob(jobId, { photos: photosStr });
+                // 最新のフルデータをAPIから取得
+                const job = await RyubeeAPI.fetchJob(jobId);
+                let pArr = Array.isArray(job.photos) ? [...job.photos] : [];
+                try { if (typeof job.photos === 'string') pArr = JSON.parse(job.photos); } catch (e) { }
+                pArr.splice(index, 1);
+                await RyubeeAPI.updateJob(jobId, { photos: JSON.stringify(pArr) });
                 await loadPipeline();
-                openJobDetail(jobId); // reload drawer
-            } catch (err) { alert("削除失敗"); }
+                openJobDetail(jobId);
+            } catch (err) { alert("削除失敗: " + err.message); }
         }
     </script>
     <script>

@@ -1,7 +1,10 @@
 """案件ルーター: 案件CRUD（テナント分離あり）+ パイプライン + 写真"""
 import json
+import os
+import time
+import uuid as uuid_mod
 from typing import Any
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, UploadFile, File
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from app.database import get_db
@@ -169,7 +172,7 @@ def pipeline_view(
     current_user: models.User = Depends(auth.get_current_user),
     db: Session = Depends(get_db),
 ):
-    """営業パイプライン: カンバン形式でステージ別グルーピング"""
+    """営業パイプライン: カンバン形式でステージ別グルーピング（写真データ軽量化）"""
     stages = ["inquiry", "estimate", "negotiation", "contract", "scheduled", "waiting_manifest", "completed", "lost"]
     jobs = db.query(models.Job).filter_by(
         company_id=current_user.company_id
@@ -180,7 +183,12 @@ def pipeline_view(
         pipeline[stage] = []
     for j in jobs:
         stage = j.pipeline_stage if j.pipeline_stage in stages else "inquiry"
-        pipeline[stage].append(JobOut.from_orm_job(j).model_dump())
+        d = JobOut.from_orm_job(j).model_dump()
+        # パイプライン一覧では写真はカウントだけ返す（レスポンス軽量化）
+        photo_list = d.get("photos", [])
+        d["photo_count"] = len(photo_list) if isinstance(photo_list, list) else 0
+        d["photos"] = []  # 一覧ではデータを送らない
+        pipeline[stage].append(d)
 
     return pipeline
 
@@ -331,6 +339,49 @@ def archive_and_subscribe(
             
     db.commit()
     return {"message": "Job archived and customer subscribed successfully"}
+
+
+# ── Photo Upload ───────────────────────────────────────
+@router.post("/{job_id}/photos")
+async def upload_job_photos(
+    job_id: str,
+    images: list[UploadFile] = File(...),
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(get_db),
+):
+    """案件に写真をアップロード（ファイル保存方式）"""
+    job = _get_own_job(job_id, current_user, db)
+
+    # 既存の写真リストを取得
+    existing = []
+    if job.photos:
+        try:
+            existing = json.loads(job.photos)
+        except Exception:
+            pass
+
+    os.makedirs("uploads", exist_ok=True)
+    new_urls = []
+
+    for f in images:
+        content = await f.read()
+        mime_type = f.content_type or "image/jpeg"
+        ext = "jpg"
+        if "png" in mime_type:
+            ext = "png"
+        elif "webp" in mime_type:
+            ext = "webp"
+        filename = f"job_{int(time.time())}_{uuid_mod.uuid4().hex[:6]}.{ext}"
+        filepath = os.path.join("uploads", filename)
+        with open(filepath, "wb") as out_f:
+            out_f.write(content)
+        new_urls.append(f"/uploads/{filename}")
+
+    existing.extend(new_urls)
+    job.photos = json.dumps(existing)
+    db.commit()
+
+    return {"uploaded": len(new_urls), "total": len(existing), "urls": new_urls}
 
 
 # ── Helper ─────────────────────────────────────────────
