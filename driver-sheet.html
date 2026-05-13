@@ -163,7 +163,7 @@
 
     <div class="sheet-header no-print"
         style="display:flex; align-items:center; justify-content:space-between; padding:12px 16px;">
-        <button onclick="if(document.referrer){history.back();}else{window.location.href='jobs.html';}"
+        <button onclick="window.location.href='pipeline.html'"
             style="background:none; border:none; color:var(--primary); font-size:1.1rem; padding:8px 0; cursor:pointer; flex-shrink:0;">‹
             戻る</button>
         <h2
@@ -344,8 +344,15 @@
                     if (customer.phone) document.getElementById('dsPhone').textContent = customer.phone;
                 }
 
-                if (Array.isArray(job.photos) && job.photos.length) {
-                    const resolvedPhotos = RyubeeAPI.resolvePhotoUrls(job.photos);
+                // Photos parsing — handle both array and JSON string
+                let photos = [];
+                if (Array.isArray(job.photos)) {
+                    photos = job.photos;
+                } else if (typeof job.photos === 'string' && job.photos.length > 2) {
+                    try { photos = JSON.parse(job.photos); } catch (e) { }
+                }
+                if (photos.length) {
+                    const resolvedPhotos = RyubeeAPI.resolvePhotoUrls(photos);
                     document.getElementById('photoSection').style.display = 'block';
                     document.getElementById('photoSection').classList.add('hidden-for-print');
                     document.getElementById('dsPhotos').innerHTML = resolvedPhotos.map(url =>
