@@ -1461,6 +1461,20 @@
         // ── 請求書編集モード ────────────────────────
         let editInvoiceId = null;
 
+        function generateQtySelect(currentQty, id, onChangeName) {
+            const num = Number(currentQty) || 0;
+            const opts = [0.5, 1.0, 1.5, 2.0, 2.5, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0, 9.0, 10.0, 15.0, 20.0, 30.0, 40.0, 50.0];
+            if (!opts.includes(num)) opts.push(num);
+            opts.sort((a, b) => a - b);
+            
+            let html = `<select id="${id}" style="width:60px; text-align:right; padding:4px; border:1px solid var(--border); border-radius:4px;" onchange="${onChangeName}">`;
+            opts.forEach(v => {
+                html += `<option value="${v}" ${v === num ? 'selected' : ''}>${v}</option>`;
+            });
+            html += `</select>`;
+            return html;
+        }
+
         function enterEditMode(invId) {
             editInvoiceId = invId;
             const inv = allInvoices.find(i => i.id === invId);
@@ -1472,7 +1486,7 @@
             tbody.innerHTML = items.map((it, idx) => `
                 <tr id="editRow_${idx}">
                     <td><input type="text" value="${utils.escapeHtml(it.description)}" id="edit_desc_${idx}" style="width:100%;padding:4px;border:1px solid var(--border);border-radius:4px;font-size:0.85rem;"></td>
-                    <td><input type="number" value="${it.quantity}" id="edit_qty_${idx}" style="width:60px;padding:4px;border:1px solid var(--border);border-radius:4px;text-align:right;" oninput="recalcAllInv()"></td>
+                    <td>${generateQtySelect(it.quantity, `edit_qty_${idx}`, 'recalcAllInv()')}</td>
                     <td><input type="number" value="${it.unit_price}" id="edit_price_${idx}" style="width:80px;padding:4px;border:1px solid var(--border);border-radius:4px;text-align:right;" oninput="recalcAllInv()"></td>
                     <td class="num" id="edit_amt_${idx}" style="font-weight:700;">¥${Number(it.amount).toLocaleString()}</td>
                     <td style="text-align:center;"><button onclick="deleteEditRow(${idx})" style="background:none;border:none;color:#DC2626;cursor:pointer;font-size:14px;" title="削除">✕</button></td>
@@ -1571,7 +1585,7 @@
             newRow1.id = `editRow_${idx}`;
             newRow1.innerHTML = `
                 <td><input type="text" value="" id="edit_desc_${idx}" style="width:100%;padding:4px;border:1px solid var(--border);border-radius:4px;font-size:0.85rem;" placeholder="品目名"></td>
-                <td><input type="number" value="0" id="edit_qty_${idx}" style="width:60px;padding:4px;border:1px solid var(--border);border-radius:4px;text-align:right;" oninput="recalcAllInv()"></td>
+                <td>${generateQtySelect(0, `edit_qty_${idx}`, 'recalcAllInv()')}</td>
                 <td><input type="number" value="0" id="edit_price_${idx}" style="width:80px;padding:4px;border:1px solid var(--border);border-radius:4px;text-align:right;" oninput="recalcAllInv()"></td>
                 <td class="num" id="edit_amt_${idx}" style="font-weight:700;">¥0</td>
                 <td style="text-align:center;"><button onclick="deleteEditRow(${idx})" style="background:none;border:none;color:#DC2626;cursor:pointer;font-size:14px;" title="削除">✕</button></td>
