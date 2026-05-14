@@ -531,6 +531,14 @@ const RyubeeAPI = {
     return apiFetch("/v1/bank/transactions");
   },
 
+  async bankManualMatch(transactionId, invoiceId) {
+    return apiFetch("/v1/bank/manual-match", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ transaction_id: transactionId, invoice_id: invoiceId }),
+    });
+  },
+
   // ── freee連携 ───────────────────────────────────────────────
 
   async freeeAuthUrl() {

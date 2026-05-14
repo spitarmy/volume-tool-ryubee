@@ -19,6 +19,13 @@ class MatchResult(BaseModel):
     status: str
     matched_customer_name: str | None = None
     matched_invoice_id: str | None = None
+    # ニアピン候補
+    near_matches: list[dict] | None = None
+
+
+class ManualMatchRequest(BaseModel):
+    transaction_id: str
+    invoice_id: str
 
 
 # ── CSV Upload ─────────────────────────────────────────
@@ -85,6 +92,7 @@ def auto_match(
 ):
     """
     未マッチの銀行入金を顧客名で自動マッチング → 対応する未払い請求書に消し込み
+    名前が一致しなくても金額が一致する請求書があれば「ニアピン候補」として返す
     """
     unmatched = (
         db.query(models.BankTransaction)
@@ -99,6 +107,16 @@ def auto_match(
         cust_map[c.name.strip()] = c
         if c.contact_person:
             cust_map[c.contact_person.strip()] = c
+
+    # 全未払い請求書を取得（ニアピン検索用）
+    all_unpaid_invoices = (
+        db.query(models.Invoice)
+        .filter(
+            models.Invoice.company_id == current_user.company_id,
+            models.Invoice.status.in_(["sent", "partial", "overdue"]),
+        )
+        .all()
+    )
 
     matched_count = 0
     results = []
@@ -160,15 +178,105 @@ def auto_match(
                 matched_invoice_id=txn.matched_invoice_id,
             ))
         else:
+            # ── ニアピン候補を探す ──
+            # 名前は一致しなかったが、金額が一致 or 近い請求書を探す
+            near = []
+            for inv in all_unpaid_invoices:
+                # 既存の入金を考慮した残額を計算
+                paid_so_far = sum(p.amount for p in (inv.payments or []))
+                remaining = inv.total_amount - paid_so_far
+                if remaining <= 0:
+                    continue
+                # 完全一致 or 差額10%以内
+                diff = abs(remaining - txn.amount)
+                if remaining > 0 and diff <= remaining * 0.1:
+                    cust = next((c for c in customers if c.id == inv.customer_id), None)
+                    near.append({
+                        "invoice_id": inv.id,
+                        "customer_name": cust.name if cust else "不明",
+                        "customer_id": inv.customer_id,
+                        "invoice_month": inv.month,
+                        "invoice_total": inv.total_amount,
+                        "remaining": remaining,
+                        "diff": diff,
+                        "exact": diff == 0,
+                    })
+            # 差額が小さい順にソート、最大5件
+            near.sort(key=lambda x: x["diff"])
+            near = near[:5]
+
             results.append(MatchResult(
                 transaction_id=txn.id,
                 payer_name=txn.payer_name,
                 amount=txn.amount,
                 status="unmatched",
+                near_matches=near if near else None,
             ))
 
     db.commit()
     return {"matched": matched_count, "total": len(unmatched), "results": [r.model_dump() for r in results]}
+
+
+# ── 手動マッチング（ニアピン確定） ────────────────────────
+@router.post("/manual-match")
+def manual_match(
+    body: ManualMatchRequest,
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(get_db),
+):
+    """
+    ニアピン候補を手動で確定し、入金消し込みを行う
+    """
+    txn = (
+        db.query(models.BankTransaction)
+        .filter_by(id=body.transaction_id, company_id=current_user.company_id)
+        .first()
+    )
+    if not txn:
+        raise HTTPException(404, "入金データが見つかりません")
+    if txn.status != "unmatched":
+        raise HTTPException(400, "この入金は既にマッチ済みです")
+
+    inv = (
+        db.query(models.Invoice)
+        .filter_by(id=body.invoice_id, company_id=current_user.company_id)
+        .first()
+    )
+    if not inv:
+        raise HTTPException(404, "請求書が見つかりません")
+
+    # マッチング確定
+    txn.matched_customer_id = inv.customer_id
+    txn.matched_invoice_id = inv.id
+    txn.status = "matched"
+
+    # 入金レコードを作成
+    payment = models.Payment(
+        invoice_id=inv.id,
+        company_id=current_user.company_id,
+        amount=txn.amount,
+        payment_date=txn.transaction_date,
+        payment_method="bank_transfer",
+        notes=f"手動消込 ({txn.payer_name})",
+    )
+    db.add(payment)
+
+    # 請求書ステータス更新
+    total_paid = sum(p.amount for p in inv.payments) + txn.amount
+    if total_paid >= inv.total_amount:
+        inv.status = "paid"
+        txn.status = "reconciled"
+    else:
+        inv.status = "partial"
+
+    db.commit()
+
+    cust = db.query(models.Customer).filter_by(id=inv.customer_id).first()
+    return {
+        "success": True,
+        "message": f"{cust.name if cust else '不明'} の請求書に消し込みました",
+        "status": txn.status,
+    }
 
 
 # ── 未マッチ一覧 ────────────────────────────────────────

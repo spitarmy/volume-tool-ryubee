@@ -1878,20 +1878,69 @@
                 }
                 let html = `<div class="alert alert-info">✅ ${result.matched}/${result.total}件 マッチング成功</div>`;
                 if (result.results) {
-                    html += result.results.map(r => `
-                        <div style="display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border);">
-                            <span>${utils.escapeHtml(r.payer_name)}</span>
-                            <span>¥${r.amount.toLocaleString()}</span>
-                            <span class="badge ${r.status === 'reconciled' ? 'badge-success' : r.status === 'matched' ? 'badge-primary' : 'badge-warning'}">
-                                ${r.status === 'reconciled' ? '消込済' : r.status === 'matched' ? 'マッチ' : '未マッチ'}
-                            </span>
-                        </div>
-                    `).join('');
+                    html += result.results.map(r => {
+                        let statusBadge = '';
+                        if (r.status === 'reconciled') statusBadge = '<span class="badge badge-success">消込済</span>';
+                        else if (r.status === 'matched') statusBadge = '<span class="badge badge-primary">マッチ</span>';
+                        else statusBadge = '<span class="badge badge-warning">未マッチ</span>';
+
+                        let row = `
+                            <div style="padding:10px 0;border-bottom:1px solid var(--border);">
+                                <div style="display:flex;justify-content:space-between;align-items:center;">
+                                    <span style="font-weight:600;">${utils.escapeHtml(r.payer_name)}</span>
+                                    <span>¥${r.amount.toLocaleString()}</span>
+                                    ${statusBadge}
+                                </div>`;
+
+                        if (r.matched_customer_name) {
+                            row += `<div style="font-size:0.8rem;color:var(--text-secondary);margin-top:2px;">→ ${utils.escapeHtml(r.matched_customer_name)}</div>`;
+                        }
+
+                        // ニアピン候補の表示
+                        if (r.near_matches && r.near_matches.length > 0) {
+                            row += `<div style="margin-top:8px;padding:8px 12px;background:var(--warning-bg, #FFF7ED);border:1px solid var(--warning-border, #FDBA74);border-radius:8px;">
+                                <div style="font-size:0.8rem;font-weight:700;color:#B45309;margin-bottom:6px;">🎯 ニアピン候補（金額が近い請求書）</div>`;
+                            r.near_matches.forEach(nm => {
+                                const diffStr = nm.exact ? '✅ 金額一致' : `差額 ¥${nm.diff.toLocaleString()}`;
+                                const diffColor = nm.exact ? '#16A34A' : '#D97706';
+                                row += `
+                                <div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-top:1px solid rgba(0,0,0,0.06);">
+                                    <div>
+                                        <div style="font-size:0.85rem;font-weight:600;">${utils.escapeHtml(nm.customer_name)}</div>
+                                        <div style="font-size:0.75rem;color:var(--text-secondary);">${nm.invoice_month} ｜ 残額 ¥${nm.remaining.toLocaleString()}</div>
+                                        <div style="font-size:0.75rem;color:${diffColor};font-weight:600;">${diffStr}</div>
+                                    </div>
+                                    <button class="btn btn-xs btn-primary" onclick="confirmNearMatch('${r.transaction_id}', '${nm.invoice_id}', '${utils.escapeHtml(nm.customer_name)}')"
+                                        style="white-space:nowrap;font-size:0.75rem;padding:6px 12px;">
+                                        ✔ 消込
+                                    </button>
+                                </div>`;
+                            });
+                            row += `</div>`;
+                        }
+
+                        row += `</div>`;
+                        return row;
+                    }).join('');
                 }
                 el.innerHTML = html;
                 loadInvoices();
                 loadAlerts();
             } catch (e) { alert('エラー: ' + e.message); }
+        }
+
+        async function confirmNearMatch(transactionId, invoiceId, customerName) {
+            if (!confirm(`「${customerName}」の請求書に消し込みます。よろしいですか？`)) return;
+            try {
+                const result = await RyubeeAPI.bankManualMatch(transactionId, invoiceId);
+                showToast(`✅ ${result.message}`);
+                // 再度マッチングを実行して画面を更新
+                await runAutoMatch();
+                loadInvoices();
+                loadAlerts();
+            } catch (e) {
+                alert('エラー: ' + e.message);
+            }
         }
 
         // ── freee連携 ─────────────────────────────────
