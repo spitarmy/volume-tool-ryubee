@@ -1864,7 +1864,11 @@
             if (!file) { alert('CSVファイルを選択してください'); return; }
             try {
                 const result = await RyubeeAPI.uploadBankCSV(file, bankType);
-                showToast(`✅ ${result.imported}件の入金データを取込みました`);
+                let msg = `✅ ${result.imported}件の入金データを取込みました`;
+                if (result.skipped > 0) {
+                    msg += `\n⚠️ ${result.skipped}件は既に取込済みのためスキップしました`;
+                }
+                showToast(msg);
             } catch (e) { alert('エラー: ' + e.message); }
         }
 

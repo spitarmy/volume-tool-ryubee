@@ -3,7 +3,7 @@ import csv
 import io
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from pydantic import BaseModel
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 from sqlalchemy import func
 from app.database import get_db
 from app import models, auth
@@ -39,6 +39,7 @@ async def upload_bank_csv(
     """
     銀行CSVをアップロードして入金データを取り込む
     対応フォーマット: 日付, 振込人名義, 入金額 (カンマ区切り)
+    重複取込防止: 同じ日付・名義・金額の組み合わせがあればスキップ
     """
     content = await file.read()
     # Shift-JIS or UTF-8
@@ -49,6 +50,7 @@ async def upload_bank_csv(
 
     reader = csv.reader(io.StringIO(text))
     imported = 0
+    skipped = 0
 
     for row in reader:
         if len(row) < 3:
@@ -67,6 +69,21 @@ async def upload_bank_csv(
         if amount <= 0:
             continue
 
+        # ★ FIX 1: 重複取込防止 ─ 同じ日付・名義・金額の組み合わせがあればスキップ
+        existing = (
+            db.query(models.BankTransaction)
+            .filter_by(
+                company_id=current_user.company_id,
+                transaction_date=date_str,
+                payer_name=payer,
+                amount=amount,
+            )
+            .first()
+        )
+        if existing:
+            skipped += 1
+            continue
+
         bank_name_str = "京都中央信用金庫" if bank_type == "kyoto_chuo" else "京都銀行"
         txn = models.BankTransaction(
             company_id=current_user.company_id,
@@ -81,7 +98,7 @@ async def upload_bank_csv(
         imported += 1
 
     db.commit()
-    return {"imported": imported}
+    return {"imported": imported, "skipped": skipped}
 
 
 # ── 自動マッチング ──────────────────────────────────────
@@ -103,14 +120,19 @@ def auto_match(
     customers = db.query(models.Customer).filter_by(company_id=current_user.company_id).all()
     cust_map = {}
     for c in customers:
-        # 名前の部分一致マッチング（カナ・漢字両方）
-        cust_map[c.name.strip()] = c
+        name = c.name.strip()
+        # ★ FIX 2: 短すぎる名前（2文字以下）は誤マッチの原因になるので完全一致のみ
+        if name:
+            cust_map[name] = {"customer": c, "exact_only": len(name) <= 2}
         if c.contact_person:
-            cust_map[c.contact_person.strip()] = c
+            cp = c.contact_person.strip()
+            if cp:
+                cust_map[cp] = {"customer": c, "exact_only": len(cp) <= 2}
 
-    # 全未払い請求書を取得（ニアピン検索用）
+    # ★ FIX 3: 請求書を payments と一緒に eager load して正確な残額を計算
     all_unpaid_invoices = (
         db.query(models.Invoice)
+        .options(joinedload(models.Invoice.payments))
         .filter(
             models.Invoice.company_id == current_user.company_id,
             models.Invoice.status.in_(["sent", "partial", "overdue"]),
@@ -118,35 +140,57 @@ def auto_match(
         .all()
     )
 
+    # ★ FIX 4: このバッチ内で既にマッチした請求書IDを追跡し、二重消込を防ぐ
+    matched_invoice_ids_this_batch = set()
+
     matched_count = 0
     results = []
 
     for txn in unmatched:
         matched_customer = None
         # 振込人名義で顧客を検索（部分一致）
-        for name_key, customer in cust_map.items():
-            if name_key and (name_key in txn.payer_name or txn.payer_name in name_key):
-                matched_customer = customer
-                break
+        for name_key, entry in cust_map.items():
+            customer = entry["customer"]
+            exact_only = entry["exact_only"]
+            if exact_only:
+                # 短い名前は完全一致のみ
+                if name_key == txn.payer_name.strip():
+                    matched_customer = customer
+                    break
+            else:
+                # 通常の部分一致
+                if name_key and (name_key in txn.payer_name or txn.payer_name in name_key):
+                    matched_customer = customer
+                    break
 
         if matched_customer:
             txn.matched_customer_id = matched_customer.id
 
-            # この顧客の未払い請求書を検索（金額一致 or 最も古いもの）
-            unpaid_invoice = (
-                db.query(models.Invoice)
-                .filter(
-                    models.Invoice.company_id == current_user.company_id,
-                    models.Invoice.customer_id == matched_customer.id,
-                    models.Invoice.status.in_(["sent", "partial", "overdue"]),
-                )
-                .order_by(models.Invoice.month.asc())
-                .first()
-            )
+            # この顧客の未払い請求書を検索（このバッチで未消込のもの優先）
+            candidate_invoices = [
+                inv for inv in all_unpaid_invoices
+                if inv.customer_id == matched_customer.id
+                and inv.id not in matched_invoice_ids_this_batch
+            ]
+            # 月が古い順にソート
+            candidate_invoices.sort(key=lambda x: x.month)
+
+            unpaid_invoice = None
+            # まず金額一致の請求書を探す
+            for inv in candidate_invoices:
+                paid_so_far = sum(p.amount for p in (inv.payments or []))
+                remaining = inv.total_amount - paid_so_far
+                if remaining == txn.amount:
+                    unpaid_invoice = inv
+                    break
+            # なければ最も古い未払い請求書
+            if not unpaid_invoice and candidate_invoices:
+                unpaid_invoice = candidate_invoices[0]
 
             if unpaid_invoice:
                 txn.matched_invoice_id = unpaid_invoice.id
                 txn.status = "matched"
+                matched_invoice_ids_this_batch.add(unpaid_invoice.id)
 
                 # 入金レコードを作成
                 payment = models.Payment(
@@ -159,8 +203,8 @@ def auto_match(
                 )
                 db.add(payment)
 
-                # 請求書ステータス更新
-                total_paid = sum(p.amount for p in unpaid_invoice.payments) + txn.amount
+                # ★ FIX 5: 既存の payments + 今回の入金額で正しく判定
+                total_paid = sum(p.amount for p in (unpaid_invoice.payments or [])) + txn.amount
                 if total_paid >= unpaid_invoice.total_amount:
                     unpaid_invoice.status = "paid"
                     txn.status = "reconciled"
@@ -182,6 +226,8 @@ def auto_match(
             # 名前は一致しなかったが、金額が一致 or 近い請求書を探す
             near = []
             for inv in all_unpaid_invoices:
+                if inv.id in matched_invoice_ids_this_batch:
+                    continue
                 # 既存の入金を考慮した残額を計算
                 paid_so_far = sum(p.amount for p in (inv.payments or []))
                 remaining = inv.total_amount - paid_so_far
@@ -237,8 +283,10 @@ def manual_match(
     if txn.status != "unmatched":
         raise HTTPException(400, "この入金は既にマッチ済みです")
 
+    # ★ FIX 6: payments を eager load して正確な残額計算
     inv = (
         db.query(models.Invoice)
+        .options(joinedload(models.Invoice.payments))
         .filter_by(id=body.invoice_id, company_id=current_user.company_id)
         .first()
     )
@@ -262,7 +310,7 @@ def manual_match(
     db.add(payment)
 
     # 請求書ステータス更新
-    total_paid = sum(p.amount for p in inv.payments) + txn.amount
+    total_paid = sum(p.amount for p in (inv.payments or [])) + txn.amount
     if total_paid >= inv.total_amount:
         inv.status = "paid"
         txn.status = "reconciled"
