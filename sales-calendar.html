@@ -85,15 +85,31 @@
             margin-bottom: 90px;
         }
 
-        .cal-week {
+        .cal-week-container {
+            position: relative;
+            min-height: 100px;
+            background: var(--border);
+            border-bottom: 1px solid var(--border);
+            display: flex;
+        }
+
+        .cal-week-bg {
+            position: absolute;
+            inset: 0;
+            display: grid;
+            grid-template-columns: repeat(7, 1fr);
+            gap: 4px;
+        }
+
+        .cal-week-events {
+            position: relative;
+            width: 100%;
             display: grid;
             grid-template-columns: repeat(7, 1fr);
             grid-auto-rows: min-content;
             gap: 4px;
-            background: var(--border);
-            border-bottom: 1px solid var(--border);
+            pointer-events: none;
             padding-bottom: 4px;
-            min-height: 80px;
         }
 
         .cal-grid {
@@ -124,21 +140,20 @@
 
         .cal-day {
             background: #fff;
-            grid-row: 1 / span var(--rows, 2);
-            padding: 4px;
             cursor: pointer;
             transition: background 0.15s;
+            width: 100%;
+            height: 100%;
         }
 
         .cal-day-content {
             grid-row: 1;
-            pointer-events: none; /* Let clicks pass to cal-day background */
-            z-index: 2;
             padding: 4px;
+            z-index: 2;
         }
 
         .cal-day:hover { background: var(--bg-secondary); }
-        .cal-day.other-month { background: #F9FAFB; color: var(--text-tertiary); }
+        .cal-day.other-month { background: #F9FAFB; }
         .cal-day.today { background: #F0F9FF; }
 
         .day-num {
@@ -148,7 +163,11 @@
             display: inline-block;
         }
 
-        .cal-day.today .day-num {
+        .day-num.text-tertiary {
+            color: var(--text-tertiary);
+        }
+
+        .day-num.today-num {
             background: var(--blue);
             color: white;
             width: 22px;
@@ -171,7 +190,7 @@
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            cursor: pointer;
+            pointer-events: auto; /* Clickable */
             display: flex;
             align-items: center;
         }
@@ -520,7 +539,8 @@
 
             for (let w = 0; w < numWeeks; w++) {
                 const weekDates = [];
-                let bgHtml = '';
+                let bgHtml = '<div class="cal-week-bg">';
+                let eventsHtml = '<div class="cal-week-events">';
                 
                 for (let i = 0; i < 7; i++) {
                     const dStr = getFormatDate(currentLoopDate);
@@ -531,15 +551,18 @@
                     
                     bgHtml += `
                         <div class="cal-day ${isOtherMonth ? 'other-month' : ''} ${isToday ? 'today' : ''}" 
-                             style="grid-column: ${i+1};"
                              onclick="openDailyDrawer('${dStr}')">
-                            <div class="cal-day-content">
-                                <span class="day-num">${currentLoopDate.getDate()}</span>
-                            </div>
+                        </div>
+                    `;
+                    
+                    eventsHtml += `
+                        <div class="cal-day-content" style="grid-column: ${i+1}; grid-row: 1;">
+                            <span class="day-num ${isToday ? 'today-num' : ''} ${isOtherMonth ? 'text-tertiary' : ''}">${currentLoopDate.getDate()}</span>
                         </div>
                     `;
                     currentLoopDate.setDate(currentLoopDate.getDate() + 1);
                 }
+                bgHtml += '</div>';
 
                 const weekStart = weekDates[0];
                 const weekEnd = weekDates[6];
@@ -602,8 +625,8 @@
                     }
                 });
                 
-                const maxRow = rowEnds.length === 0 ? 2 : rowEnds.length + 1;
-                html += `<div class="cal-week" style="--rows: ${maxRow};">${bgHtml}${eventsHtml}</div>`;
+                eventsHtml += '</div>';
+                html += `<div class="cal-week-container">${bgHtml}${eventsHtml}</div>`;
             }
 
             document.getElementById('calendarGrid').innerHTML = html;
