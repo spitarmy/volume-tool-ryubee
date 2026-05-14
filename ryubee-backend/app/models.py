@@ -560,6 +560,7 @@ class CalendarEvent(Base):
     color: Mapped[str] = mapped_column(String(20), default="#3B82F6")  # 予定の色
     memo: Mapped[str] = mapped_column(Text, default="")
     all_day: Mapped[bool] = mapped_column(Boolean, default=False)
+    is_done: Mapped[bool] = mapped_column(Boolean, default=False)  # 完了フラグ
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
 
     user: Mapped["User | None"] = relationship()

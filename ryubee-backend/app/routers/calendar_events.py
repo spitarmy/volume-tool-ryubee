@@ -17,6 +17,7 @@ class EventCreate(BaseModel):
     color: str = "#3B82F6"
     memo: str = ""
     all_day: bool = False
+    is_done: bool = False
     user_id: str | None = None
 
 
@@ -33,6 +34,7 @@ class EventOut(BaseModel):
     color: str
     memo: str
     all_day: bool
+    is_done: bool
     user_id: str | None
     user_name: str = ""
 
@@ -88,6 +90,7 @@ def create_event(
         color=body.color,
         memo=body.memo,
         all_day=body.all_day,
+        is_done=body.is_done,
         user_id=body.user_id,
     )
     db.add(event)
@@ -121,6 +124,7 @@ def update_event(
     event.color = body.color
     event.memo = body.memo
     event.all_day = body.all_day
+    event.is_done = body.is_done
     event.user_id = body.user_id
 
     db.commit()

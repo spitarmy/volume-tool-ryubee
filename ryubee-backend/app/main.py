@@ -35,6 +35,7 @@ try:
             ("users", "role", "VARCHAR(20) DEFAULT 'staff'"),
             ("company_settings", "contractors_master", "TEXT DEFAULT '[\"ホームケルン\", \"光アスコン\", \"旭興産業\", \"木材開発\", \"厳本金属\", \"京都有機資源\", \"HIRAYAMA\", \"大剛\", \"京都環境保全公社\", \"西山環境サービス\", \"家電リサイクル\"]'"),
             ("invoices", "invoice_type", "VARCHAR(20) DEFAULT 'mixed'"),
+            ("calendar_events", "is_done", "BOOLEAN DEFAULT FALSE"),
         ]
         for _table, _col, _coltype in _migrations:
             try:

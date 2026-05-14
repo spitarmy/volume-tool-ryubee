@@ -324,6 +324,9 @@
                 <label style="display:flex;align-items:center;gap:6px;font-size:0.9rem;cursor:pointer;">
                     <input type="checkbox" id="eventAllDay" onchange="toggleTimeFields()"> 終日
                 </label>
+                <label style="display:flex;align-items:center;gap:6px;font-size:0.9rem;cursor:pointer;margin-left:12px;">
+                    <input type="checkbox" id="eventIsDone"> ✅ 完了済にする
+                </label>
             </div>
 
             <div id="timeFields" style="display:flex; gap:12px; margin-bottom:16px;">
@@ -478,7 +481,9 @@
 
                 let eventsHtml = dayEvents.slice(0, 4).map(e => {
                     const timeStr = e.all_day ? '' : (e.start_time ? `${e.start_time} ` : '');
-                    return `<div class="event-bar" style="background:${e.color}">${timeStr}${utils.escapeHtml(e.title)}</div>`;
+                    const bgColor = e.is_done ? '#4B5563' : e.color;
+                    const textStyle = e.is_done ? 'text-decoration:line-through;opacity:0.7;' : '';
+                    return `<div class="event-bar" style="background:${bgColor};${textStyle}">${timeStr}${utils.escapeHtml(e.title)}</div>`;
                 }).join('');
                 
                 if (dayEvents.length > 4) {
@@ -526,16 +531,19 @@
                         if (e.end_time) timeDisplay += `<br><span style="font-size:0.7rem;font-weight:400;">〜${e.end_time}</span>`;
                     }
                     
+                    const bgColor = e.is_done ? '#4B5563' : e.color;
+                    const textStyle = e.is_done ? 'text-decoration:line-through;color:var(--text-tertiary);' : '';
                     return `
-                    <div class="event-card" onclick="editEvent('${e.id}')">
-                        <div class="ec-time">${timeDisplay}</div>
+                    <div class="event-card" onclick="editEvent('${e.id}')" style="${e.is_done ? 'background:#F9FAFB;' : ''}">
+                        <div class="ec-time" style="${textStyle}">${timeDisplay}</div>
                         <div class="ec-content">
-                            <div class="ec-title">
-                                <span class="ec-color-dot" style="background:${e.color}"></span>
+                            <div class="ec-title" style="${textStyle}">
+                                <span class="ec-color-dot" style="background:${bgColor}"></span>
                                 ${utils.escapeHtml(e.title)}
+                                ${e.is_done ? '<span style="font-size:0.7rem;background:#4B5563;color:white;padding:2px 6px;border-radius:4px;margin-left:6px;font-weight:normal;text-decoration:none;">完了</span>' : ''}
                             </div>
-                            ${e.memo ? `<div class="ec-memo">${utils.escapeHtml(e.memo)}</div>` : ''}
-                            ${e.user_name ? `<div class="ec-user">👤 ${utils.escapeHtml(e.user_name)}</div>` : ''}
+                            ${e.memo ? `<div class="ec-memo" style="${textStyle}">${utils.escapeHtml(e.memo)}</div>` : ''}
+                            ${e.user_name ? `<div class="ec-user" style="${e.is_done ? 'opacity:0.7;' : ''}">👤 ${utils.escapeHtml(e.user_name)}</div>` : ''}
                         </div>
                     </div>
                 `}).join('');
@@ -577,6 +585,7 @@
             document.getElementById('eventTitle').value = '';
             document.getElementById('eventDate').value = dateStr || new Date().toISOString().split('T')[0];
             document.getElementById('eventAllDay').checked = false;
+            document.getElementById('eventIsDone').checked = false;
             document.getElementById('eventStartTime').value = '';
             document.getElementById('eventEndTime').value = '';
             document.getElementById('eventUserId').value = RyubeeAPI.currentUser()?.id || '';
@@ -601,6 +610,7 @@
             document.getElementById('eventTitle').value = e.title;
             document.getElementById('eventDate').value = e.event_date;
             document.getElementById('eventAllDay').checked = e.all_day;
+            document.getElementById('eventIsDone').checked = e.is_done || false;
             document.getElementById('eventStartTime').value = e.start_time || '';
             document.getElementById('eventEndTime').value = e.end_time || '';
             document.getElementById('eventUserId').value = e.user_id || '';
@@ -632,6 +642,7 @@
                 title: document.getElementById('eventTitle').value,
                 event_date: document.getElementById('eventDate').value,
                 all_day: document.getElementById('eventAllDay').checked,
+                is_done: document.getElementById('eventIsDone').checked,
                 start_time: document.getElementById('eventStartTime').value || null,
                 end_time: document.getElementById('eventEndTime').value || null,
                 user_id: document.getElementById('eventUserId').value || null,
@@ -680,6 +691,28 @@
             } catch (e) {
                 alert("削除エラー: " + e.message);
             }
+        }
+
+        function showToast(msg) {
+            const t = document.createElement('div');
+            t.textContent = msg;
+            t.style.position = 'fixed';
+            t.style.bottom = '20px';
+            t.style.left = '50%';
+            t.style.transform = 'translateX(-50%)';
+            t.style.background = '#333';
+            t.style.color = '#fff';
+            t.style.padding = '10px 20px';
+            t.style.borderRadius = '20px';
+            t.style.zIndex = '9999';
+            t.style.fontSize = '0.9rem';
+            t.style.boxShadow = '0 4px 6px rgba(0,0,0,0.1)';
+            document.body.appendChild(t);
+            setTimeout(() => {
+                t.style.opacity = '0';
+                t.style.transition = 'opacity 0.3s';
+                setTimeout(() => t.remove(), 300);
+            }, 3000);
         }
     </script>
 </body>
