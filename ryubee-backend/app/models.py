@@ -555,6 +555,7 @@ class CalendarEvent(Base):
     user_id: Mapped[str | None] = mapped_column(String, ForeignKey("users.id"), nullable=True)  # 担当営業
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     event_date: Mapped[str] = mapped_column(String(20), nullable=False)  # YYYY-MM-DD
+    end_date: Mapped[str | None] = mapped_column(String(20), nullable=True)  # YYYY-MM-DD (複数日跨ぎ用)
     start_time: Mapped[str | None] = mapped_column(String(10), nullable=True)  # HH:MM
     end_time: Mapped[str | None] = mapped_column(String(10), nullable=True)    # HH:MM
     color: Mapped[str] = mapped_column(String(20), default="#3B82F6")  # 予定の色

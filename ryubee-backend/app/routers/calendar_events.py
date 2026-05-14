@@ -2,7 +2,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
-from sqlalchemy import or_
+from sqlalchemy import or_, and_
 from app.database import get_db
 from app import models, auth
 
@@ -12,6 +12,7 @@ router = APIRouter(prefix="/v1/calendar", tags=["calendar"])
 class EventCreate(BaseModel):
     title: str
     event_date: str
+    end_date: str | None = None
     start_time: str | None = None
     end_time: str | None = None
     color: str = "#3B82F6"
@@ -29,6 +30,7 @@ class EventOut(BaseModel):
     id: str
     title: str
     event_date: str
+    end_date: str | None
     start_time: str | None
     end_time: str | None
     color: str
@@ -50,9 +52,24 @@ def get_events(
     db: Session = Depends(get_db),
 ):
     """指定月のイベント一覧を取得"""
+    # Filter: event_date is in the month, OR end_date is in the month, OR the month is between event_date and end_date
+    next_month = f"{month[:5]}{(int(month[5:]) % 12) + 1:02d}"
+    if month.endswith("-12"):
+        next_month = f"{int(month[:4]) + 1}-01"
+    
+    # 予定がその月に被っているか
+    # event_date < next_month AND (end_date >= month OR end_date IS NULL AND event_date >= month)
+    # 簡略化して: event_date が month と一致、または end_date がある場合はその期間が month と被る
     query = db.query(models.CalendarEvent).filter(
         models.CalendarEvent.company_id == current_user.company_id,
-        models.CalendarEvent.event_date.startswith(month)
+        or_(
+            models.CalendarEvent.event_date.startswith(month),
+            and_(
+                models.CalendarEvent.end_date != None,
+                models.CalendarEvent.event_date <= f"{month}-31",
+                models.CalendarEvent.end_date >= f"{month}-01"
+            )
+        )
     )
 
     if user_filter:
@@ -85,6 +102,7 @@ def create_event(
         company_id=current_user.company_id,
         title=body.title,
         event_date=body.event_date,
+        end_date=body.end_date,
         start_time=body.start_time,
         end_time=body.end_time,
         color=body.color,
@@ -119,6 +137,7 @@ def update_event(
 
     event.title = body.title
     event.event_date = body.event_date
+    event.end_date = body.end_date
     event.start_time = body.start_time
     event.end_time = body.end_time
     event.color = body.color
