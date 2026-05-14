@@ -118,16 +118,67 @@ def auto_match(
     )
 
     customers = db.query(models.Customer).filter_by(company_id=current_user.company_id).all()
-    cust_map = {}
+
+    # ── 名前正規化: 法人格や記号を除去して「核」の名前を抽出 ──
+    import re
+
+    # 除去する法人格・記号パターン（漢字・カナ両方）
+    STRIP_PATTERNS = [
+        # 漢字法人格
+        r'株式会社', r'有限会社', r'合同会社', r'合資会社', r'合名会社',
+        r'一般社団法人', r'一般財団法人', r'社会福祉法人', r'医療法人',
+        r'特定非営利活動法人', r'NPO法人',
+        # 略称（括弧付き）
+        r'\(株\)', r'（株）', r'\(有\)', r'（有）', r'\(合\)', r'（合）',
+        # カナ法人格（銀行CSVでよく使われる）
+        r'カ\)', r'カ）', r'\(カ', r'（カ', r'ユ\)', r'ユ）', r'\(ユ', r'（ユ',
+        r'ド\)', r'ド）', r'\(ド', r'（ド',
+        # 一般的な接尾語
+        r'御中', r'様',
+    ]
+
+    def normalize_name(name: str) -> str:
+        """法人格・記号を除去し、核となる名前を抽出する"""
+        s = name.strip()
+        for pat in STRIP_PATTERNS:
+            s = re.sub(pat, '', s)
+        # 全角・半角スペース、記号を除去
+        s = re.sub(r'[\s　・\-\.\(\)（）「」\u3000]+', '', s)
+        return s.strip()
+
+    # 顧客名マップ: { 正規化名: customer } と { 元の名前: customer }
+    cust_entries = []  # [(core_name, original_name, customer), ...]
     for c in customers:
         name = c.name.strip()
-        # ★ FIX 2: 短すぎる名前（2文字以下）は誤マッチの原因になるので完全一致のみ
         if name:
-            cust_map[name] = {"customer": c, "exact_only": len(name) <= 2}
+            core = normalize_name(name)
+            cust_entries.append((core, name, c))
         if c.contact_person:
             cp = c.contact_person.strip()
             if cp:
-                cust_map[cp] = {"customer": c, "exact_only": len(cp) <= 2}
+                core = normalize_name(cp)
+                cust_entries.append((core, cp, c))
+
+    def find_matching_customer(payer_name: str):
+        """振込人名義から顧客を検索。核の名前で照合する。"""
+        payer_core = normalize_name(payer_name)
+
+        if not payer_core:
+            return None
+
+        # Pass 1: 核の名前が完全一致
+        for core, orig, cust in cust_entries:
+            if core and core == payer_core:
+                return cust
+
+        # Pass 2: 核の名前で部分一致（3文字以上の場合のみ）
+        for core, orig, cust in cust_entries:
+            if not core or len(core) < 3:
+                continue
+            if core in payer_core or payer_core in core:
+                return cust
+
+        return None
 
     # ★ FIX 3: 請求書を payments と一緒に eager load して正確な残額を計算
     all_unpaid_invoices = (
@@ -147,21 +198,7 @@ def auto_match(
     results = []
 
     for txn in unmatched:
-        matched_customer = None
-        # 振込人名義で顧客を検索（部分一致）
-        for name_key, entry in cust_map.items():
-            customer = entry["customer"]
-            exact_only = entry["exact_only"]
-            if exact_only:
-                # 短い名前は完全一致のみ
-                if name_key == txn.payer_name.strip():
-                    matched_customer = customer
-                    break
-            else:
-                # 通常の部分一致
-                if name_key and (name_key in txn.payer_name or txn.payer_name in name_key):
-                    matched_customer = customer
-                    break
+        matched_customer = find_matching_customer(txn.payer_name)
 
         if matched_customer:
             txn.matched_customer_id = matched_customer.id
