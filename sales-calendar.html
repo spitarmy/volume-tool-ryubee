@@ -195,6 +195,31 @@
             align-items: center;
         }
 
+        /* Drawer styles */
+        .drawer-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(4px);
+            display: none;
+            z-index: 3000;
+            align-items: flex-end;
+            justify-content: center;
+        }
+
+        .drawer-overlay.show { display: flex; }
+
+        .drawer {
+            background: #fff;
+            border-radius: var(--r-xl) var(--r-xl) 0 0;
+            width: 100%;
+            max-width: 600px;
+            max-height: 85vh;
+            padding: 20px;
+            overflow-y: auto;
+            animation: sheetUp 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+
         /* TimeTree style drawer */
         .tt-event {
             display: flex;
