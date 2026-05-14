@@ -93,6 +93,11 @@ app.include_router(daily_reports.router)
 app.include_router(company_data.router)
 
 try:
+    from app.routers import calendar_events
+    app.include_router(calendar_events.router)
+except ImportError as _e:
+    print(f"calendar_events router not loaded: {_e}")
+try:
     from app.routers import auto_debit
     app.include_router(auto_debit.router)
 except ImportError as _e:

@@ -739,6 +739,38 @@ const RyubeeAPI = {
     return res.json();
   },
 
+  // ── Users ──────────────────────────────────────────────────
+  async fetchUsers() {
+    return apiFetch("/v1/auth/users");
+  },
+
+  // ── Calendar Events ───────────────────────────────────────
+  async fetchCalendarEvents(month, userFilter = null) {
+    let url = `/v1/calendar/events?month=${month}`;
+    if (userFilter) url += `&user_filter=${userFilter}`;
+    return apiFetch(url);
+  },
+
+  async createCalendarEvent(data) {
+    return apiFetch("/v1/calendar/events", {
+      method: "POST",
+      body: JSON.stringify(data),
+    });
+  },
+
+  async updateCalendarEvent(id, data) {
+    return apiFetch(`/v1/calendar/events/${id}`, {
+      method: "PUT",
+      body: JSON.stringify(data),
+    });
+  },
+
+  async deleteCalendarEvent(id) {
+    return apiFetch(`/v1/calendar/events/${id}`, {
+      method: "DELETE",
+    });
+  },
+
   // ── Photo URL Helper ──────────────────────────────────────
   /**
    * 写真URLを解決する。

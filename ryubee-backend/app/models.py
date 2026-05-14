@@ -544,3 +544,22 @@ class TrainingMaterial(Base):
     file_type: Mapped[str] = mapped_column(String(50), default="")  # pdf/image
     notes: Mapped[str] = mapped_column(Text, default="")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
+# ── 営業共有カレンダー ─────────────────────────────────────────
+class CalendarEvent(Base):
+    __tablename__ = "calendar_events"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    company_id: Mapped[str] = mapped_column(String, ForeignKey("companies.id"), nullable=False)
+    user_id: Mapped[str | None] = mapped_column(String, ForeignKey("users.id"), nullable=True)  # 担当営業
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    event_date: Mapped[str] = mapped_column(String(20), nullable=False)  # YYYY-MM-DD
+    start_time: Mapped[str | None] = mapped_column(String(10), nullable=True)  # HH:MM
+    end_time: Mapped[str | None] = mapped_column(String(10), nullable=True)    # HH:MM
+    color: Mapped[str] = mapped_column(String(20), default="#3B82F6")  # 予定の色
+    memo: Mapped[str] = mapped_column(Text, default="")
+    all_day: Mapped[bool] = mapped_column(Boolean, default=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+    user: Mapped["User | None"] = relationship()
