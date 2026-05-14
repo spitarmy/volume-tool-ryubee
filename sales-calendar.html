@@ -124,7 +124,7 @@
 
         .cal-day {
             background: #fff;
-            grid-row: 1 / 100;
+            grid-row: 1 / span var(--rows, 2);
             padding: 4px;
             cursor: pointer;
             transition: background 0.15s;
@@ -176,79 +176,90 @@
             align-items: center;
         }
 
-        /* Drawer styles */
-        .drawer-overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.4);
-            backdrop-filter: blur(4px);
-            display: none;
-            z-index: 3000;
-            align-items: flex-end;
-            justify-content: center;
-        }
-
-        .drawer-overlay.show { display: flex; }
-
-        .drawer {
-            background: #fff;
-            border-radius: var(--r-xl) var(--r-xl) 0 0;
-            width: 100%;
-            max-width: 600px;
-            max-height: 85vh;
-            padding: 20px;
-            overflow-y: auto;
-            animation: sheetUp 0.3s cubic-bezier(0.25, 1, 0.5, 1);
-        }
-
-        .event-card {
-            background: #fff;
-            border-radius: var(--r-md);
-            padding: 12px;
-            margin-bottom: 10px;
-            border: 1px solid var(--border);
+        /* TimeTree style drawer */
+        .tt-event {
             display: flex;
-            align-items: flex-start;
-            gap: 12px;
+            align-items: center;
+            padding: 14px 0;
+            border-bottom: 1px solid #f0f0f0;
+            cursor: pointer;
+            background: #fff;
         }
-
-        .ec-time {
-            width: 45px;
+        .tt-event:last-child {
+            border-bottom: none;
+        }
+        .tt-time {
+            width: 48px;
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
             font-size: 0.8rem;
             font-weight: 700;
-            color: var(--text-secondary);
-            text-align: right;
+            color: var(--text-primary);
+        }
+        .tt-time-end {
+            font-size: 0.75rem;
+            font-weight: 400;
+            color: var(--text-tertiary);
+        }
+        .tt-color-bar {
+            width: 3px;
+            height: 36px;
+            border-radius: 2px;
+            margin: 0 12px;
             flex-shrink: 0;
         }
-
-        .ec-content { flex: 1; }
-        
-        .ec-title {
+        .tt-content {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        .tt-title {
             font-weight: 700;
             font-size: 0.95rem;
-            margin-bottom: 4px;
+            color: var(--text-primary);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
             display: flex;
             align-items: center;
             gap: 6px;
         }
-
-        .ec-color-dot {
-            width: 10px;
-            height: 10px;
-            border-radius: 50%;
-            display: inline-block;
-        }
-
-        .ec-memo {
-            font-size: 0.85rem;
-            color: var(--text-secondary);
-            white-space: pre-wrap;
-        }
-
-        .ec-user {
-            font-size: 0.75rem;
+        .tt-title.done {
+            text-decoration: line-through;
             color: var(--text-tertiary);
-            margin-top: 6px;
+        }
+        .tt-memo {
+            font-size: 0.75rem;
+            color: var(--text-secondary);
+            margin-top: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .tt-user {
+            margin-left: 8px;
+            flex-shrink: 0;
+        }
+        .tt-avatar {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: #F472B6; /* default pinkish */
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.85rem;
+            font-weight: 700;
+        }
+        .tt-avatar.done {
+            opacity: 0.6;
+            background: #9CA3AF !important;
         }
 
         .floating-add-btn {
@@ -590,8 +601,9 @@
                         rowIndex++;
                     }
                 });
-
-                html += `<div class="cal-week">${bgHtml}${eventsHtml}</div>`;
+                
+                const maxRow = rowEnds.length === 0 ? 2 : rowEnds.length + 1;
+                html += `<div class="cal-week" style="--rows: ${maxRow};">${bgHtml}${eventsHtml}</div>`;
             }
 
             document.getElementById('calendarGrid').innerHTML = html;
@@ -619,26 +631,35 @@
                 list.innerHTML = '<p style="color:var(--text-tertiary); font-size:0.9rem; text-align:center; padding:20px 0;">この日の予定はありません。</p>';
             } else {
                 list.innerHTML = dayEvents.map(e => {
-                    let timeDisplay = '終日';
+                    let timeHtml = '<span style="font-weight:normal;color:var(--text-secondary);">終日</span>';
                     if (!e.all_day && e.start_time) {
-                        timeDisplay = e.start_time;
-                        if (e.end_time) timeDisplay += `<br><span style="font-size:0.7rem;font-weight:400;">〜${e.end_time}</span>`;
+                        timeHtml = `<span>${e.start_time}</span>`;
+                        if (e.end_time) timeHtml += `<span class="tt-time-end">${e.end_time}</span>`;
                     }
                     
-                    const bgColor = e.is_done ? '#4B5563' : e.color;
-                    const textStyle = e.is_done ? 'text-decoration:line-through;color:var(--text-tertiary);' : '';
+                    const bgColor = e.is_done ? '#9CA3AF' : e.color;
+                    const doneClass = e.is_done ? 'done' : '';
+                    
+                    let avatarHtml = '';
+                    if (e.user_name) {
+                        const initial = e.user_name.charAt(0);
+                        // Simple hash for color if needed, or just use the event color or a default
+                        const avatarColor = e.color; 
+                        avatarHtml = `<div class="tt-user"><div class="tt-avatar ${doneClass}" style="background:${avatarColor}">${utils.escapeHtml(initial)}</div></div>`;
+                    }
+
                     return `
-                    <div class="event-card" onclick="editEvent('${e.id}')" style="${e.is_done ? 'background:#F9FAFB;' : ''}">
-                        <div class="ec-time" style="${textStyle}">${timeDisplay}</div>
-                        <div class="ec-content">
-                            <div class="ec-title" style="${textStyle}">
-                                <span class="ec-color-dot" style="background:${bgColor}"></span>
+                    <div class="tt-event" onclick="editEvent('${e.id}')">
+                        <div class="tt-time">${timeHtml}</div>
+                        <div class="tt-color-bar" style="background:${bgColor}"></div>
+                        <div class="tt-content">
+                            <div class="tt-title ${doneClass}">
                                 ${utils.escapeHtml(e.title)}
-                                ${e.is_done ? '<span style="font-size:0.7rem;background:#4B5563;color:white;padding:2px 6px;border-radius:4px;margin-left:6px;font-weight:normal;text-decoration:none;">完了</span>' : ''}
+                                ${e.is_done ? '<span style="font-size:0.65rem;background:#4B5563;color:white;padding:1px 4px;border-radius:4px;margin-left:4px;font-weight:normal;text-decoration:none;">完了</span>' : ''}
                             </div>
-                            ${e.memo ? `<div class="ec-memo" style="${textStyle}">${utils.escapeHtml(e.memo)}</div>` : ''}
-                            ${e.user_name ? `<div class="ec-user" style="${e.is_done ? 'opacity:0.7;' : ''}">👤 ${utils.escapeHtml(e.user_name)}</div>` : ''}
+                            ${e.memo ? `<div class="tt-memo ${doneClass}">${utils.escapeHtml(e.memo)}</div>` : ''}
                         </div>
+                        ${avatarHtml}
                     </div>
                 `}).join('');
             }
