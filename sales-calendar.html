@@ -579,7 +579,7 @@
             document.getElementById('eventAllDay').checked = false;
             document.getElementById('eventStartTime').value = '';
             document.getElementById('eventEndTime').value = '';
-            document.getElementById('eventUserId').value = RyubeeAPI.getUser().id || '';
+            document.getElementById('eventUserId').value = RyubeeAPI.currentUser()?.id || '';
             updateEventColor();
             document.getElementById('eventMemo').value = '';
             
