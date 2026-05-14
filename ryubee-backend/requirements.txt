@@ -15,3 +15,4 @@ jinja2
 weasyprint
 reportlab
 python-dateutil
+pykakasi

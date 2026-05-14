@@ -411,6 +411,40 @@ class BankTransaction(Base):
     invoice: Mapped["Invoice | None"] = relationship()
 
 
+# ── 振込人名寄せ（学習機能） ─────────────────────────────────
+class PayerNameAlias(Base):
+    __tablename__ = "payer_name_aliases"
+    __table_args__ = (
+        Index('ix_payer_alias_company', 'company_id'),
+    )
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    company_id: Mapped[str] = mapped_column(String, ForeignKey("companies.id"), nullable=False)
+    payer_name: Mapped[str] = mapped_column(String(255), nullable=False)  # 銀行CSVの振込人名義
+    customer_id: Mapped[str] = mapped_column(String, ForeignKey("customers.id"), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+    customer: Mapped["Customer"] = relationship()
+
+
+# ── 操作ログ（監査証跡） ────────────────────────────────────
+class AuditLog(Base):
+    __tablename__ = "audit_logs"
+    __table_args__ = (
+        Index('ix_audit_company_time', 'company_id', 'created_at'),
+    )
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    company_id: Mapped[str] = mapped_column(String, ForeignKey("companies.id"), nullable=False)
+    user_id: Mapped[str] = mapped_column(String, ForeignKey("users.id"), nullable=False)
+    user_name: Mapped[str] = mapped_column(String(255), default="")
+    action: Mapped[str] = mapped_column(String(100), nullable=False)  # email_sent / payment_created / payment_deleted / invoice_updated / bank_matched
+    target_type: Mapped[str] = mapped_column(String(50), default="")  # invoice / payment / bank_transaction
+    target_id: Mapped[str] = mapped_column(String, default="")
+    details: Mapped[str] = mapped_column(Text, default="")  # JSON or free-form description
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+
+
 # ── freee連携 ─────────────────────────────────────────────
 class FreeeIntegration(Base):
     __tablename__ = "freee_integrations"

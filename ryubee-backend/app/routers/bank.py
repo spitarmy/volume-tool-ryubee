@@ -1,6 +1,7 @@
-"""銀行入金取込ルーター: CSVアップロード・自動マッチング・消し込み"""
+"""銀行入金取込ルーター: CSVアップロード・自動マッチング・消し込み・名寄せ学習"""
 import csv
 import io
+import re
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
 from pydantic import BaseModel
 from sqlalchemy.orm import Session, joinedload
@@ -9,6 +10,65 @@ from app.database import get_db
 from app import models, auth
 
 router = APIRouter(prefix="/v1/bank", tags=["bank"])
+
+# ── pykakasi (漢字→カタカナ変換) ───────────────────────────
+try:
+    import pykakasi
+    _kakasi = pykakasi.kakasi()
+    _kakasi.setMode("H", "K")  # ひらがな → カタカナ
+    _kakasi.setMode("J", "K")  # 漢字 → カタカナ
+    _kakasi.setMode("a", "K")  # ASCII → カタカナ
+    _conv = _kakasi.getConverter()
+
+    def to_katakana(text: str) -> str:
+        """テキストを全角カタカナに変換"""
+        return _conv.do(text)
+except Exception:
+    # pykakasi が使えない場合はそのまま返す
+    def to_katakana(text: str) -> str:
+        return text
+
+
+# ── 名前正規化 ─────────────────────────────────────────────
+STRIP_PATTERNS = [
+    r'株式会社', r'有限会社', r'合同会社', r'合資会社', r'合名会社',
+    r'一般社団法人', r'一般財団法人', r'社会福祉法人', r'医療法人',
+    r'特定非営利活動法人', r'NPO法人',
+    r'\(株\)', r'（株）', r'\(有\)', r'（有）', r'\(合\)', r'（合）',
+    r'カ\)', r'カ）', r'\(カ', r'（カ', r'ユ\)', r'ユ）', r'\(ユ', r'（ユ',
+    r'ド\)', r'ド）', r'\(ド', r'（ド',
+    r'カブシキガイシャ', r'カブシキカイシャ', r'ユウゲンガイシャ', r'ユウゲンカイシャ',
+    r'ゴウドウガイシャ', r'ゴウドウカイシャ',
+    r'御中', r'様',
+]
+
+def normalize_name(name: str) -> str:
+    """法人格・記号を除去し、核となる名前を抽出する"""
+    s = name.strip()
+    for pat in STRIP_PATTERNS:
+        s = re.sub(pat, '', s)
+    s = re.sub(r'[\s　・\-\.\(\)（）「」\u3000]+', '', s)
+    return s.strip()
+
+
+def normalize_for_kana_match(name: str) -> str:
+    """名前を正規化 + カタカナ変換して照合用文字列を作る"""
+    core = normalize_name(name)
+    return to_katakana(core)
+
+
+# ── 監査ログヘルパー ───────────────────────────────────────
+def _audit(db: Session, user: models.User, action: str, target_type: str, target_id: str, details: str):
+    log = models.AuditLog(
+        company_id=user.company_id,
+        user_id=user.id,
+        user_name=user.username,
+        action=action,
+        target_type=target_type,
+        target_id=target_id,
+        details=details,
+    )
+    db.add(log)
 
 
 # ── Schemas ────────────────────────────────────────────
@@ -19,13 +79,16 @@ class MatchResult(BaseModel):
     status: str
     matched_customer_name: str | None = None
     matched_invoice_id: str | None = None
-    # ニアピン候補
     near_matches: list[dict] | None = None
 
 
 class ManualMatchRequest(BaseModel):
     transaction_id: str
     invoice_id: str
+
+
+class UndoMatchRequest(BaseModel):
+    transaction_id: str
 
 
 # ── CSV Upload ─────────────────────────────────────────
@@ -38,11 +101,9 @@ async def upload_bank_csv(
 ):
     """
     銀行CSVをアップロードして入金データを取り込む
-    対応フォーマット: 日付, 振込人名義, 入金額 (カンマ区切り)
     重複取込防止: 同じ日付・名義・金額の組み合わせがあればスキップ
     """
     content = await file.read()
-    # Shift-JIS or UTF-8
     try:
         text = content.decode("utf-8-sig")
     except UnicodeDecodeError:
@@ -55,7 +116,6 @@ async def upload_bank_csv(
     for row in reader:
         if len(row) < 3:
             continue
-        # ヘッダー行スキップ
         date_str = row[0].strip()
         if not date_str or not date_str[0].isdigit():
             continue
@@ -69,7 +129,7 @@ async def upload_bank_csv(
         if amount <= 0:
             continue
 
-        # ★ FIX 1: 重複取込防止 ─ 同じ日付・名義・金額の組み合わせがあればスキップ
+        # 重複取込防止
         existing = (
             db.query(models.BankTransaction)
             .filter_by(
@@ -90,13 +150,16 @@ async def upload_bank_csv(
             transaction_date=date_str,
             amount=amount,
             payer_name=payer,
-            payer_name_kana=payer,  # CSVが全角カナの場合そのまま使用
+            payer_name_kana=payer,
             bank_name=bank_name_str,
             status="unmatched",
         )
         db.add(txn)
         imported += 1
 
+    db.commit()
+    _audit(db, current_user, "bank_csv_upload", "bank_transaction", "",
+           f"取込: {imported}件, スキップ: {skipped}件, 銀行: {bank_type}")
     db.commit()
     return {"imported": imported, "skipped": skipped}
 
@@ -108,8 +171,8 @@ def auto_match(
     db: Session = Depends(get_db),
 ):
     """
-    未マッチの銀行入金を顧客名で自動マッチング → 対応する未払い請求書に消し込み
-    名前が一致しなくても金額が一致する請求書があれば「ニアピン候補」として返す
+    未マッチの銀行入金を自動マッチング
+    優先順: エイリアス(学習済み) → カナ変換マッチ → ニアピン候補表示
     """
     unmatched = (
         db.query(models.BankTransaction)
@@ -119,68 +182,75 @@ def auto_match(
 
     customers = db.query(models.Customer).filter_by(company_id=current_user.company_id).all()
 
-    # ── 名前正規化: 法人格や記号を除去して「核」の名前を抽出 ──
-    import re
+    # エイリアス（学習済み名寄せ）を取得
+    aliases = (
+        db.query(models.PayerNameAlias)
+        .filter_by(company_id=current_user.company_id)
+        .all()
+    )
+    alias_map = {a.payer_name.strip(): a.customer_id for a in aliases}
 
-    # 除去する法人格・記号パターン（漢字・カナ両方）
-    STRIP_PATTERNS = [
-        # 漢字法人格
-        r'株式会社', r'有限会社', r'合同会社', r'合資会社', r'合名会社',
-        r'一般社団法人', r'一般財団法人', r'社会福祉法人', r'医療法人',
-        r'特定非営利活動法人', r'NPO法人',
-        # 略称（括弧付き）
-        r'\(株\)', r'（株）', r'\(有\)', r'（有）', r'\(合\)', r'（合）',
-        # カナ法人格（銀行CSVでよく使われる）
-        r'カ\)', r'カ）', r'\(カ', r'（カ', r'ユ\)', r'ユ）', r'\(ユ', r'（ユ',
-        r'ド\)', r'ド）', r'\(ド', r'（ド',
-        # 一般的な接尾語
-        r'御中', r'様',
-    ]
-
-    def normalize_name(name: str) -> str:
-        """法人格・記号を除去し、核となる名前を抽出する"""
-        s = name.strip()
-        for pat in STRIP_PATTERNS:
-            s = re.sub(pat, '', s)
-        # 全角・半角スペース、記号を除去
-        s = re.sub(r'[\s　・\-\.\(\)（）「」\u3000]+', '', s)
-        return s.strip()
-
-    # 顧客名マップ: { 正規化名: customer } と { 元の名前: customer }
-    cust_entries = []  # [(core_name, original_name, customer), ...]
+    # 顧客名の正規化＋カナ変換マップ
+    cust_entries = []  # [(kana_core, original_name, customer), ...]
     for c in customers:
         name = c.name.strip()
         if name:
             core = normalize_name(name)
-            cust_entries.append((core, name, c))
+            kana = normalize_for_kana_match(name)
+            cust_entries.append((core, kana, name, c))
         if c.contact_person:
             cp = c.contact_person.strip()
             if cp:
                 core = normalize_name(cp)
-                cust_entries.append((core, cp, c))
+                kana = normalize_for_kana_match(cp)
+                cust_entries.append((core, kana, cp, c))
 
     def find_matching_customer(payer_name: str):
-        """振込人名義から顧客を検索。核の名前で照合する。"""
-        payer_core = normalize_name(payer_name)
+        """振込人名義から顧客を検索"""
+        pn = payer_name.strip()
+
+        # Pass 0: エイリアス（学習済み） ─ 最優先
+        if pn in alias_map:
+            cust_id = alias_map[pn]
+            cust = next((c for c in customers if c.id == cust_id), None)
+            if cust:
+                return cust
+
+        payer_core = normalize_name(pn)
+        payer_kana = normalize_for_kana_match(pn)
 
         if not payer_core:
             return None
 
         # Pass 1: 核の名前が完全一致
-        for core, orig, cust in cust_entries:
+        for core, kana, orig, cust in cust_entries:
             if core and core == payer_core:
                 return cust
 
-        # Pass 2: 核の名前で部分一致（3文字以上の場合のみ）
-        for core, orig, cust in cust_entries:
+        # Pass 2: カナ変換後に完全一致
+        if payer_kana:
+            for core, kana, orig, cust in cust_entries:
+                if kana and kana == payer_kana:
+                    return cust
+
+        # Pass 3: 核の名前で部分一致（3文字以上）
+        for core, kana, orig, cust in cust_entries:
             if not core or len(core) < 3:
                 continue
             if core in payer_core or payer_core in core:
                 return cust
 
+        # Pass 4: カナで部分一致（3文字以上）
+        if payer_kana and len(payer_kana) >= 3:
+            for core, kana, orig, cust in cust_entries:
+                if not kana or len(kana) < 3:
+                    continue
+                if kana in payer_kana or payer_kana in kana:
+                    return cust
+
         return None
 
-    # ★ FIX 3: 請求書を payments と一緒に eager load して正確な残額を計算
+    # 請求書を payments と一緒に eager load
     all_unpaid_invoices = (
         db.query(models.Invoice)
         .options(joinedload(models.Invoice.payments))
@@ -191,9 +261,7 @@ def auto_match(
         .all()
     )
 
-    # ★ FIX 4: このバッチ内で既にマッチした請求書IDを追跡し、二重消込を防ぐ
     matched_invoice_ids_this_batch = set()
-
     matched_count = 0
     results = []
 
@@ -203,24 +271,20 @@ def auto_match(
         if matched_customer:
             txn.matched_customer_id = matched_customer.id
 
-            # この顧客の未払い請求書を検索（このバッチで未消込のもの優先）
             candidate_invoices = [
                 inv for inv in all_unpaid_invoices
                 if inv.customer_id == matched_customer.id
                 and inv.id not in matched_invoice_ids_this_batch
             ]
-            # 月が古い順にソート
             candidate_invoices.sort(key=lambda x: x.month)
 
             unpaid_invoice = None
-            # まず金額一致の請求書を探す
             for inv in candidate_invoices:
                 paid_so_far = sum(p.amount for p in (inv.payments or []))
                 remaining = inv.total_amount - paid_so_far
                 if remaining == txn.amount:
                     unpaid_invoice = inv
                     break
-            # なければ最も古い未払い請求書
             if not unpaid_invoice and candidate_invoices:
                 unpaid_invoice = candidate_invoices[0]
 
@@ -229,7 +293,6 @@ def auto_match(
                 txn.status = "matched"
                 matched_invoice_ids_this_batch.add(unpaid_invoice.id)
 
-                # 入金レコードを作成
                 payment = models.Payment(
                     invoice_id=unpaid_invoice.id,
                     company_id=current_user.company_id,
@@ -240,7 +303,6 @@ def auto_match(
                 )
                 db.add(payment)
 
-                # ★ FIX 5: 既存の payments + 今回の入金額で正しく判定
                 total_paid = sum(p.amount for p in (unpaid_invoice.payments or [])) + txn.amount
                 if total_paid >= unpaid_invoice.total_amount:
                     unpaid_invoice.status = "paid"
@@ -249,6 +311,8 @@ def auto_match(
                     unpaid_invoice.status = "partial"
 
                 matched_count += 1
+                _audit(db, current_user, "bank_matched", "bank_transaction", txn.id,
+                       f"自動消込: {txn.payer_name} → {matched_customer.name} ¥{txn.amount:,}")
 
             results.append(MatchResult(
                 transaction_id=txn.id,
@@ -259,18 +323,15 @@ def auto_match(
                 matched_invoice_id=txn.matched_invoice_id,
             ))
         else:
-            # ── ニアピン候補を探す ──
-            # 名前は一致しなかったが、金額が一致 or 近い請求書を探す
+            # ニアピン候補
             near = []
             for inv in all_unpaid_invoices:
                 if inv.id in matched_invoice_ids_this_batch:
                     continue
-                # 既存の入金を考慮した残額を計算
                 paid_so_far = sum(p.amount for p in (inv.payments or []))
                 remaining = inv.total_amount - paid_so_far
                 if remaining <= 0:
                     continue
-                # 完全一致 or 差額10%以内
                 diff = abs(remaining - txn.amount)
                 if remaining > 0 and diff <= remaining * 0.1:
                     cust = next((c for c in customers if c.id == inv.customer_id), None)
@@ -284,7 +345,6 @@ def auto_match(
                         "diff": diff,
                         "exact": diff == 0,
                     })
-            # 差額が小さい順にソート、最大5件
             near.sort(key=lambda x: x["diff"])
             near = near[:5]
 
@@ -300,16 +360,13 @@ def auto_match(
     return {"matched": matched_count, "total": len(unmatched), "results": [r.model_dump() for r in results]}
 
 
-# ── 手動マッチング（ニアピン確定） ────────────────────────
+# ── 手動マッチング（ニアピン確定 + 名寄せ学習） ───────────────
 @router.post("/manual-match")
 def manual_match(
     body: ManualMatchRequest,
     current_user: models.User = Depends(auth.get_current_user),
     db: Session = Depends(get_db),
 ):
-    """
-    ニアピン候補を手動で確定し、入金消し込みを行う
-    """
     txn = (
         db.query(models.BankTransaction)
         .filter_by(id=body.transaction_id, company_id=current_user.company_id)
@@ -320,7 +377,6 @@ def manual_match(
     if txn.status != "unmatched":
         raise HTTPException(400, "この入金は既にマッチ済みです")
 
-    # ★ FIX 6: payments を eager load して正確な残額計算
     inv = (
         db.query(models.Invoice)
         .options(joinedload(models.Invoice.payments))
@@ -330,12 +386,10 @@ def manual_match(
     if not inv:
         raise HTTPException(404, "請求書が見つかりません")
 
-    # マッチング確定
     txn.matched_customer_id = inv.customer_id
     txn.matched_invoice_id = inv.id
     txn.status = "matched"
 
-    # 入金レコードを作成
     payment = models.Payment(
         invoice_id=inv.id,
         company_id=current_user.company_id,
@@ -346,7 +400,6 @@ def manual_match(
     )
     db.add(payment)
 
-    # 請求書ステータス更新
     total_paid = sum(p.amount for p in (inv.payments or [])) + txn.amount
     if total_paid >= inv.total_amount:
         inv.status = "paid"
@@ -354,14 +407,99 @@ def manual_match(
     else:
         inv.status = "partial"
 
-    db.commit()
+    # ★ 名寄せ学習: この振込人名 = この顧客 を記憶する
+    payer_stripped = txn.payer_name.strip()
+    existing_alias = (
+        db.query(models.PayerNameAlias)
+        .filter_by(company_id=current_user.company_id, payer_name=payer_stripped)
+        .first()
+    )
+    if not existing_alias:
+        alias = models.PayerNameAlias(
+            company_id=current_user.company_id,
+            payer_name=payer_stripped,
+            customer_id=inv.customer_id,
+        )
+        db.add(alias)
 
     cust = db.query(models.Customer).filter_by(id=inv.customer_id).first()
+    _audit(db, current_user, "bank_manual_match", "bank_transaction", txn.id,
+           f"手動消込: {txn.payer_name} → {cust.name if cust else '不明'} ¥{txn.amount:,}")
+
+    db.commit()
     return {
         "success": True,
-        "message": f"{cust.name if cust else '不明'} の請求書に消し込みました",
+        "message": f"{cust.name if cust else '不明'} の請求書に消し込みました（名寄せ学習済み）",
         "status": txn.status,
     }
+
+
+# ── 消込取り消し ────────────────────────────────────────────
+@router.post("/undo-match")
+def undo_match(
+    body: UndoMatchRequest,
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(get_db),
+):
+    """消込を取り消し、入金レコードを削除してステータスを戻す"""
+    txn = (
+        db.query(models.BankTransaction)
+        .filter_by(id=body.transaction_id, company_id=current_user.company_id)
+        .first()
+    )
+    if not txn:
+        raise HTTPException(404, "入金データが見つかりません")
+    if txn.status == "unmatched":
+        raise HTTPException(400, "この入金はまだ消込されていません")
+
+    invoice_id = txn.matched_invoice_id
+    old_status = txn.status
+
+    # 該当する自動消込の Payment を検索・削除
+    if invoice_id:
+        payments_to_delete = (
+            db.query(models.Payment)
+            .filter(
+                models.Payment.invoice_id == invoice_id,
+                models.Payment.company_id == current_user.company_id,
+                models.Payment.amount == txn.amount,
+                models.Payment.notes.contains(txn.payer_name),
+            )
+            .all()
+        )
+        for p in payments_to_delete:
+            db.delete(p)
+
+        # 請求書ステータスを再計算
+        inv = (
+            db.query(models.Invoice)
+            .options(joinedload(models.Invoice.payments))
+            .filter_by(id=invoice_id)
+            .first()
+        )
+        if inv:
+            remaining_paid = sum(
+                p.amount for p in (inv.payments or [])
+                if p.id not in {pp.id for pp in payments_to_delete}
+            )
+            if remaining_paid >= inv.total_amount:
+                inv.status = "paid"
+            elif remaining_paid > 0:
+                inv.status = "partial"
+            else:
+                # 送信済みなら sent、それ以外は overdue かどうか判定が必要
+                inv.status = "sent"
+
+    # トランザクションをリセット
+    txn.matched_customer_id = None
+    txn.matched_invoice_id = None
+    txn.status = "unmatched"
+
+    _audit(db, current_user, "bank_undo_match", "bank_transaction", txn.id,
+           f"消込取消: {txn.payer_name} ¥{txn.amount:,} (旧ステータス: {old_status})")
+
+    db.commit()
+    return {"success": True, "message": "消込を取り消しました"}
 
 
 # ── 未マッチ一覧 ────────────────────────────────────────
@@ -412,4 +550,31 @@ def get_transactions(
             "matched_invoice_id": t.matched_invoice_id,
         }
         for t in txns
+    ]
+
+
+# ── 監査ログ取得 ────────────────────────────────────────
+@router.get("/audit-logs")
+def get_audit_logs(
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(get_db),
+):
+    logs = (
+        db.query(models.AuditLog)
+        .filter_by(company_id=current_user.company_id)
+        .order_by(models.AuditLog.created_at.desc())
+        .limit(100)
+        .all()
+    )
+    return [
+        {
+            "id": l.id,
+            "user_name": l.user_name,
+            "action": l.action,
+            "target_type": l.target_type,
+            "target_id": l.target_id,
+            "details": l.details,
+            "created_at": l.created_at.isoformat() if l.created_at else "",
+        }
+        for l in logs
     ]

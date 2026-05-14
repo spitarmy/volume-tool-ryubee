@@ -489,6 +489,26 @@
     <div class="billing-content">
         <div style="max-width: 800px; margin: 0 auto;">
 
+            <!-- 月次ダッシュボード -->
+            <div id="dashboardCards" style="display:grid; grid-template-columns:repeat(4,1fr); gap:8px; padding:12px 20px; display:none;">
+                <div style="background:linear-gradient(135deg,#667EEA,#764BA2);color:#fff;padding:14px;border-radius:12px;text-align:center;">
+                    <div style="font-size:0.7rem;opacity:0.8;">請求総額</div>
+                    <div id="dashTotal" style="font-size:1.1rem;font-weight:800;">-</div>
+                </div>
+                <div style="background:linear-gradient(135deg,#11998E,#38EF7D);color:#fff;padding:14px;border-radius:12px;text-align:center;">
+                    <div style="font-size:0.7rem;opacity:0.8;">入金済み</div>
+                    <div id="dashPaid" style="font-size:1.1rem;font-weight:800;">-</div>
+                </div>
+                <div style="background:linear-gradient(135deg,#F2994A,#F2C94C);color:#fff;padding:14px;border-radius:12px;text-align:center;">
+                    <div style="font-size:0.7rem;opacity:0.8;">未入金</div>
+                    <div id="dashUnpaid" style="font-size:1.1rem;font-weight:800;">-</div>
+                </div>
+                <div style="background:linear-gradient(135deg,#4FACFE,#00F2FE);color:#fff;padding:14px;border-radius:12px;text-align:center;">
+                    <div style="font-size:0.7rem;opacity:0.8;">入金率</div>
+                    <div id="dashRate" style="font-size:1.1rem;font-weight:800;">-</div>
+                </div>
+            </div>
+
             <!-- 未入金アラートパネル -->
             <div class="alert-panel" id="alertPanel" style="display:none;">
                 <div class="alert-summary-bar" onclick="toggleAlertPanel()">
@@ -523,6 +543,9 @@
                 <button class="btn btn-xs btn-secondary" onclick="showBankUpload()"
                     style="width:100%;background:var(--blue-light);color:var(--blue-dark);border-color:var(--blue);">🏦
                     銀行入金取込</button>
+                <button class="btn btn-xs btn-secondary" onclick="exportCSV()"
+                    style="width:100%;background:#ECFDF5;color:#065F46;border-color:#10B981;">📥
+                    CSVエクスポート</button>
                 <button class="btn btn-xs btn-ghost" onclick="connectFreee()" id="freeeBtn" style="width:100;">🔗
                     freee連携</button>
                 <button class="btn btn-xs btn-secondary" onclick="showCarryoverDialog()"
@@ -531,6 +554,8 @@
                 <button class="btn btn-xs btn-secondary" onclick="showAutoDebitModal()"
                     style="width:100%;background:#E0E7FF;color:#3730A3;border-color:#6366F1;">💳
                     口座振替データ</button>
+                <button class="btn btn-xs btn-ghost" onclick="showAuditLog()"
+                    style="width:100%;font-size:0.75rem;">📋 操作ログ</button>
             </div>
 
             <!-- 検索・フィルター -->
@@ -988,6 +1013,7 @@
                 allInvoices = await RyubeeAPI.fetchInvoices({ month: month || undefined });
                 renderInvoices();
                 updatePaymentSelect();
+                updateDashboard();
             } catch (e) {
                 document.getElementById('invoiceList').innerHTML = `<div class="alert alert-danger">${e.message}</div>`;
             }
@@ -1938,13 +1964,132 @@
             try {
                 const result = await RyubeeAPI.bankManualMatch(transactionId, invoiceId);
                 showToast(`✅ ${result.message}`);
-                // 再度マッチングを実行して画面を更新
                 await runAutoMatch();
                 loadInvoices();
                 loadAlerts();
             } catch (e) {
                 alert('エラー: ' + e.message);
             }
+        }
+
+        // ── 月次ダッシュボード ─────────────────────────
+        function updateDashboard() {
+            const cards = document.getElementById('dashboardCards');
+            if (!allInvoices.length) { cards.style.display = 'none'; return; }
+            cards.style.display = 'grid';
+
+            let totalAmount = 0, paidAmount = 0;
+            allInvoices.forEach(inv => {
+                totalAmount += inv.total_amount || 0;
+                if (inv.status === 'paid') paidAmount += inv.total_amount || 0;
+                else if (inv.status === 'partial') {
+                    const payments = inv.payments || [];
+                    paidAmount += payments.reduce((s, p) => s + (p.amount || 0), 0);
+                }
+            });
+            const unpaidAmount = totalAmount - paidAmount;
+            const rate = totalAmount > 0 ? Math.round((paidAmount / totalAmount) * 100) : 0;
+
+            document.getElementById('dashTotal').textContent = `¥${totalAmount.toLocaleString()}`;
+            document.getElementById('dashPaid').textContent = `¥${paidAmount.toLocaleString()}`;
+            document.getElementById('dashUnpaid').textContent = `¥${unpaidAmount.toLocaleString()}`;
+            document.getElementById('dashRate').textContent = `${rate}%`;
+        }
+
+        // ── CSVエクスポート ────────────────────────────
+        function exportCSV() {
+            if (!allInvoices.length) { alert('エクスポートするデータがありません'); return; }
+            const BOM = '\uFEFF';
+            let csv = BOM + '管理番号,顧客名,請求月,請求額,ステータス,種別,期限\n';
+            allInvoices.forEach(inv => {
+                const cust = allCustomers.find(c => c.id === inv.customer_id) || {};
+                let fd = {};
+                try { fd = JSON.parse(cust.form_data || '{}'); } catch (e) {}
+                const yamaNum = fd.yamabun_management_number || '';
+                const statusMap = {draft:'下書き',sent:'送信済',paid:'入金済',partial:'一部入金',overdue:'期限超過'};
+                csv += `"${yamaNum}","${inv.customer_name || ''}","${inv.month}",${inv.total_amount},"${statusMap[inv.status]||inv.status}","${inv.invoice_type||''}","${inv.due_date||''}"\n`;
+            });
+            const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `請求一覧_${document.getElementById('monthFilter').value || 'all'}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('✅ CSVをダウンロードしました');
+        }
+
+        // ── 操作ログ表示 ──────────────────────────────
+        async function showAuditLog() {
+            try {
+                const logs = await RyubeeAPI.fetchAuditLogs();
+                const actionLabels = {
+                    email_sent: '📧 メール送信',
+                    bank_matched: '✅ 自動消込',
+                    bank_manual_match: '🎯 手動消込',
+                    bank_undo_match: '↩️ 消込取消',
+                    bank_csv_upload: '📤 CSV取込',
+                };
+                let html = '<h3 style="margin-bottom:12px;">📋 操作ログ（最新100件）</h3>';
+                if (!logs.length) {
+                    html += '<p class="small-text">ログがありません</p>';
+                } else {
+                    html += '<div style="max-height:60vh;overflow-y:auto;">';
+                    logs.forEach(l => {
+                        const d = l.created_at ? new Date(l.created_at).toLocaleString('ja-JP') : '';
+                        html += `<div style="padding:8px 0;border-bottom:1px solid var(--border);font-size:0.85rem;">
+                            <div style="display:flex;justify-content:space-between;">
+                                <span style="font-weight:600;">${actionLabels[l.action] || l.action}</span>
+                                <span style="color:var(--text-secondary);font-size:0.75rem;">${d}</span>
+                            </div>
+                            <div style="color:var(--text-secondary);font-size:0.8rem;">${utils.escapeHtml(l.details)}</div>
+                            <div style="font-size:0.7rem;color:var(--text-tertiary);">by ${utils.escapeHtml(l.user_name)}</div>
+                        </div>`;
+                    });
+                    html += '</div>';
+                }
+                html += '<button class="btn btn-secondary mt-1" onclick="closeAuditLog()">閉じる</button>';
+                // 既存のモーダルを使い回す
+                const overlay = document.getElementById('bankOverlay');
+                const modal = overlay.querySelector('.payment-modal');
+                modal.innerHTML = '<div class="modal-drag-handle"></div>' + html;
+                overlay.classList.add('show');
+            } catch (e) { alert('ログ取得エラー: ' + e.message); }
+        }
+        function closeAuditLog() {
+            document.getElementById('bankOverlay').classList.remove('show');
+            // 元の銀行UIを復元
+            setTimeout(() => {
+                const modal = document.getElementById('bankOverlay').querySelector('.payment-modal');
+                modal.innerHTML = `<div class="modal-drag-handle"></div>
+                    <h3 class="card-title">🏦 銀行入金取込</h3>
+                    <div class="form-group">
+                        <label>対象銀行</label>
+                        <select id="bankType" style="padding:10px; width:100%; border:1px solid var(--border); border-radius:var(--r-sm);">
+                            <option value="kyoto">京都銀行</option>
+                            <option value="kyoto_chuo">京都中央信用金庫</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>CSVファイル</label>
+                        <input type="file" id="bankFile" accept=".csv" style="padding:10px;">
+                    </div>
+                    <button class="btn btn-primary" onclick="uploadBankCSV()">📤 アップロード</button>
+                    <button class="btn btn-success mt-1" onclick="runAutoMatch()">🔍 自動マッチング実行</button>
+                    <div id="matchResults" style="margin-top:16px;"></div>
+                    <button class="btn btn-secondary mt-1" onclick="closeBankUpload()">閉じる</button>`;
+            }, 300);
+        }
+
+        // ── 消込取り消し ──────────────────────────────
+        async function undoBankMatch(transactionId, payerName) {
+            if (!confirm(`「${payerName}」の消込を取り消しますか？\n入金レコードが削除されます。`)) return;
+            try {
+                const result = await RyubeeAPI.bankUndoMatch(transactionId);
+                showToast(`✅ ${result.message}`);
+                loadInvoices();
+                loadAlerts();
+            } catch (e) { alert('エラー: ' + e.message); }
         }
 
         // ── freee連携 ─────────────────────────────────

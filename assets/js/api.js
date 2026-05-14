@@ -539,6 +539,18 @@ const RyubeeAPI = {
     });
   },
 
+  async bankUndoMatch(transactionId) {
+    return apiFetch("/v1/bank/undo-match", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ transaction_id: transactionId }),
+    });
+  },
+
+  async fetchAuditLogs() {
+    return apiFetch("/v1/bank/audit-logs");
+  },
+
   // ── freee連携 ───────────────────────────────────────────────
 
   async freeeAuthUrl() {
