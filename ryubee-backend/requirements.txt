@@ -16,3 +16,4 @@ weasyprint
 reportlab
 python-dateutil
 pykakasi
+Pillow

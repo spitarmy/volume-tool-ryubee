@@ -349,7 +349,10 @@ async def upload_job_photos(
     current_user: models.User = Depends(auth.get_current_user),
     db: Session = Depends(get_db),
 ):
-    """案件に写真をアップロード（ファイル保存方式）"""
+    """案件に写真をアップロード（base64 DB保存方式 — Renderデプロイでも消えない）"""
+    from PIL import Image
+    import io, base64
+
     job = _get_own_job(job_id, current_user, db)
 
     # 既存の写真リストを取得
@@ -360,28 +363,71 @@ async def upload_job_photos(
         except Exception:
             pass
 
-    os.makedirs("uploads", exist_ok=True)
     new_urls = []
+    MAX_SIZE = 1200  # 最大ピクセル（幅or高さ）
+    JPEG_QUALITY = 75  # JPEG圧縮品質
 
     for f in images:
         content = await f.read()
-        mime_type = f.content_type or "image/jpeg"
-        ext = "jpg"
-        if "png" in mime_type:
-            ext = "png"
-        elif "webp" in mime_type:
-            ext = "webp"
-        filename = f"job_{int(time.time())}_{uuid_mod.uuid4().hex[:6]}.{ext}"
-        filepath = os.path.join("uploads", filename)
-        with open(filepath, "wb") as out_f:
-            out_f.write(content)
-        new_urls.append(f"/uploads/{filename}")
+        try:
+            img = Image.open(io.BytesIO(content))
+            # EXIF回転を適用
+            try:
+                from PIL import ImageOps
+                img = ImageOps.exif_transpose(img)
+            except Exception:
+                pass
+            # リサイズ（アスペクト比維持）
+            if img.width > MAX_SIZE or img.height > MAX_SIZE:
+                img.thumbnail((MAX_SIZE, MAX_SIZE), Image.LANCZOS)
+            # RGBA→RGB変換（JPEG保存のため）
+            if img.mode in ('RGBA', 'P'):
+                img = img.convert('RGB')
+            # JPEG圧縮してbase64エンコード
+            buf = io.BytesIO()
+            img.save(buf, format='JPEG', quality=JPEG_QUALITY, optimize=True)
+            b64 = base64.b64encode(buf.getvalue()).decode('utf-8')
+            data_uri = f"data:image/jpeg;base64,{b64}"
+            new_urls.append(data_uri)
+        except Exception as e:
+            # 画像処理に失敗した場合はそのままbase64化
+            b64 = base64.b64encode(content).decode('utf-8')
+            mime = f.content_type or "image/jpeg"
+            data_uri = f"data:{mime};base64,{b64}"
+            new_urls.append(data_uri)
 
     existing.extend(new_urls)
     job.photos = json.dumps(existing)
     db.commit()
 
-    return {"uploaded": len(new_urls), "total": len(existing), "urls": new_urls}
+    return {"uploaded": len(new_urls), "total": len(existing), "urls": ["(base64 stored)"] * len(new_urls)}
+
+
+# ── 壊れた写真参照のクリーンアップ ──────────────────────
+@router.post("/cleanup-broken-photos")
+def cleanup_broken_photos(
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(get_db),
+):
+    """壊れた /uploads/... パスの写真参照を一括削除"""
+    jobs = db.query(models.Job).filter_by(company_id=current_user.company_id).all()
+    cleaned_count = 0
+    for j in jobs:
+        if not j.photos:
+            continue
+        try:
+            photos = json.loads(j.photos)
+        except Exception:
+            continue
+        if not isinstance(photos, list):
+            continue
+        # /uploads/ で始まるパスは壊れているので除外、data: や https:// は残す
+        valid = [p for p in photos if not str(p).startswith('/uploads/')]
+        if len(valid) != len(photos):
+            j.photos = json.dumps(valid)
+            cleaned_count += 1
+    db.commit()
+    return {"message": f"{cleaned_count} 件の案件から壊れた写真参照を削除しました"}
 
 
 # ── Helper ─────────────────────────────────────────────
