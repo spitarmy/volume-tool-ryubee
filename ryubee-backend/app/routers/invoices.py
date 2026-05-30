@@ -1129,6 +1129,12 @@ def create_invoice_from_estimate(
     if amount <= 0:
         raise HTTPException(400, "金額が0円です。見積金額を設定してください。")
 
+    # 値引き・追加料金を反映
+    if job.discount_amount and job.discount_amount > 0:
+        amount -= job.discount_amount
+    if job.surcharge_amount and job.surcharge_amount > 0:
+        amount += job.surcharge_amount
+
     customer_id = job.customer_id
     if not customer_id:
         raise HTTPException(400, "案件に顧客が紐づいていません")
@@ -1250,6 +1256,12 @@ def record_cash_collection(
     if amount <= 0:
         raise HTTPException(400, "金額が0円です。見積金額を設定してください。")
 
+    # 値引き・追加料金を反映
+    if job.discount_amount and job.discount_amount > 0:
+        amount -= job.discount_amount
+    if job.surcharge_amount and job.surcharge_amount > 0:
+        amount += job.surcharge_amount
+
     customer_id = job.customer_id
     if not customer_id:
         raise HTTPException(400, "案件に顧客が紐づいていません")
@@ -1357,7 +1369,8 @@ def record_cash_collection(
     ))
 
     # 案件のステータスを自動更新（任意）
-    job.stage = "completed"
+    job.pipeline_stage = "completed"
+    job.status = "completed"
 
     db.commit()
     db.refresh(inv)
