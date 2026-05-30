@@ -685,6 +685,40 @@
             min-height: 60px;
         }
 
+        .gps-btn {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            padding: 6px 12px;
+            background: linear-gradient(135deg, #3B82F6, #2563EB);
+            color: #fff;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.78rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform 0.15s;
+        }
+
+        .gps-btn:active {
+            transform: scale(0.95);
+        }
+
+        .gps-btn.loading {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+
+        .gps-accuracy {
+            font-size: 0.68rem;
+            color: var(--text-tertiary);
+            margin-top: 4px;
+        }
+
+        .gps-accuracy.good { color: #16A34A; }
+        .gps-accuracy.ok { color: #D97706; }
+        .gps-accuracy.poor { color: #DC2626; }
+
         .advance-btn {
             display: flex;
             align-items: center;
@@ -795,7 +829,15 @@
                     <option value="waiting_manifest">マニフェスト待ち</option>
                 </select>
             </div>
-            <div class="form-group" style="margin-bottom:24px;">
+            <div class="form-group" id="njAddressGroup" style="display:none; margin-bottom:24px;">
+                <label>📍 住所（現場の場所）</label>
+                <div style="display:flex;gap:6px;">
+                    <input type="text" id="njAddress" placeholder="例: 京都市中京区○○町123" style="flex:1;">
+                    <button type="button" class="gps-btn" onclick="fillCurrentLocationNew()">📍 現在地</button>
+                </div>
+                <div id="njGpsAccuracy" class="gps-accuracy"></div>
+            </div>
+            <div class="form-group" id="njAmountGroup" style="margin-bottom:24px;">
                 <label>見込金額</label>
                 <input type="number" id="njAmount" placeholder="未定の場合は空欄" style="width:100%;">
             </div>
@@ -839,9 +881,6 @@
             { key: 'discovered', label: '発見', emoji: '🔍' },
             { key: 'gathering_info', label: '情報収集', emoji: '📋' },
             { key: 'owner_identified', label: 'オーナー判明', emoji: '👤' },
-            { key: 'construction_identified', label: '工事会社判明', emoji: '🏗' },
-            { key: 'sales_prep', label: '営業準備', emoji: '📝' },
-            { key: 'ready_to_approach', label: '営業開始待ち', emoji: '⏳' },
         ];
 
         const TYPE_LABELS = {
@@ -1110,14 +1149,14 @@
             const stage = document.getElementById('njStage').value;
             const amount = document.getElementById('njAmount').value;
             const assigned_to = document.getElementById('njAssignedTo').value;
+            const address = document.getElementById('njAddress')?.value?.trim() || '';
 
             if (!name) { alert("案件名を入力してください"); return; }
 
             try {
-                // 手動でのジョブ作成（API）
                 const payload = {
                     job_name: name,
-                    customer_name: name, // 顧客名と案件名を同じにして簡略化
+                    customer_name: name,
                     job_type: type,
                     pipeline_stage: stage,
                     estimated_price: amount ? parseInt(amount, 10) : 0,
@@ -1125,6 +1164,11 @@
                 };
                 if (assigned_to) {
                     payload.assigned_to = assigned_to;
+                }
+                // 潜在顧客の場合: 住所を設定、初期サブステータスを格納
+                if (stage === 'prospect') {
+                    payload.address = address;
+                    payload.form_data = JSON.stringify({ prospect_status: 'discovered' });
                 }
 
                 await RyubeeAPI.createJob(payload);
@@ -1134,7 +1178,9 @@
                 // フォームリセット
                 document.getElementById('njName').value = '';
                 document.getElementById('njAmount').value = '';
+                document.getElementById('njAddress').value = '';
                 document.getElementById('njAssignedTo').value = '';
+                document.getElementById('njGpsAccuracy').innerHTML = '';
             } catch (e) {
                 alert("追加エラー: " + e.message);
             }
@@ -1643,12 +1689,19 @@
                 <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px;">
                     <div style="flex:1;">
                         <div class="drawer-customer-name" style="color:#7C3AED;">${utils.escapeHtml(job.customer_name || '未設定')}</div>
-                        <p style="font-size:0.82rem;color:var(--text-secondary);margin:2px 0 0;">
-                            📍 ${utils.escapeHtml(job.job_name || '')}
-                            ${job.address ? `<br>${utils.escapeHtml(job.address)} <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(job.address)}" target="_blank" style="margin-left:4px;text-decoration:none;font-size:0.72rem;background:#E2E8F0;padding:2px 6px;border-radius:4px;color:var(--text-primary);">🗺 マップ</a>` : ''}
-                        </p>
                     </div>
                     <a href="jobs.html?id=${jobId}" style="flex-shrink:0;margin-left:8px;padding:4px 10px;font-size:0.72rem;background:#EDE9FE;color:#7C3AED;border:1px solid #C4B5FD;border-radius:8px;text-decoration:none;font-weight:700;white-space:nowrap;">✏️ 編集</a>
+                </div>
+
+                <!-- 住所（メイン情報） -->
+                <div class="drawer-section">
+                    <div class="drawer-section-title">📍 現場住所</div>
+                    <div style="display:flex;gap:6px;align-items:flex-start;">
+                        <input type="text" id="pAddress" placeholder="住所を入力..." value="${utils.escapeHtml(job.address || '')}" onchange="saveProspectAddress('${jobId}')" style="flex:1;padding:10px;border-radius:8px;border:1px solid var(--border);font-size:0.9rem;">
+                        <button type="button" class="gps-btn" onclick="fillCurrentLocation('pAddress', 'pGpsAccuracy')">📍 現在地</button>
+                    </div>
+                    <div id="pGpsAccuracy" class="gps-accuracy"></div>
+                    ${job.address ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(job.address)}" target="_blank" style="display:inline-block;margin-top:6px;text-decoration:none;font-size:0.75rem;background:#E2E8F0;padding:3px 8px;border-radius:4px;color:var(--text-primary);">🗺 マップで確認</a>` : ''}
                 </div>
 
                 <!-- 進捗ステッパー -->
@@ -1677,16 +1730,6 @@
                                 <input type="tel" id="pOwnerPhone" placeholder="090-xxxx-xxxx" value="${utils.escapeHtml(fd.prospect_owner_phone || '')}" onchange="saveProspectInfo('${jobId}')">
                             </div>
                         </div>
-                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-                            <div>
-                                <label>🏗 工事会社名</label>
-                                <input type="text" id="pConstCompany" placeholder="例: ABC建設" value="${utils.escapeHtml(fd.prospect_construction_company || '')}" onchange="saveProspectInfo('${jobId}')">
-                            </div>
-                            <div>
-                                <label>📞 工事会社連絡先</label>
-                                <input type="tel" id="pConstPhone" placeholder="075-xxx-xxxx" value="${utils.escapeHtml(fd.prospect_construction_phone || '')}" onchange="saveProspectInfo('${jobId}')">
-                            </div>
-                        </div>
                         <div>
                             <label>📝 メモ</label>
                             <textarea id="pNotes" placeholder="工期や備考を記入..." onchange="saveProspectInfo('${jobId}')">${utils.escapeHtml(fd.prospect_notes || '')}</textarea>
@@ -1694,9 +1737,9 @@
                     </div>
                 </div>
 
-                <!-- 問合せに進むボタン -->
-                <button class="advance-btn" onclick="advanceToInquiry('${jobId}')">
-                    📩 問合せに進む（営業開始）→
+                <!-- 商談に進むボタン -->
+                <button class="advance-btn" onclick="advanceToNegotiation('${jobId}')">
+                    🤝 商談に進む →
                 </button>
 
                 <!-- コメント -->
@@ -1742,8 +1785,6 @@
                 fd.prospect_source = document.getElementById('pSource')?.value?.trim() || '';
                 fd.prospect_owner_name = document.getElementById('pOwnerName')?.value?.trim() || '';
                 fd.prospect_owner_phone = document.getElementById('pOwnerPhone')?.value?.trim() || '';
-                fd.prospect_construction_company = document.getElementById('pConstCompany')?.value?.trim() || '';
-                fd.prospect_construction_phone = document.getElementById('pConstPhone')?.value?.trim() || '';
                 fd.prospect_notes = document.getElementById('pNotes')?.value?.trim() || '';
 
                 await RyubeeAPI.updateJob(jobId, { form_data: JSON.stringify(fd) });
@@ -1751,15 +1792,82 @@
             } catch (e) { alert('保存エラー: ' + e.message); }
         }
 
-        async function advanceToInquiry(jobId) {
-            if (!confirm('この潜在顧客を「問合せ」ステージに移動しますか？\n営業活動を開始します。')) return;
+        async function saveProspectAddress(jobId) {
+            const address = document.getElementById('pAddress')?.value?.trim() || '';
             try {
-                await RyubeeAPI.updateJobStage(jobId, 'inquiry');
+                await RyubeeAPI.updateJob(jobId, { address: address });
+                showToast('✅ 住所を保存しました');
+            } catch (e) { alert('保存エラー: ' + e.message); }
+        }
+
+        async function advanceToNegotiation(jobId) {
+            if (!confirm('この潜在顧客を「商談」ステージに移動しますか？')) return;
+            try {
+                await RyubeeAPI.updateJobStage(jobId, 'negotiation');
                 document.getElementById('drawerOverlay').classList.remove('show');
                 await loadPipeline();
-                showToast('✅ 問合せステージに移動しました。営業開始！');
+                showToast('✅ 商談ステージに移動しました！');
             } catch (e) { alert('エラー: ' + e.message); }
         }
+
+        // GPS 現在地取得
+        function fillCurrentLocation(inputId, accuracyId) {
+            const btn = event.target.closest('.gps-btn');
+            const accEl = document.getElementById(accuracyId);
+            if (!navigator.geolocation) {
+                alert('このブラウザでは位置情報を利用できません');
+                return;
+            }
+            btn.classList.add('loading');
+            btn.textContent = '📍 取得中...';
+            navigator.geolocation.getCurrentPosition(
+                async (pos) => {
+                    const lat = pos.coords.latitude;
+                    const lng = pos.coords.longitude;
+                    const acc = Math.round(pos.coords.accuracy);
+                    // 逆ジオコーディング（Google不要、Nominatim使用）
+                    try {
+                        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=ja`);
+                        const data = await res.json();
+                        const address = data.display_name || `${lat}, ${lng}`;
+                        document.getElementById(inputId).value = address;
+                        // 精度表示
+                        let accClass = 'good';
+                        let accLabel = '高精度';
+                        if (acc > 100) { accClass = 'poor'; accLabel = '低精度'; }
+                        else if (acc > 30) { accClass = 'ok'; accLabel = '中精度'; }
+                        accEl.innerHTML = `📡 精度: 約${acc}m（${accLabel}）`;
+                        accEl.className = `gps-accuracy ${accClass}`;
+                    } catch (e) {
+                        document.getElementById(inputId).value = `${lat}, ${lng}`;
+                        accEl.innerHTML = `📡 精度: 約${Math.round(pos.coords.accuracy)}m（住所変換失敗、座標のみ）`;
+                        accEl.className = 'gps-accuracy ok';
+                    }
+                    // input の onchange をトリガー
+                    document.getElementById(inputId).dispatchEvent(new Event('change'));
+                    btn.classList.remove('loading');
+                    btn.textContent = '📍 現在地';
+                },
+                (err) => {
+                    btn.classList.remove('loading');
+                    btn.textContent = '📍 現在地';
+                    if (err.code === 1) alert('位置情報の使用が拒否されました。\nブラウザの設定から位置情報を許可してください。');
+                    else alert('位置情報の取得に失敗しました: ' + err.message);
+                },
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            );
+        }
+
+        function fillCurrentLocationNew() {
+            fillCurrentLocation('njAddress', 'njGpsAccuracy');
+        }
+
+        // 新規追加モーダルのステージ切替
+        document.getElementById('njStage')?.addEventListener('change', function() {
+            const isProspect = this.value === 'prospect';
+            document.getElementById('njAddressGroup').style.display = isProspect ? 'block' : 'none';
+            document.getElementById('njAmountGroup').style.display = isProspect ? 'none' : 'block';
+        });
     </script>
     <script>
         if ('serviceWorker' in navigator) {
