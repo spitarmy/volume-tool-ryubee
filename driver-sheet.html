@@ -356,7 +356,7 @@
                     document.getElementById('photoSection').style.display = 'block';
                     document.getElementById('photoSection').classList.add('hidden-for-print');
                     document.getElementById('dsPhotos').innerHTML = resolvedPhotos.map(url =>
-                        `<img src="${utils.escapeHtml(url)}" alt="現場写真">`
+                        `<img src="${url}" alt="現場写真">`
                     ).join('');
                     document.getElementById('photoToggleLabel').style.display = 'inline-flex';
                 }
