@@ -288,22 +288,43 @@
         }
 
         /* ── Empty State ──────────────────────── */
-        .empty-state {
-            text-align: center;
-            padding: 40px 20px;
-            color: var(--text-secondary);
-        }
+        .empty-state { text-align: center; padding: 40px 20px; color: var(--text-secondary); }
+        .empty-state .empty-icon { font-size: 48px; margin-bottom: 12px; opacity: 0.5; }
+        .empty-state p { font-size: 0.9rem; font-weight: 500; }
 
-        .empty-state .empty-icon {
-            font-size: 48px;
-            margin-bottom: 12px;
-            opacity: 0.5;
-        }
-
-        .empty-state p {
-            font-size: 0.9rem;
-            font-weight: 500;
-        }
+        /* ── Prospect List ────────────────────── */
+        .prospect-overlay { position:fixed; inset:0; background:rgba(0,0,0,0.5); backdrop-filter:blur(4px); z-index:3000; display:none; align-items:flex-end; justify-content:center; }
+        .prospect-overlay.show { display:flex; }
+        .prospect-sheet { background:#fff; border-radius:20px 20px 0 0; width:100%; max-width:600px; max-height:90vh; overflow-y:auto; padding:20px; animation: sheetUp 0.3s cubic-bezier(0.25,1,0.5,1); }
+        @keyframes sheetUp { from { transform:translateY(100%); } to { transform:translateY(0); } }
+        .prospect-list-item { background:var(--surface-solid); border:1px solid var(--border); border-left:3px solid #7C3AED; border-radius:12px; padding:14px; margin-bottom:10px; cursor:pointer; transition:transform 0.15s; }
+        .prospect-list-item:active { transform:scale(0.98); }
+        .prospect-list-item .pl-name { font-weight:700; font-size:0.95rem; color:var(--text-primary); margin-bottom:2px; }
+        .prospect-list-item .pl-address { font-size:0.78rem; color:var(--text-secondary); margin-bottom:6px; }
+        .pl-progress { display:flex; gap:3px; }
+        .pl-progress .dot { flex:1; height:4px; border-radius:2px; background:#E5E7EB; }
+        .pl-progress .dot.filled { background:#7C3AED; }
+        .prospect-badge-sm { display:inline-flex; align-items:center; gap:3px; font-size:0.68rem; font-weight:700; padding:2px 7px; border-radius:6px; background:#EDE9FE; color:#7C3AED; }
+        .stepper { display:flex; flex-direction:column; gap:0; margin:12px 0; }
+        .stepper-item { display:flex; align-items:flex-start; gap:12px; padding:10px 0; cursor:pointer; border-radius:8px; padding-left:4px; transition:background 0.15s; }
+        .stepper-item:hover { background:rgba(124,58,237,0.04); }
+        .stepper-dot { width:28px; height:28px; border-radius:50%; border:2px solid #D1D5DB; display:flex; align-items:center; justify-content:center; font-size:0.72rem; font-weight:700; color:#9CA3AF; flex-shrink:0; transition:all 0.2s; }
+        .stepper-item.completed .stepper-dot { background:#7C3AED; border-color:#7C3AED; color:#fff; }
+        .stepper-item.current .stepper-dot { border-color:#7C3AED; color:#7C3AED; box-shadow:0 0 0 3px rgba(124,58,237,0.15); }
+        .stepper-label { font-size:0.85rem; font-weight:600; color:var(--text-secondary); line-height:28px; }
+        .stepper-item.completed .stepper-label { color:#7C3AED; }
+        .stepper-item.current .stepper-label { color:var(--text-primary); font-weight:700; }
+        .prospect-info-grid { display:grid; grid-template-columns:1fr; gap:10px; margin-top:12px; }
+        .prospect-info-grid label { font-size:0.78rem; font-weight:600; color:var(--text-secondary); margin-bottom:2px; display:block; }
+        .prospect-info-grid input, .prospect-info-grid textarea { width:100%; padding:8px 10px; border-radius:8px; border:1px solid var(--border); font-size:0.85rem; box-sizing:border-box; }
+        .prospect-info-grid textarea { resize:vertical; min-height:60px; }
+        .gps-btn { display:inline-flex; align-items:center; gap:4px; padding:6px 12px; background:linear-gradient(135deg,#3B82F6,#2563EB); color:#fff; border:none; border-radius:8px; font-size:0.78rem; font-weight:700; cursor:pointer; }
+        .gps-btn:active { transform:scale(0.95); }
+        .gps-btn.loading { opacity:0.6; pointer-events:none; }
+        .gps-accuracy { font-size:0.68rem; color:var(--text-tertiary); margin-top:4px; }
+        .gps-accuracy.good { color:#16A34A; } .gps-accuracy.ok { color:#D97706; } .gps-accuracy.poor { color:#DC2626; }
+        .advance-btn { display:flex; align-items:center; justify-content:center; gap:8px; width:100%; padding:14px; margin-top:16px; background:linear-gradient(135deg,#7C3AED,#6D28D9); color:#fff; border:none; border-radius:12px; font-size:0.95rem; font-weight:700; cursor:pointer; }
+        .advance-btn:active { transform:scale(0.97); }
     </style>
 </head>
 
@@ -383,6 +404,18 @@
             </div>
         </a>
 
+        <!-- Prospect CTA -->
+        <div onclick="openProspectList()" class="main-cta" style="background:linear-gradient(135deg,#7C3AED 0%,#6D28D9 100%); padding:20px 24px; cursor:pointer;">
+            <div class="cta-inner" style="display:flex; align-items:center; gap:16px;">
+                <span class="cta-icon" style="font-size:32px; margin:0;">🎯</span>
+                <div style="flex:1;">
+                    <div class="cta-title" style="font-size:1.1rem; margin-bottom:4px;">潜在顧客アプローチリスト</div>
+                    <div class="cta-desc" style="font-size:0.8rem; opacity:0.9;">工事中店舗の発見〜オーナー判明まで</div>
+                </div>
+                <span id="prospectCount" style="background:rgba(255,255,255,0.25);padding:4px 10px;border-radius:20px;font-weight:800;font-size:0.9rem;">–</span>
+            </div>
+        </div>
+
         <!-- Recent Jobs -->
         <div class="section-header">
             <h2>最近の案件</h2>
@@ -405,6 +438,22 @@
         <a href="company-data.html" class="nav-item"><span class="nav-icon">📁</span><span>データ</span></a>
     </nav>
 
+    <!-- Prospect List Sheet -->
+    <div class="prospect-overlay" id="prospectOverlay" onclick="if(event.target===this) this.classList.remove('show')">
+        <div class="prospect-sheet">
+            <div class="modal-drag-handle"></div>
+            <div id="prospectSheetBody"></div>
+        </div>
+    </div>
+
+    <!-- Prospect Detail Drawer -->
+    <div class="prospect-overlay" id="prospectDetailOverlay" onclick="if(event.target===this) this.classList.remove('show')">
+        <div class="prospect-sheet" style="max-height:95vh;">
+            <div class="modal-drag-handle"></div>
+            <div id="prospectDetailBody"></div>
+        </div>
+    </div>
+
     <script src="assets/js/api.js?v=2"></script>
     <script src="assets/js/utils.js?v=2"></script>
     <script>
@@ -418,6 +467,7 @@
             }
 
             await loadRecentJobs();
+            await loadProspectCount();
             await loadDashboardAlerts();
         });
 
@@ -472,6 +522,201 @@
           </div>`;
                 console.error(e);
             }
+        }
+
+        // ── 潜在顧客機能 ──────────────────────────
+        const PROSPECT_STATUSES = [
+            { key: 'discovered', label: '発見', emoji: '🔍' },
+            { key: 'gathering_info', label: '情報収集', emoji: '📋' },
+            { key: 'owner_identified', label: 'オーナー判明', emoji: '👤' },
+        ];
+        let prospectJobs = [];
+
+        async function loadProspectCount() {
+            try {
+                const pipeline = await RyubeeAPI.fetchPipeline();
+                prospectJobs = pipeline.prospect || [];
+                document.getElementById('prospectCount').textContent = prospectJobs.length;
+            } catch (e) { console.error(e); }
+        }
+
+        async function openProspectList() {
+            const body = document.getElementById('prospectSheetBody');
+            try {
+                const pipeline = await RyubeeAPI.fetchPipeline();
+                prospectJobs = pipeline.prospect || [];
+                document.getElementById('prospectCount').textContent = prospectJobs.length;
+            } catch (e) { }
+
+            let listHtml = `
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+                    <h3 style="margin:0;">🎯 潜在顧客リスト <span style="font-size:0.8rem;color:var(--text-tertiary);">(${prospectJobs.length}件)</span></h3>
+                    <button onclick="openNewProspectForm()" style="background:#7C3AED;color:#fff;border:none;padding:8px 14px;border-radius:10px;font-weight:700;font-size:0.82rem;cursor:pointer;">＋ 追加</button>
+                </div>
+            `;
+            if (prospectJobs.length === 0) {
+                listHtml += '<div class="empty-state"><div class="empty-icon">🎯</div><p>潜在顧客はまだありません。<br>工事中の店舗を見つけたら追加しましょう！</p></div>';
+            } else {
+                for (const j of prospectJobs) {
+                    let fd = {}; try { fd = JSON.parse(j.form_data || '{}'); } catch(e){}
+                    const ps = fd.prospect_status || 'discovered';
+                    const psIdx = PROSPECT_STATUSES.findIndex(s => s.key === ps);
+                    const psLabel = PROSPECT_STATUSES[psIdx]?.label || '発見';
+                    const psEmoji = PROSPECT_STATUSES[psIdx]?.emoji || '🔍';
+                    let dots = PROSPECT_STATUSES.map((s,i) => `<div class="dot ${i <= psIdx ? 'filled' : ''}"></div>`).join('');
+                    listHtml += `
+                        <div class="prospect-list-item" onclick="openProspectDetail('${j.job_id}')">
+                            <div class="pl-name">${utils.escapeHtml(j.customer_name || j.job_name || '未設定')}</div>
+                            <div class="pl-address">📍 ${utils.escapeHtml(j.address || '住所未入力')}</div>
+                            <div style="display:flex;justify-content:space-between;align-items:center;">
+                                <span class="prospect-badge-sm">${psEmoji} ${psLabel}</span>
+                                <span style="font-size:0.65rem;color:var(--text-tertiary);">${psIdx+1}/${PROSPECT_STATUSES.length}</span>
+                            </div>
+                            <div class="pl-progress">${dots}</div>
+                        </div>`;
+                }
+            }
+            body.innerHTML = listHtml;
+            document.getElementById('prospectOverlay').classList.add('show');
+        }
+
+        async function openProspectDetail(jobId) {
+            const body = document.getElementById('prospectDetailBody');
+            let job = prospectJobs.find(j => j.job_id === jobId);
+            if (!job) return;
+            try { const full = await RyubeeAPI.fetchJob(jobId); job = {...job, ...full}; } catch(e){}
+            let fd = {}; try { fd = JSON.parse(job.form_data || '{}'); } catch(e){}
+            const ps = fd.prospect_status || 'discovered';
+            const curIdx = PROSPECT_STATUSES.findIndex(s => s.key === ps);
+            let stepHtml = '';
+            PROSPECT_STATUSES.forEach((s,i) => {
+                let cls = i < curIdx ? 'completed' : i === curIdx ? 'current' : '';
+                stepHtml += `<div class="stepper-item ${cls}" onclick="updateProspectStatus('${jobId}','${s.key}')"><div class="stepper-dot">${i < curIdx ? '✓' : (i+1)}</div><div class="stepper-label">${s.emoji} ${s.label}</div></div>`;
+            });
+            body.innerHTML = `
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
+                    <div><div style="font-size:1.3rem;font-weight:800;color:#7C3AED;">${utils.escapeHtml(job.customer_name || '未設定')}</div></div>
+                    <button onclick="document.getElementById('prospectDetailOverlay').classList.remove('show')" style="background:none;border:none;font-size:1.2rem;cursor:pointer;">✕</button>
+                </div>
+                <div style="margin-bottom:12px;">
+                    <div style="font-size:0.82rem;font-weight:600;color:var(--text-secondary);margin-bottom:4px;">📍 現場住所</div>
+                    <div style="display:flex;gap:6px;">
+                        <input type="text" id="pAddress" value="${utils.escapeHtml(job.address || '')}" placeholder="住所を入力..." onchange="saveProspectAddress('${jobId}')" style="flex:1;padding:10px;border-radius:8px;border:1px solid var(--border);font-size:0.9rem;">
+                        <button type="button" class="gps-btn" onclick="fillCurrentLocation('pAddress','pGpsAcc')">📍 現在地</button>
+                    </div>
+                    <div id="pGpsAcc" class="gps-accuracy"></div>
+                    ${job.address ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(job.address)}" target="_blank" style="display:inline-block;margin-top:4px;font-size:0.72rem;background:#E2E8F0;padding:2px 8px;border-radius:4px;text-decoration:none;color:var(--text-primary);">🗺 マップ</a>` : ''}
+                </div>
+                <div style="margin-bottom:12px;"><div style="font-size:0.82rem;font-weight:600;color:#7C3AED;margin-bottom:4px;">🎯 アプローチ進捗</div><div class="stepper">${stepHtml}</div></div>
+                <div style="margin-bottom:12px;"><div style="font-size:0.82rem;font-weight:600;color:var(--text-secondary);margin-bottom:4px;">📋 リード情報</div>
+                    <div class="prospect-info-grid">
+                        <div><label>🔍 発見経緯</label><input type="text" id="pSource" value="${utils.escapeHtml(fd.prospect_source||'')}" placeholder="例: 車で通りかかり発見" onchange="saveProspectInfo('${jobId}')"></div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;"><div><label>👤 オーナー名</label><input type="text" id="pOwnerName" value="${utils.escapeHtml(fd.prospect_owner_name||'')}" placeholder="田中太郎" onchange="saveProspectInfo('${jobId}')"></div><div><label>📞 連絡先</label><input type="tel" id="pOwnerPhone" value="${utils.escapeHtml(fd.prospect_owner_phone||'')}" placeholder="090-xxxx" onchange="saveProspectInfo('${jobId}')"></div></div>
+                        <div><label>📝 メモ</label><textarea id="pNotes" placeholder="工期や備考..." onchange="saveProspectInfo('${jobId}')">${utils.escapeHtml(fd.prospect_notes||'')}</textarea></div>
+                    </div>
+                </div>
+                <button class="advance-btn" onclick="advanceToNegotiation('${jobId}')">🤝 商談に進む →</button>
+            `;
+            document.getElementById('prospectDetailOverlay').classList.add('show');
+        }
+
+        async function updateProspectStatus(jobId, newStatus) {
+            try {
+                const job = await RyubeeAPI.fetchJob(jobId);
+                let fd = {}; try { fd = JSON.parse(job.form_data || '{}'); } catch(e){}
+                fd.prospect_status = newStatus;
+                await RyubeeAPI.updateJob(jobId, { form_data: JSON.stringify(fd) });
+                await loadProspectCount();
+                openProspectDetail(jobId);
+                showToast(`✅ ${PROSPECT_STATUSES.find(s=>s.key===newStatus)?.label}に更新`);
+            } catch(e) { alert('エラー: '+e.message); }
+        }
+
+        async function saveProspectAddress(jobId) {
+            try { await RyubeeAPI.updateJob(jobId, { address: document.getElementById('pAddress')?.value?.trim()||'' }); showToast('✅ 住所を保存'); } catch(e) { alert('エラー: '+e.message); }
+        }
+
+        async function saveProspectInfo(jobId) {
+            try {
+                const job = await RyubeeAPI.fetchJob(jobId);
+                let fd = {}; try { fd = JSON.parse(job.form_data||'{}'); } catch(e){}
+                fd.prospect_source = document.getElementById('pSource')?.value?.trim()||'';
+                fd.prospect_owner_name = document.getElementById('pOwnerName')?.value?.trim()||'';
+                fd.prospect_owner_phone = document.getElementById('pOwnerPhone')?.value?.trim()||'';
+                fd.prospect_notes = document.getElementById('pNotes')?.value?.trim()||'';
+                await RyubeeAPI.updateJob(jobId, { form_data: JSON.stringify(fd) });
+                showToast('✅ リード情報を保存');
+            } catch(e) { alert('エラー: '+e.message); }
+        }
+
+        async function advanceToNegotiation(jobId) {
+            if (!confirm('この潜在顧客を「商談」に移動しますか？\nリストから消えてパイプラインの商談に移動します。')) return;
+            try {
+                await RyubeeAPI.updateJobStage(jobId, 'negotiation');
+                document.getElementById('prospectDetailOverlay').classList.remove('show');
+                await loadProspectCount();
+                openProspectList();
+                showToast('✅ 商談ステージに移動しました！');
+            } catch(e) { alert('エラー: '+e.message); }
+        }
+
+        function openNewProspectForm() {
+            const body = document.getElementById('prospectDetailBody');
+            body.innerHTML = `
+                <h3 style="margin-bottom:16px;">🎯 新規リード追加</h3>
+                <div class="prospect-info-grid">
+                    <div><label>📍 住所（現場の場所）</label>
+                        <div style="display:flex;gap:6px;"><input type="text" id="npAddress" placeholder="京都市中京区○○町123" style="flex:1;"><button type="button" class="gps-btn" onclick="fillCurrentLocation('npAddress','npGpsAcc')">📍 現在地</button></div>
+                        <div id="npGpsAcc" class="gps-accuracy"></div>
+                    </div>
+                    <div><label>案件メモ（店舗名など）</label><input type="text" id="npName" placeholder="例: ○○交差点角の新築工事"></div>
+                </div>
+                <button class="advance-btn" style="margin-top:16px;" onclick="submitNewProspect()">保存する</button>
+            `;
+            document.getElementById('prospectOverlay').classList.remove('show');
+            document.getElementById('prospectDetailOverlay').classList.add('show');
+        }
+
+        async function submitNewProspect() {
+            const address = document.getElementById('npAddress')?.value?.trim()||'';
+            const name = document.getElementById('npName')?.value?.trim() || address || '新規リード';
+            if (!name && !address) { alert('住所またはメモを入力してください'); return; }
+            try {
+                await RyubeeAPI.createJob({ job_name: name, customer_name: name, job_type: 'general_waste', pipeline_stage: 'prospect', address: address, source: 'manual', form_data: JSON.stringify({ prospect_status: 'discovered' }) });
+                document.getElementById('prospectDetailOverlay').classList.remove('show');
+                await loadProspectCount();
+                openProspectList();
+                showToast('✅ 新規リードを追加しました');
+            } catch(e) { alert('エラー: '+e.message); }
+        }
+
+        function fillCurrentLocation(inputId, accId) {
+            const btn = event.target.closest('.gps-btn');
+            const accEl = document.getElementById(accId);
+            if (!navigator.geolocation) { alert('位置情報を利用できません'); return; }
+            btn.classList.add('loading'); btn.textContent = '📍 取得中...';
+            navigator.geolocation.getCurrentPosition(
+                async (pos) => {
+                    const lat=pos.coords.latitude, lng=pos.coords.longitude, acc=Math.round(pos.coords.accuracy);
+                    try {
+                        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=ja`);
+                        const data = await res.json();
+                        document.getElementById(inputId).value = data.display_name || `${lat}, ${lng}`;
+                    } catch(e) { document.getElementById(inputId).value = `${lat}, ${lng}`; }
+                    let cls='good',lbl='高精度'; if(acc>100){cls='poor';lbl='低精度';}else if(acc>30){cls='ok';lbl='中精度';}
+                    accEl.innerHTML = `📡 精度: 約${acc}m（${lbl}）`; accEl.className = `gps-accuracy ${cls}`;
+                    document.getElementById(inputId).dispatchEvent(new Event('change'));
+                    btn.classList.remove('loading'); btn.textContent = '📍 現在地';
+                },
+                (err) => { btn.classList.remove('loading'); btn.textContent = '📍 現在地'; alert(err.code===1?'位置情報の使用が拒否されました':'位置情報取得失敗: '+err.message); },
+                { enableHighAccuracy:true, timeout:10000, maximumAge:0 }
+            );
+        }
+
+        function showToast(msg) {
+            const t=document.createElement('div'); t.textContent=msg;
+            t.style.cssText='position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#34C759;color:#fff;padding:10px 20px;border-radius:20px;font-weight:600;z-index:9999;';
+            document.body.appendChild(t); setTimeout(()=>t.remove(),2500);
         }
 
         async function loadDashboardAlerts() {
