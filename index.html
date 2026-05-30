@@ -310,7 +310,7 @@
         .stepper-item:hover { background:rgba(124,58,237,0.04); }
         .stepper-dot { width:28px; height:28px; border-radius:50%; border:2px solid #D1D5DB; display:flex; align-items:center; justify-content:center; font-size:0.72rem; font-weight:700; color:#9CA3AF; flex-shrink:0; transition:all 0.2s; }
         .stepper-item.completed .stepper-dot { background:#7C3AED; border-color:#7C3AED; color:#fff; }
-        .stepper-item.current .stepper-dot { border-color:#7C3AED; color:#7C3AED; box-shadow:0 0 0 3px rgba(124,58,237,0.15); }
+        .stepper-item.current .stepper-dot { background:#7C3AED; border-color:#7C3AED; color:#fff; box-shadow:0 0 0 3px rgba(124,58,237,0.25); }
         .stepper-label { font-size:0.85rem; font-weight:600; color:var(--text-secondary); line-height:28px; }
         .stepper-item.completed .stepper-label { color:#7C3AED; }
         .stepper-item.current .stepper-label { color:var(--text-primary); font-weight:700; }
@@ -656,6 +656,7 @@
                 fd.prospect_status = newStatus;
                 await RyubeeAPI.updateJob(jobId, { form_data: JSON.stringify(fd) });
                 await loadProspectCount();
+                openProspectList();
                 openProspectDetail(jobId);
                 showToast(`✅ ${PROSPECT_STATUSES.find(s=>s.key===newStatus)?.label}に更新`);
             } catch(e) { alert('エラー: '+e.message); }
