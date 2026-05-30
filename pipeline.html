@@ -322,6 +322,228 @@
         .comment-input-row button {
             white-space: nowrap;
         }
+
+        /* ── Drawer Redesign ── */
+        .drawer-customer-name {
+            font-size: 1.4rem;
+            font-weight: 800;
+            color: var(--text-primary);
+            margin-bottom: 4px;
+            line-height: 1.3;
+        }
+
+        .drawer-section {
+            margin-top: 16px;
+            padding: 14px;
+            background: var(--bg-secondary);
+            border-radius: var(--r-md);
+        }
+
+        .drawer-section-title {
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: var(--text-secondary);
+            margin-bottom: 10px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+
+        .instruction-preview {
+            display: block;
+            background: linear-gradient(135deg, #E3F2FD, #BBDEFB);
+            border-radius: var(--r-md);
+            padding: 20px 16px;
+            text-decoration: none;
+            color: #1565C0;
+            font-weight: 700;
+            font-size: 0.95rem;
+            text-align: center;
+            border: 1px solid #90CAF9;
+            transition: transform 0.15s, box-shadow 0.15s;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .instruction-preview:active {
+            transform: scale(0.97);
+        }
+
+        .instruction-preview .preview-hint {
+            display: block;
+            font-size: 0.72rem;
+            font-weight: 500;
+            color: #64B5F6;
+            margin-top: 6px;
+        }
+
+        .instruction-preview .preview-lines {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            margin-top: 10px;
+            padding: 0 20px;
+        }
+
+        .instruction-preview .preview-line {
+            height: 3px;
+            background: rgba(21, 101, 192, 0.15);
+            border-radius: 2px;
+        }
+
+        .photo-category-tabs {
+            display: flex;
+            gap: 0;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+        }
+
+        .photo-cat-tab {
+            flex: 1;
+            padding: 8px 0;
+            text-align: center;
+            font-size: 0.82rem;
+            font-weight: 700;
+            cursor: pointer;
+            border: none;
+            background: #fff;
+            color: var(--text-secondary);
+            transition: all 0.2s;
+        }
+
+        .photo-cat-tab.active {
+            background: var(--blue);
+            color: #fff;
+        }
+
+        .photo-grid {
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding-bottom: 4px;
+        }
+
+        .photo-grid::-webkit-scrollbar {
+            height: 4px;
+        }
+
+        .photo-grid::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 4px;
+        }
+
+        .photo-thumb {
+            position: relative;
+            flex-shrink: 0;
+        }
+
+        .photo-thumb img {
+            width: 90px;
+            height: 90px;
+            object-fit: cover;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+        }
+
+        .photo-thumb .photo-del {
+            position: absolute;
+            top: -6px;
+            right: -6px;
+            background: #EF4444;
+            color: white;
+            border: 2px solid #fff;
+            border-radius: 50%;
+            width: 22px;
+            height: 22px;
+            font-size: 10px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+        }
+
+        .photo-add-btn {
+            width: 90px;
+            height: 90px;
+            border-radius: 10px;
+            border: 2px dashed var(--border);
+            background: transparent;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 2px;
+            cursor: pointer;
+            font-size: 1.4rem;
+            color: var(--text-tertiary);
+            flex-shrink: 0;
+            transition: border-color 0.2s, background 0.2s;
+        }
+
+        .photo-add-btn:hover {
+            border-color: var(--blue);
+            background: rgba(14, 165, 233, 0.04);
+        }
+
+        .photo-add-btn span {
+            font-size: 0.65rem;
+            font-weight: 600;
+        }
+
+        .amount-card {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 14px;
+            background: #fff;
+            border-radius: var(--r-md);
+            border: 1px solid var(--border);
+            cursor: pointer;
+            transition: box-shadow 0.15s;
+            text-decoration: none;
+            color: inherit;
+        }
+
+        .amount-card:active {
+            box-shadow: var(--shadow-md);
+        }
+
+        .amount-value {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--text-primary);
+        }
+
+        .amount-label {
+            font-size: 0.72rem;
+            color: var(--text-tertiary);
+        }
+
+        .amount-tap-hint {
+            font-size: 0.72rem;
+            color: var(--blue);
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .drawer-actions {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
+            margin-top: 16px;
+        }
+
+        .drawer-actions .btn {
+            padding: 14px 10px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            border-radius: var(--r-md);
+        }
     </style>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#1A237E">
@@ -735,7 +957,6 @@
             // 個別APIからフルデータ取得（写真含む）
             try {
                 const fullJob = await RyubeeAPI.fetchJob(jobId);
-                // 写真データをマージ
                 job = { ...job, ...fullJob };
             } catch (e) {
                 console.warn('Failed to fetch full job data:', e);
@@ -747,97 +968,125 @@
 
             const est = job.estimated_price || job.price_total || 0;
             const fin = job.final_price || 0;
+            const displayPrice = fin || est;
             const disc = job.discount_amount || 0;
             const surcharge = job.surcharge_amount || 0;
 
-            // Form Data for Subcontractor
+            // Form Data
             let fd = {};
             try { fd = JSON.parse(job.form_data || "{}"); } catch (e) { }
 
-            // Photos parsing
-            let photos = Array.isArray(job.photos) ? job.photos : [];
-            try { if (typeof job.photos === 'string') photos = JSON.parse(job.photos); } catch (e) { }
-            // Resolve relative /uploads/ paths to full backend URL
-            photos = RyubeeAPI.resolvePhotoUrls(photos);
+            // Photos parsing — 回収前/回収後 分離
+            let allPhotos = Array.isArray(job.photos) ? job.photos : [];
+            try { if (typeof job.photos === 'string') allPhotos = JSON.parse(job.photos); } catch (e) { }
+            allPhotos = RyubeeAPI.resolvePhotoUrls(allPhotos);
+
+            // form_dataに保存された回収前/回収後のインデックスを使用
+            const beforeCount = fd.photos_before_count || 0;
+            const photosBefore = allPhotos.slice(0, beforeCount);
+            const photosAfter = allPhotos.slice(beforeCount);
+
+            function renderPhotoGrid(photos, category, startIndex) {
+                let html = '';
+                photos.forEach((p, i) => {
+                    const realIndex = startIndex + i;
+                    html += `<div class="photo-thumb">
+                        <img src="${p}" alt="写真">
+                        <button class="photo-del" onclick="deleteJobPhoto('${jobId}', ${realIndex})">✕</button>
+                    </div>`;
+                });
+                html += `<label class="photo-add-btn">
+                    📷<span>追加</span>
+                    <input type="file" style="display:none;" accept="image/*" multiple onchange="uploadCategoryPhotos(event, '${jobId}', '${category}')">
+                </label>`;
+                return html;
+            }
 
             body.innerHTML = `
-                <div style="display:flex;justify-content:space-between;align-items:flex-start;">
-                    <h3 style="font-size:1.2rem;font-weight:700;margin-bottom:4px;flex:1;">${utils.escapeHtml(job.job_name || '案件')}</h3>
-                    <a href="jobs.html?id=${jobId}" style="flex-shrink:0;margin-left:8px;padding:4px 10px;font-size:0.72rem;background:#FEE2E2;color:#DC2626;border:1px solid #FECACA;border-radius:8px;text-decoration:none;font-weight:700;white-space:nowrap;">✏️ フル編集</a>
+                <!-- ① お客様名 -->
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:2px;">
+                    <div style="flex:1;">
+                        <div class="drawer-customer-name">${utils.escapeHtml(job.customer_name || 'お客様名未設定')}</div>
+                        <p style="font-size:0.82rem;color:var(--text-secondary);margin:2px 0 0;">
+                            ${utils.escapeHtml(job.job_name || '')}
+                            ${job.work_date ? ` ・ ${job.work_date}` : ''}
+                            ${job.address ? `<br>📍 ${utils.escapeHtml(job.address)} <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(job.address)}" target="_blank" style="margin-left:4px;text-decoration:none;font-size:0.72rem;background:#E2E8F0;padding:2px 6px;border-radius:4px;color:var(--text-primary);">🗺 マップ</a>` : ''}
+                        </p>
+                    </div>
+                    <a href="jobs.html?id=${jobId}" style="flex-shrink:0;margin-left:8px;padding:4px 10px;font-size:0.72rem;background:#FEE2E2;color:#DC2626;border:1px solid #FECACA;border-radius:8px;text-decoration:none;font-weight:700;white-space:nowrap;">✏️ 編集</a>
                 </div>
-                <p class="small-text">
-                    👤 ${utils.escapeHtml(job.customer_name || '未設定')} | ${TYPE_LABELS[job.job_type] || 'その他'}
-                    ${job.address ? `<br>📍 ${utils.escapeHtml(job.address)} <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(job.address)}" target="_blank" style="margin-left:4px;text-decoration:none;font-size:0.75rem;background:#E2E8F0;padding:2px 6px;border-radius:4px;color:var(--text-primary);">🗺 マップ</a>` : ''}
-                    ${!job.customer_id ? `
-                        <br><div id="customerLinkSection" style="margin-top:8px;">
-                            <div style="position:relative;">
-                                <input type="text" id="customerSearchInput" placeholder="🔍 顧客名で検索..." autocomplete="off"
-                                    oninput="filterCustomerDropdown()"
-                                    onfocus="document.getElementById('customerDropdownList').style.display='block'"
-                                    style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--border);font-size:0.85rem;box-sizing:border-box;">
-                                <div id="customerDropdownList" style="display:none;position:absolute;top:100%;left:0;right:0;max-height:200px;overflow-y:auto;background:#fff;border:1px solid var(--border);border-radius:0 0 8px 8px;box-shadow:0 4px 12px rgba(0,0,0,0.12);z-index:100;">
-                                    <div class="cust-dd-item" style="padding:10px 12px;cursor:pointer;font-size:0.85rem;color:var(--primary);font-weight:600;border-bottom:1px solid var(--border);" onclick="selectCustomerOption('__new__', '➕ 新規顧客として登録')">➕ 新規顧客として登録</div>
-                                </div>
-                                <input type="hidden" id="customerLinkSelect" value="">
+
+                ${!job.customer_id ? `
+                    <div id="customerLinkSection" style="margin-top:8px;padding:10px;background:#FEF3C7;border-radius:var(--r-md);border:1px solid #FDE68A;">
+                        <div style="position:relative;">
+                            <input type="text" id="customerSearchInput" placeholder="🔍 顧客名で検索..." autocomplete="off"
+                                oninput="filterCustomerDropdown()"
+                                onfocus="document.getElementById('customerDropdownList').style.display='block'"
+                                style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--border);font-size:0.85rem;box-sizing:border-box;">
+                            <div id="customerDropdownList" style="display:none;position:absolute;top:100%;left:0;right:0;max-height:200px;overflow-y:auto;background:#fff;border:1px solid var(--border);border-radius:0 0 8px 8px;box-shadow:0 4px 12px rgba(0,0,0,0.12);z-index:100;">
+                                <div class="cust-dd-item" style="padding:10px 12px;cursor:pointer;font-size:0.85rem;color:var(--primary);font-weight:600;border-bottom:1px solid var(--border);" onclick="selectCustomerOption('__new__', '➕ 新規顧客として登録')">➕ 新規顧客として登録</div>
                             </div>
-                            <div style="display:flex;gap:6px;align-items:center;margin-top:6px;">
-                                <span id="selectedCustomerLabel" style="flex:1;font-size:0.8rem;color:var(--text-tertiary);">未選択</span>
-                                <button class="btn btn-xs btn-primary" style="white-space:nowrap;" onclick="linkCustomerToJob('${jobId}')">紐づけ</button>
-                            </div>
-                            <p style="font-size:0.68rem;color:var(--text-tertiary);margin:4px 0 0;">⚠️ 請求書の発行には顧客の紐づけが必要です</p>
+                            <input type="hidden" id="customerLinkSelect" value="">
                         </div>
-                    ` : `
-                        <br><span class="badge badge-success" style="margin-top:8px;display:inline-block;">✅ 顧客登録済</span>
-                    `}
-                </p>
+                        <div style="display:flex;gap:6px;align-items:center;margin-top:6px;">
+                            <span id="selectedCustomerLabel" style="flex:1;font-size:0.8rem;color:var(--text-tertiary);">未選択</span>
+                            <button class="btn btn-xs btn-primary" style="white-space:nowrap;" onclick="linkCustomerToJob('${jobId}')">紐づけ</button>
+                        </div>
+                        <p style="font-size:0.68rem;color:#92400E;margin:4px 0 0;">⚠️ 請求書の発行には顧客の紐づけが必要です</p>
+                    </div>
+                ` : ''}
 
-                <div style="margin-top:16px;padding:12px;background:var(--bg-secondary);border-radius:var(--r-md);">
-                    <h4 style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:8px;">🚚 配車・協力業者アサイン</h4>
-                    <div style="display:flex;gap:8px;">
-                        <input type="text" id="jobSubcontractor" placeholder="協力業者名 (例: 山本文夫)" value="${utils.escapeHtml(fd.subcontractor_name || '')}" style="flex:1;font-size:0.85rem;padding:6px;border-radius:6px;border:1px solid var(--border);" onchange="updateJobFormData('${jobId}')">
-                        <input type="text" id="jobVehicleNum" placeholder="号車 (例: 3号車)" value="${utils.escapeHtml(fd.vehicle_number || '')}" style="width:100px;font-size:0.85rem;padding:6px;border-radius:6px;border:1px solid var(--border);" onchange="updateJobFormData('${jobId}')">
+                <!-- ② 指示書 -->
+                <div class="drawer-section" style="padding:0;background:transparent;">
+                    <div class="drawer-section-title">📋 指示書</div>
+                    <a href="driver-sheet.html?id=${jobId}" target="_blank" class="instruction-preview">
+                        🚚 ドライバー指示書
+                        <div class="preview-lines">
+                            <div class="preview-line" style="width:100%"></div>
+                            <div class="preview-line" style="width:85%"></div>
+                            <div class="preview-line" style="width:70%"></div>
+                            <div class="preview-line" style="width:90%"></div>
+                        </div>
+                        <span class="preview-hint">タップで詳細 →</span>
+                    </a>
+                </div>
+
+                <!-- ③ 写真（回収前/回収後） -->
+                <div class="drawer-section">
+                    <div class="drawer-section-title">📸 写真</div>
+                    <div class="photo-category-tabs">
+                        <button class="photo-cat-tab active" onclick="switchPhotoTab('before', this)">回収前 (${photosBefore.length})</button>
+                        <button class="photo-cat-tab" onclick="switchPhotoTab('after', this)">回収後 (${photosAfter.length})</button>
+                    </div>
+                    <div id="photosBeforeGrid" class="photo-grid">
+                        ${renderPhotoGrid(photosBefore, 'before', 0)}
+                    </div>
+                    <div id="photosAfterGrid" class="photo-grid" style="display:none;">
+                        ${renderPhotoGrid(photosAfter, 'after', beforeCount)}
                     </div>
                 </div>
 
-                <div style="margin-top:16px;">
-                    <a href="jobs.html?id=${jobId}&mode=preview" class="btn btn-sm btn-outline" style="width:100%;text-align:center;padding:12px;display:block;">👁 案件の詳細を確認する（プレビュー）</a>
+                <!-- ④ 金額 -->
+                <div class="drawer-section" style="padding:0;background:transparent;">
+                    <div class="drawer-section-title">💰 金額</div>
+                    <a href="invoice.html?id=${jobId}" target="_blank" class="amount-card">
+                        <div>
+                            <div class="amount-label">${fin ? '成約金額' : '見積金額'}</div>
+                            <div class="amount-value">¥${displayPrice.toLocaleString()}</div>
+                            ${disc ? `<span style="font-size:0.72rem;color:var(--red);">値引き -¥${disc.toLocaleString()}</span>` : ''}
+                            ${surcharge ? `<span style="font-size:0.72rem;color:var(--blue);margin-left:6px;">追加 +¥${surcharge.toLocaleString()}</span>` : ''}
+                        </div>
+                        <div class="amount-tap-hint">見積書 →</div>
+                    </a>
                 </div>
 
-                <div style="margin-top:12px;padding:12px;background:var(--bg-secondary);border-radius:var(--r-md);">
-                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-                        <h4 style="font-size:0.85rem;color:var(--text-secondary);margin:0;">📸 現場写真</h4>
-                        <label class="btn btn-xs btn-primary" style="cursor:pointer;margin:0;">追加
-                            <input type="file" style="display:none;" accept="image/*" multiple onchange="uploadJobPhotos(event, '${jobId}')">
-                        </label>
-                    </div>
-                    <div id="jobPhotosGrid" style="display:flex;gap:8px;overflow-x:auto;">
-                        ${photos.length ? photos.map((p, i) => `
-                            <div style="position:relative;flex-shrink:0;">
-                                <img src="${p}" style="width:80px;height:80px;object-fit:cover;border-radius:8px;border:1px solid var(--border);">
-                                <button onclick="deleteJobPhoto('${jobId}', ${i})" style="position:absolute;top:-5px;right:-5px;background:red;color:white;border:none;border-radius:50%;width:20px;height:20px;font-size:10px;cursor:pointer;">✕</button>
-                            </div>
-                        `).join('') : '<p class="small-text">写真はありません</p>'}
-                    </div>
+                <!-- ⑤ 請求書発行 / 現金を回収 -->
+                <div class="drawer-actions">
+                    <button class="btn btn-success" onclick="convertToInvoice('${jobId}')">🧾 請求書を発行</button>
+                    <button class="btn btn-warning" onclick="collectCash('${jobId}')">💴 現金を回収</button>
                 </div>
 
-                <div style="margin-top:12px;padding:12px;background:var(--bg-secondary);border-radius:var(--r-md);">
-                    <h4 style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:10px;">💰 金額トラッキング</h4>
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-                        <div><span class="small-text">見積金額</span><br><strong>¥${est.toLocaleString()}</strong></div>
-                        <div><span class="small-text">成約金額</span><br><strong style="color:var(--green-dark);">¥${fin ? fin.toLocaleString() : '–'}</strong></div>
-                        ${disc ? `<div><span class="small-text">割引</span><br><strong style="color:var(--red);">-¥${disc.toLocaleString()}</strong></div>` : ''}
-                        ${surcharge ? `<div><span class="small-text">追加料金</span><br><strong style="color:var(--blue);">+¥${surcharge.toLocaleString()}</strong></div>` : ''}
-                    </div>
-                    ${job.price_notes ? `<p class="small-text" style="margin-top:8px;">📝 ${utils.escapeHtml(job.price_notes)}</p>` : ''}
-                </div>
-
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:16px;">
-                    <a href="invoice.html?id=${jobId}" target="_blank" class="btn btn-secondary" style="text-align:center;text-decoration:none;font-size:0.85rem;padding:10px;">📄 見積書を発行</a>
-                    <a href="packer-sheet.html?job_id=${jobId}" target="_blank" class="btn btn-secondary" style="text-align:center;text-decoration:none;font-size:0.85rem;padding:10px;">🖨 パッカー指示書</a>
-                    <button class="btn btn-success" onclick="convertToInvoice('${jobId}')" style="font-size:0.85rem;padding:10px;">🧾 請求書を発行</button>
-                    <button class="btn btn-warning" onclick="collectCash('${jobId}')" style="font-size:0.85rem;padding:10px;">💴 現金を回収</button>
-                </div>
-
+                <!-- ⑥ コメント -->
                 <div class="comment-thread">
                     <h4 style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:8px;">💬 コメント (${comments.length})</h4>
                     <div id="commentList">
@@ -855,7 +1104,6 @@
                 </div>
             `;
             drawer.classList.add('show');
-            // Populate customer dropdown if job has no customer_id
             if (!job.customer_id) {
                 populateCustomerDropdown();
             }
@@ -1062,28 +1310,70 @@
             } catch (e) { alert("保存エラー"); }
         }
 
-        async function uploadJobPhotos(event, jobId) {
+        // 回収前/回収後タブ切替
+        function switchPhotoTab(tab, btn) {
+            document.querySelectorAll('.photo-cat-tab').forEach(t => t.classList.remove('active'));
+            btn.classList.add('active');
+            document.getElementById('photosBeforeGrid').style.display = tab === 'before' ? 'flex' : 'none';
+            document.getElementById('photosAfterGrid').style.display = tab === 'after' ? 'flex' : 'none';
+        }
+
+        // カテゴリ別写真アップロード
+        async function uploadCategoryPhotos(event, jobId, category) {
             const files = Array.from(event.target.files);
             if (!files.length) return;
 
             showToast(`📸 ${files.length}枚の写真をアップロード中...`);
 
             try {
+                // 先にフルデータ取得
+                const job = await RyubeeAPI.fetchJob(jobId);
+                let fd = {};
+                try { fd = JSON.parse(job.form_data || "{}"); } catch (e) { }
+                let currentBeforeCount = fd.photos_before_count || 0;
+
+                // アップロード
                 const result = await RyubeeAPI.uploadJobPhotos(jobId, files);
-                showToast(`📸 ${result.uploaded}枚の写真を保存しました（合計: ${result.total}枚）`);
+
+                // 回収前の場合、beforeCountを更新
+                if (category === 'before') {
+                    currentBeforeCount += files.length;
+                }
+                // 回収後の場合はそのまま（末尾に追加される）
+
+                fd.photos_before_count = currentBeforeCount;
+                await RyubeeAPI.updateJob(jobId, { form_data: JSON.stringify(fd) });
+
+                showToast(`📸 ${result.uploaded}枚の写真を保存しました`);
                 await loadPipeline();
                 openJobDetail(jobId);
             } catch (err) { alert("アップロード失敗: " + err.message); }
+        }
+
+        // 旧互換用
+        async function uploadJobPhotos(event, jobId) {
+            return uploadCategoryPhotos(event, jobId, 'after');
         }
 
         async function deleteJobPhoto(jobId, index) {
             if (!confirm("この写真を削除しますか？")) return;
 
             try {
-                // 最新のフルデータをAPIから取得
                 const job = await RyubeeAPI.fetchJob(jobId);
                 let pArr = Array.isArray(job.photos) ? [...job.photos] : [];
                 try { if (typeof job.photos === 'string') pArr = JSON.parse(job.photos); } catch (e) { }
+
+                // form_dataのbeforeCountも調整
+                let fd = {};
+                try { fd = JSON.parse(job.form_data || "{}"); } catch (e) { }
+                let beforeCount = fd.photos_before_count || 0;
+
+                // 削除対象が回収前写真の範囲内ならbeforeCountを減らす
+                if (index < beforeCount) {
+                    fd.photos_before_count = beforeCount - 1;
+                    await RyubeeAPI.updateJob(jobId, { form_data: JSON.stringify(fd) });
+                }
+
                 pArr.splice(index, 1);
                 await RyubeeAPI.updateJob(jobId, { photos: JSON.stringify(pArr) });
                 await loadPipeline();
