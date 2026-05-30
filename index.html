@@ -611,11 +611,15 @@
                 <div style="margin-bottom:12px;"><div style="font-size:0.82rem;font-weight:600;color:var(--text-secondary);margin-bottom:4px;">📋 リード情報</div>
                     <div class="prospect-info-grid">
                         <div><label>🔍 発見経緯</label><input type="text" id="pSource" value="${utils.escapeHtml(fd.prospect_source||'')}" placeholder="例: 車で通りかかり発見" onchange="saveProspectInfo('${jobId}')"></div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;"><div><label>👁 発見者</label><input type="text" id="pDiscoverer" value="${utils.escapeHtml(fd.prospect_discoverer||'')}" placeholder="発見した人" onchange="saveProspectInfo('${jobId}')"></div><div><label>👤 担当者</label><input type="text" id="pAssignee" value="${utils.escapeHtml(fd.prospect_assignee||'')}" placeholder="営業担当" onchange="saveProspectInfo('${jobId}')"></div></div>
                         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;"><div><label>👤 オーナー名</label><input type="text" id="pOwnerName" value="${utils.escapeHtml(fd.prospect_owner_name||'')}" placeholder="田中太郎" onchange="saveProspectInfo('${jobId}')"></div><div><label>📞 連絡先</label><input type="tel" id="pOwnerPhone" value="${utils.escapeHtml(fd.prospect_owner_phone||'')}" placeholder="090-xxxx" onchange="saveProspectInfo('${jobId}')"></div></div>
                         <div><label>📝 メモ</label><textarea id="pNotes" placeholder="工期や備考..." onchange="saveProspectInfo('${jobId}')">${utils.escapeHtml(fd.prospect_notes||'')}</textarea></div>
                     </div>
                 </div>
-                <button class="advance-btn" onclick="advanceToNegotiation('${jobId}')">🤝 商談に進む →</button>
+                <div style="display:flex;gap:8px;">
+                    <button class="advance-btn" onclick="advanceToNegotiation('${jobId}')" style="flex:3;">🤝 商談に進む →</button>
+                    <button class="advance-btn" onclick="markAsLost('${jobId}')" style="flex:1;background:linear-gradient(135deg,#EF4444,#DC2626);font-size:0.8rem;">❌ 不成約</button>
+                </div>
             `;
             document.getElementById('prospectDetailOverlay').classList.add('show');
         }
@@ -641,11 +645,24 @@
                 const job = await RyubeeAPI.fetchJob(jobId);
                 let fd = {}; try { fd = JSON.parse(job.form_data||'{}'); } catch(e){}
                 fd.prospect_source = document.getElementById('pSource')?.value?.trim()||'';
+                fd.prospect_discoverer = document.getElementById('pDiscoverer')?.value?.trim()||'';
+                fd.prospect_assignee = document.getElementById('pAssignee')?.value?.trim()||'';
                 fd.prospect_owner_name = document.getElementById('pOwnerName')?.value?.trim()||'';
                 fd.prospect_owner_phone = document.getElementById('pOwnerPhone')?.value?.trim()||'';
                 fd.prospect_notes = document.getElementById('pNotes')?.value?.trim()||'';
                 await RyubeeAPI.updateJob(jobId, { form_data: JSON.stringify(fd) });
                 showToast('✅ リード情報を保存');
+            } catch(e) { alert('エラー: '+e.message); }
+        }
+
+        async function markAsLost(jobId) {
+            if (!confirm('このリードを「不成約」にしますか？\nリストから削除されます。')) return;
+            try {
+                await RyubeeAPI.updateJobStage(jobId, 'lost');
+                document.getElementById('prospectDetailOverlay').classList.remove('show');
+                await loadProspectCount();
+                openProspectList();
+                showToast('❌ 不成約に移動しました');
             } catch(e) { alert('エラー: '+e.message); }
         }
 
