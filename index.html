@@ -531,6 +531,7 @@
             { key: 'owner_identified', label: 'オーナー判明', emoji: '👤' },
         ];
         let prospectJobs = [];
+        let allUsersForSelect = [];
 
         async function loadProspectCount() {
             try {
@@ -584,6 +585,9 @@
             const body = document.getElementById('prospectDetailBody');
             let job = prospectJobs.find(j => j.job_id === jobId);
             if (!job) return;
+            if (allUsersForSelect.length === 0) {
+                try { allUsersForSelect = await RyubeeAPI.fetchUsers(); } catch(e){}
+            }
             try { const full = await RyubeeAPI.fetchJob(jobId); job = {...job, ...full}; } catch(e){}
             let fd = {}; try { fd = JSON.parse(job.form_data || '{}'); } catch(e){}
             const ps = fd.prospect_status || 'discovered';
@@ -593,6 +597,14 @@
                 let cls = i < curIdx ? 'completed' : i === curIdx ? 'current' : '';
                 stepHtml += `<div class="stepper-item ${cls}" onclick="updateProspectStatus('${jobId}','${s.key}')"><div class="stepper-dot">${i < curIdx ? '✓' : (i+1)}</div><div class="stepper-label">${s.emoji} ${s.label}</div></div>`;
             });
+            
+            const userOptions = '<option value="">未設定</option>' + allUsersForSelect.map(u => 
+                `<option value="${u.id}">${utils.escapeHtml(u.name)}</option>`
+            ).join('');
+
+            const assignedToId = job.assigned_to || '';
+            const discovererId = fd.prospect_discoverer || '';
+
             body.innerHTML = `
                 <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px;">
                     <div><div style="font-size:1.3rem;font-weight:800;color:#7C3AED;">${utils.escapeHtml(job.customer_name || '未設定')}</div></div>
@@ -610,15 +622,28 @@
                 <div style="margin-bottom:12px;"><div style="font-size:0.82rem;font-weight:600;color:#7C3AED;margin-bottom:4px;">🎯 アプローチ進捗</div><div class="stepper">${stepHtml}</div></div>
                 <div style="margin-bottom:12px;"><div style="font-size:0.82rem;font-weight:600;color:var(--text-secondary);margin-bottom:4px;">📋 リード情報</div>
                     <div class="prospect-info-grid">
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                            <div>
+                                <label>👀 発見者</label>
+                                <select id="pDiscoverer" onchange="saveProspectInfo('${jobId}')" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--border);font-size:0.85rem;">
+                                    ${userOptions.replace(`value="${discovererId}"`, `value="${discovererId}" selected`)}
+                                </select>
+                            </div>
+                            <div>
+                                <label>🧑‍💼 営業担当</label>
+                                <select id="pAssignee" onchange="saveProspectInfo('${jobId}')" style="width:100%;padding:8px 10px;border-radius:8px;border:1px solid var(--border);font-size:0.85rem;">
+                                    ${userOptions.replace(`value="${assignedToId}"`, `value="${assignedToId}" selected`)}
+                                </select>
+                            </div>
+                        </div>
                         <div><label>🔍 発見経緯</label><input type="text" id="pSource" value="${utils.escapeHtml(fd.prospect_source||'')}" placeholder="例: 車で通りかかり発見" onchange="saveProspectInfo('${jobId}')"></div>
-                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;"><div><label>👁 発見者</label><input type="text" id="pDiscoverer" value="${utils.escapeHtml(fd.prospect_discoverer||'')}" placeholder="発見した人" onchange="saveProspectInfo('${jobId}')"></div><div><label>👤 担当者</label><input type="text" id="pAssignee" value="${utils.escapeHtml(fd.prospect_assignee||'')}" placeholder="営業担当" onchange="saveProspectInfo('${jobId}')"></div></div>
                         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;"><div><label>👤 オーナー名</label><input type="text" id="pOwnerName" value="${utils.escapeHtml(fd.prospect_owner_name||'')}" placeholder="田中太郎" onchange="saveProspectInfo('${jobId}')"></div><div><label>📞 連絡先</label><input type="tel" id="pOwnerPhone" value="${utils.escapeHtml(fd.prospect_owner_phone||'')}" placeholder="090-xxxx" onchange="saveProspectInfo('${jobId}')"></div></div>
                         <div><label>📝 メモ</label><textarea id="pNotes" placeholder="工期や備考..." onchange="saveProspectInfo('${jobId}')">${utils.escapeHtml(fd.prospect_notes||'')}</textarea></div>
                     </div>
                 </div>
-                <div style="display:flex;gap:8px;">
-                    <button class="advance-btn" onclick="advanceToNegotiation('${jobId}')" style="flex:3;">🤝 商談に進む →</button>
-                    <button class="advance-btn" onclick="markAsLost('${jobId}')" style="flex:1;background:linear-gradient(135deg,#EF4444,#DC2626);font-size:0.8rem;">❌ 不成約</button>
+                <div style="display:flex;gap:12px;margin-top:16px;">
+                    <button class="advance-btn" style="flex:1;" onclick="advanceToNegotiation('${jobId}')">🤝 商談に進む →</button>
+                    <button class="advance-btn" style="flex:none;width:auto;padding:14px;background:none;border:1px solid var(--border);color:var(--text-secondary);" onclick="advanceToLost('${jobId}')">不成約 ❌</button>
                 </div>
             `;
             document.getElementById('prospectDetailOverlay').classList.add('show');
@@ -644,25 +669,19 @@
             try {
                 const job = await RyubeeAPI.fetchJob(jobId);
                 let fd = {}; try { fd = JSON.parse(job.form_data||'{}'); } catch(e){}
+                fd.prospect_discoverer = document.getElementById('pDiscoverer')?.value || '';
                 fd.prospect_source = document.getElementById('pSource')?.value?.trim()||'';
-                fd.prospect_discoverer = document.getElementById('pDiscoverer')?.value?.trim()||'';
-                fd.prospect_assignee = document.getElementById('pAssignee')?.value?.trim()||'';
                 fd.prospect_owner_name = document.getElementById('pOwnerName')?.value?.trim()||'';
                 fd.prospect_owner_phone = document.getElementById('pOwnerPhone')?.value?.trim()||'';
                 fd.prospect_notes = document.getElementById('pNotes')?.value?.trim()||'';
-                await RyubeeAPI.updateJob(jobId, { form_data: JSON.stringify(fd) });
+                
+                const assigneeId = document.getElementById('pAssignee')?.value || null;
+                
+                await RyubeeAPI.updateJob(jobId, { 
+                    form_data: JSON.stringify(fd),
+                    assigned_to: assigneeId
+                });
                 showToast('✅ リード情報を保存');
-            } catch(e) { alert('エラー: '+e.message); }
-        }
-
-        async function markAsLost(jobId) {
-            if (!confirm('このリードを「不成約」にしますか？\nリストから削除されます。')) return;
-            try {
-                await RyubeeAPI.updateJobStage(jobId, 'lost');
-                document.getElementById('prospectDetailOverlay').classList.remove('show');
-                await loadProspectCount();
-                openProspectList();
-                showToast('❌ 不成約に移動しました');
             } catch(e) { alert('エラー: '+e.message); }
         }
 
@@ -674,6 +693,17 @@
                 await loadProspectCount();
                 openProspectList();
                 showToast('✅ 商談ステージに移動しました！');
+            } catch(e) { alert('エラー: '+e.message); }
+        }
+
+        async function advanceToLost(jobId) {
+            if (!confirm('この潜在顧客を「不成約」に移動しますか？\nアプローチリストから削除されます。')) return;
+            try {
+                await RyubeeAPI.updateJobStage(jobId, 'lost');
+                document.getElementById('prospectDetailOverlay').classList.remove('show');
+                await loadProspectCount();
+                openProspectList();
+                showToast('❌ 不成約ステージに移動しました');
             } catch(e) { alert('エラー: '+e.message); }
         }
 
