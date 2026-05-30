@@ -381,7 +381,7 @@
         }
 
         function openUnscheduledDrawer() {
-            const unscheduled = allJobs.filter(j => !j.work_date && j.pipeline_stage !== 'lost' && j.pipeline_stage !== 'completed' && j.pipeline_stage !== 'waiting_manifest');
+            const unscheduled = allJobs.filter(j => !j.work_date && j.pipeline_stage !== 'lost' && j.pipeline_stage !== 'completed' && j.pipeline_stage !== 'waiting_manifest' && j.pipeline_stage !== 'prospect');
 
             const list = document.getElementById('unscheduledJobsList');
             if (unscheduled.length === 0) {

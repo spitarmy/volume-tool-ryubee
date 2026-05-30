@@ -544,6 +544,172 @@
             font-weight: 700;
             border-radius: var(--r-md);
         }
+
+        /* ── Prospect (潜在顧客) Styles ── */
+        .prospect-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 3px;
+            font-size: 0.68rem;
+            font-weight: 700;
+            padding: 2px 7px;
+            border-radius: 6px;
+            background: #EDE9FE;
+            color: #7C3AED;
+        }
+
+        .prospect-progress {
+            display: flex;
+            gap: 3px;
+            margin-top: 6px;
+        }
+
+        .prospect-progress .dot {
+            flex: 1;
+            height: 4px;
+            border-radius: 2px;
+            background: #E5E7EB;
+        }
+
+        .prospect-progress .dot.filled {
+            background: #7C3AED;
+        }
+
+        .stepper {
+            display: flex;
+            flex-direction: column;
+            gap: 0;
+            margin: 12px 0;
+        }
+
+        .stepper-item {
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+            padding: 10px 0;
+            cursor: pointer;
+            transition: background 0.15s;
+            border-radius: 8px;
+            padding-left: 4px;
+        }
+
+        .stepper-item:hover {
+            background: rgba(124, 58, 237, 0.04);
+        }
+
+        .stepper-dot {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            border: 2px solid #D1D5DB;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: #9CA3AF;
+            flex-shrink: 0;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .stepper-item.completed .stepper-dot {
+            background: #7C3AED;
+            border-color: #7C3AED;
+            color: #fff;
+        }
+
+        .stepper-item.current .stepper-dot {
+            border-color: #7C3AED;
+            color: #7C3AED;
+            box-shadow: 0 0 0 3px rgba(124, 58, 237, 0.15);
+        }
+
+        .stepper-line {
+            width: 2px;
+            height: 100%;
+            background: #E5E7EB;
+            position: absolute;
+            left: 17px;
+            top: 38px;
+            bottom: 0;
+        }
+
+        .stepper-item.completed .stepper-line {
+            background: #7C3AED;
+        }
+
+        .stepper-label {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            line-height: 28px;
+        }
+
+        .stepper-item.completed .stepper-label {
+            color: #7C3AED;
+        }
+
+        .stepper-item.current .stepper-label {
+            color: var(--text-primary);
+            font-weight: 700;
+        }
+
+        .prospect-info-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+            margin-top: 12px;
+        }
+
+        .prospect-info-grid label {
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 2px;
+            display: block;
+        }
+
+        .prospect-info-grid input,
+        .prospect-info-grid textarea {
+            width: 100%;
+            padding: 8px 10px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            font-size: 0.85rem;
+            box-sizing: border-box;
+        }
+
+        .prospect-info-grid textarea {
+            resize: vertical;
+            min-height: 60px;
+        }
+
+        .advance-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            width: 100%;
+            padding: 14px;
+            margin-top: 16px;
+            background: linear-gradient(135deg, #7C3AED, #6D28D9);
+            color: #fff;
+            border: none;
+            border-radius: var(--r-md);
+            font-size: 0.95rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: transform 0.15s, box-shadow 0.15s;
+        }
+
+        .advance-btn:active {
+            transform: scale(0.97);
+        }
+
+        .advance-btn:hover {
+            box-shadow: 0 4px 16px rgba(124, 58, 237, 0.3);
+        }
     </style>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#1A237E">
@@ -621,6 +787,7 @@
             <div class="form-group">
                 <label>ステージ</label>
                 <select id="njStage">
+                    <option value="prospect">🎯 潜在顧客</option>
                     <option value="inquiry">問合せ</option>
                     <option value="estimate">見積</option>
                     <option value="negotiation">商談</option>
@@ -658,6 +825,7 @@
 
         const STAGES = [
             { key: 'lost', label: '不成約', emoji: '❌' },
+            { key: 'prospect', label: '潜在顧客', emoji: '🎯' },
             { key: 'inquiry', label: '問合せ', emoji: '📩' },
             { key: 'negotiation', label: '商談', emoji: '🤝' },
             { key: 'estimate', label: '見積', emoji: '📝' },
@@ -665,6 +833,15 @@
             { key: 'scheduled', label: '作業予定', emoji: '📅' },
             { key: 'waiting_manifest', label: 'マニフェスト待ち', emoji: '📜' },
             { key: 'completed', label: '完了', emoji: '✅' },
+        ];
+
+        const PROSPECT_STATUSES = [
+            { key: 'discovered', label: '発見', emoji: '🔍' },
+            { key: 'gathering_info', label: '情報収集', emoji: '📋' },
+            { key: 'owner_identified', label: 'オーナー判明', emoji: '👤' },
+            { key: 'construction_identified', label: '工事会社判明', emoji: '🏗' },
+            { key: 'sales_prep', label: '営業準備', emoji: '📝' },
+            { key: 'ready_to_approach', label: '営業開始待ち', emoji: '⏳' },
         ];
 
         const TYPE_LABELS = {
@@ -784,12 +961,50 @@
             const updatedText = job.updated_at ? new Date(job.updated_at).toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
 
             const cust = allCustomers.find(c => c.id === job.customer_id) || {};
-            let fd = {};
-            try { fd = JSON.parse(cust.form_data || "{}"); } catch (e) { }
-            const yamaNum = fd.yamabun_management_number || '';
+            let custFd = {};
+            try { custFd = JSON.parse(cust.form_data || "{}"); } catch (e) { }
+            const yamaNum = custFd.yamabun_management_number || '';
 
             const photoCount = job.photo_count || (Array.isArray(job.photos) ? job.photos.length : 0);
 
+            // 潜在顧客カード — 専用レンダリング
+            if (currentStage === 'prospect') {
+                let jobFd = {};
+                try { jobFd = JSON.parse(job.form_data || "{}"); } catch (e) { }
+                const prospectStatus = jobFd.prospect_status || 'discovered';
+                const psIdx = PROSPECT_STATUSES.findIndex(s => s.key === prospectStatus);
+                const psLabel = PROSPECT_STATUSES[psIdx]?.label || '発見';
+                const psEmoji = PROSPECT_STATUSES[psIdx]?.emoji || '🔍';
+
+                let progressDots = '';
+                PROSPECT_STATUSES.forEach((s, i) => {
+                    progressDots += `<div class="dot ${i <= psIdx ? 'filled' : ''}"></div>`;
+                });
+
+                return `
+                    <div class="pipeline-card" draggable="true" data-job-id="${job.job_id}" data-stage="${currentStage}" onclick="openProspectDetail('${job.job_id}')" style="border-left:3px solid #7C3AED;">
+                        <div class="pc-customer">
+                            ${utils.escapeHtml(job.customer_name || '未設定')}
+                        </div>
+                        <div class="pc-name">
+                            📍 ${utils.escapeHtml(job.job_name || '')}
+                            ${job.comment_count ? `<span class="pc-comments-badge">💬 ${job.comment_count}</span>` : ''}
+                        </div>
+                        ${job.address ? `<div style="font-size:0.72rem;color:var(--text-tertiary);margin-bottom:4px;">📍 ${utils.escapeHtml(job.address)}</div>` : ''}
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px;">
+                            <span class="prospect-badge">${psEmoji} ${psLabel}</span>
+                            <span style="font-size:0.68rem;color:var(--text-tertiary);">${psIdx + 1}/${PROSPECT_STATUSES.length}</span>
+                        </div>
+                        <div class="prospect-progress">${progressDots}</div>
+                        ${job.assigned_to_name ? `<div class="pc-assignee">担当: ${utils.escapeHtml(job.assigned_to_name)}</div>` : ''}
+                        <div style="display:flex; justify-content:flex-end; margin-top:8px;">
+                            ${nextStage ? `<button class="stage-btn" onclick="event.stopPropagation();moveJob('${job.job_id}', '${nextStage.key}')">→ ${nextStage.label}</button>` : ''}
+                        </div>
+                    </div>
+                `;
+            }
+
+            // 通常カード
             return `
                 <div class="pipeline-card" draggable="true" data-job-id="${job.job_id}" data-stage="${currentStage}" onclick="openJobDetail('${job.job_id}')">
                     <div class="pc-customer">
@@ -1379,6 +1594,171 @@
                 await loadPipeline();
                 openJobDetail(jobId);
             } catch (err) { alert("削除失敗: " + err.message); }
+        }
+
+        // ── 潜在顧客専用ドロワー ───────────────────
+        async function openProspectDetail(jobId) {
+            const drawer = document.getElementById('drawerOverlay');
+            const body = document.getElementById('drawerBody');
+
+            let job = null;
+            for (const jobs of Object.values(pipelineData)) {
+                const found = jobs.find(j => j.job_id === jobId);
+                if (found) { job = found; break; }
+            }
+            if (!job) return;
+
+            try {
+                const fullJob = await RyubeeAPI.fetchJob(jobId);
+                job = { ...job, ...fullJob };
+            } catch (e) {
+                console.warn('Failed to fetch full job data:', e);
+            }
+
+            let comments = [];
+            try { comments = await RyubeeAPI.fetchComments(jobId); } catch (e) { }
+
+            let fd = {};
+            try { fd = JSON.parse(job.form_data || "{}"); } catch (e) { }
+
+            const prospectStatus = fd.prospect_status || 'discovered';
+            const currentIdx = PROSPECT_STATUSES.findIndex(s => s.key === prospectStatus);
+
+            // ステッパーUI生成
+            let stepperHtml = '';
+            PROSPECT_STATUSES.forEach((s, i) => {
+                let cls = '';
+                if (i < currentIdx) cls = 'completed';
+                else if (i === currentIdx) cls = 'current';
+                stepperHtml += `
+                    <div class="stepper-item ${cls}" onclick="updateProspectStatus('${jobId}', '${s.key}')">
+                        <div class="stepper-dot">${i < currentIdx ? '✓' : (i + 1)}</div>
+                        <div class="stepper-label">${s.emoji} ${s.label}</div>
+                    </div>
+                `;
+            });
+
+            body.innerHTML = `
+                <!-- お客様名 / 物件名 -->
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px;">
+                    <div style="flex:1;">
+                        <div class="drawer-customer-name" style="color:#7C3AED;">${utils.escapeHtml(job.customer_name || '未設定')}</div>
+                        <p style="font-size:0.82rem;color:var(--text-secondary);margin:2px 0 0;">
+                            📍 ${utils.escapeHtml(job.job_name || '')}
+                            ${job.address ? `<br>${utils.escapeHtml(job.address)} <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(job.address)}" target="_blank" style="margin-left:4px;text-decoration:none;font-size:0.72rem;background:#E2E8F0;padding:2px 6px;border-radius:4px;color:var(--text-primary);">🗺 マップ</a>` : ''}
+                        </p>
+                    </div>
+                    <a href="jobs.html?id=${jobId}" style="flex-shrink:0;margin-left:8px;padding:4px 10px;font-size:0.72rem;background:#EDE9FE;color:#7C3AED;border:1px solid #C4B5FD;border-radius:8px;text-decoration:none;font-weight:700;white-space:nowrap;">✏️ 編集</a>
+                </div>
+
+                <!-- 進捗ステッパー -->
+                <div class="drawer-section">
+                    <div class="drawer-section-title" style="color:#7C3AED;">🎯 アプローチ進捗</div>
+                    <div class="stepper">
+                        ${stepperHtml}
+                    </div>
+                </div>
+
+                <!-- 情報入力 -->
+                <div class="drawer-section">
+                    <div class="drawer-section-title">📋 リード情報</div>
+                    <div class="prospect-info-grid">
+                        <div>
+                            <label>🔍 発見経緯</label>
+                            <input type="text" id="pSource" placeholder="例: 車で通りかかり発見" value="${utils.escapeHtml(fd.prospect_source || '')}" onchange="saveProspectInfo('${jobId}')">
+                        </div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                            <div>
+                                <label>👤 オーナー名</label>
+                                <input type="text" id="pOwnerName" placeholder="例: 田中太郎" value="${utils.escapeHtml(fd.prospect_owner_name || '')}" onchange="saveProspectInfo('${jobId}')">
+                            </div>
+                            <div>
+                                <label>📞 オーナー連絡先</label>
+                                <input type="tel" id="pOwnerPhone" placeholder="090-xxxx-xxxx" value="${utils.escapeHtml(fd.prospect_owner_phone || '')}" onchange="saveProspectInfo('${jobId}')">
+                            </div>
+                        </div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                            <div>
+                                <label>🏗 工事会社名</label>
+                                <input type="text" id="pConstCompany" placeholder="例: ABC建設" value="${utils.escapeHtml(fd.prospect_construction_company || '')}" onchange="saveProspectInfo('${jobId}')">
+                            </div>
+                            <div>
+                                <label>📞 工事会社連絡先</label>
+                                <input type="tel" id="pConstPhone" placeholder="075-xxx-xxxx" value="${utils.escapeHtml(fd.prospect_construction_phone || '')}" onchange="saveProspectInfo('${jobId}')">
+                            </div>
+                        </div>
+                        <div>
+                            <label>📝 メモ</label>
+                            <textarea id="pNotes" placeholder="工期や備考を記入..." onchange="saveProspectInfo('${jobId}')">${utils.escapeHtml(fd.prospect_notes || '')}</textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 問合せに進むボタン -->
+                <button class="advance-btn" onclick="advanceToInquiry('${jobId}')">
+                    📩 問合せに進む（営業開始）→
+                </button>
+
+                <!-- コメント -->
+                <div class="comment-thread">
+                    <h4 style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:8px;">💬 コメント (${comments.length})</h4>
+                    <div id="commentList">
+                        ${comments.length ? comments.map(c => `
+                            <div class="comment-item">
+                                <div class="comment-meta">${utils.escapeHtml(c.user_name)} ・ ${c.created_at ? new Date(c.created_at).toLocaleString('ja-JP') : ''}</div>
+                                <div class="comment-text">${utils.escapeHtml(c.content)}</div>
+                            </div>
+                        `).join('') : '<p class="small-text">コメントなし</p>'}
+                    </div>
+                    <div class="comment-input-row">
+                        <input type="text" id="commentInput" placeholder="コメントを入力..." onkeypress="if(event.key==='Enter')postJobComment('${jobId}')">
+                        <button class="btn btn-xs btn-primary" onclick="postJobComment('${jobId}')">送信</button>
+                    </div>
+                </div>
+            `;
+            drawer.classList.add('show');
+        }
+
+        async function updateProspectStatus(jobId, newStatus) {
+            try {
+                const job = await RyubeeAPI.fetchJob(jobId);
+                let fd = {};
+                try { fd = JSON.parse(job.form_data || "{}"); } catch (e) { }
+                fd.prospect_status = newStatus;
+                await RyubeeAPI.updateJob(jobId, { form_data: JSON.stringify(fd) });
+                await loadPipeline();
+                const statusLabel = PROSPECT_STATUSES.find(s => s.key === newStatus)?.label || '';
+                showToast(`✅ 進捗を「${statusLabel}」に更新しました`);
+                openProspectDetail(jobId);
+            } catch (e) { alert('更新エラー: ' + e.message); }
+        }
+
+        async function saveProspectInfo(jobId) {
+            try {
+                const job = await RyubeeAPI.fetchJob(jobId);
+                let fd = {};
+                try { fd = JSON.parse(job.form_data || "{}"); } catch (e) { }
+
+                fd.prospect_source = document.getElementById('pSource')?.value?.trim() || '';
+                fd.prospect_owner_name = document.getElementById('pOwnerName')?.value?.trim() || '';
+                fd.prospect_owner_phone = document.getElementById('pOwnerPhone')?.value?.trim() || '';
+                fd.prospect_construction_company = document.getElementById('pConstCompany')?.value?.trim() || '';
+                fd.prospect_construction_phone = document.getElementById('pConstPhone')?.value?.trim() || '';
+                fd.prospect_notes = document.getElementById('pNotes')?.value?.trim() || '';
+
+                await RyubeeAPI.updateJob(jobId, { form_data: JSON.stringify(fd) });
+                showToast('✅ リード情報を保存しました');
+            } catch (e) { alert('保存エラー: ' + e.message); }
+        }
+
+        async function advanceToInquiry(jobId) {
+            if (!confirm('この潜在顧客を「問合せ」ステージに移動しますか？\n営業活動を開始します。')) return;
+            try {
+                await RyubeeAPI.updateJobStage(jobId, 'inquiry');
+                document.getElementById('drawerOverlay').classList.remove('show');
+                await loadPipeline();
+                showToast('✅ 問合せステージに移動しました。営業開始！');
+            } catch (e) { alert('エラー: ' + e.message); }
         }
     </script>
     <script>

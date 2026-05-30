@@ -366,6 +366,7 @@
         <div class="form-group">
           <label>パイプラインステージ</label>
           <select id="pipeline_stage">
+            <option value="prospect">🎯 潜在顧客</option>
             <option value="inquiry">問合せ</option>
             <option value="estimate">見積</option>
             <option value="negotiation">商談</option>
@@ -537,7 +538,7 @@
         const price = dp != null ? `${Number(dp).toLocaleString()} 円` : '-';
         const wdate = j.work_date ? `作業日: ${j.work_date}` : '作業日: 未定';
 
-        const STAGE_LABELS = { inquiry: '問合せ', estimate: '見積', negotiation: '商談', contract: '契約', scheduled: '作業予定', waiting_manifest: 'マニ待ち', completed: '完了', lost: '不成約' };
+        const STAGE_LABELS = { prospect: '潜在顧客', inquiry: '問合せ', estimate: '見積', negotiation: '商談', contract: '契約', scheduled: '作業予定', waiting_manifest: 'マニ待ち', completed: '完了', lost: '不成約' };
         const slabel = STAGE_LABELS[j.pipeline_stage] || j.status;
         const card = document.createElement('div');
         card.className = 'job-card';
