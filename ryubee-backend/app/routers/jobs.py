@@ -59,6 +59,7 @@ class JobOut(BaseModel):
     job_id: str
     company_id: str
     user_id: str | None
+    customer_id: str | None = None
     job_name: str
     customer_name: str
     address: str
@@ -110,6 +111,7 @@ class JobOut(BaseModel):
             job_id=j.job_id,
             company_id=j.company_id,
             user_id=j.user_id,
+            customer_id=j.customer_id,
             job_name=j.job_name,
             customer_name=j.customer_name,
             address=j.address,
