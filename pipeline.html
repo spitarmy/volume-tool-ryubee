@@ -1460,7 +1460,7 @@
                     <div class="drawer-section-title">📄 処分先契約</div>
                     <div id="contractsList">読み込み中...</div>
                     <button class="contract-add-btn" onclick="openContractModal('${job.customer_id}')">➕ 契約を追加</button>
-                    <a href="contract-form.html?customer_id=${job.customer_id}" target="_blank" style="display:block;text-align:center;margin-top:6px;font-size:0.72rem;color:var(--blue);text-decoration:none;font-weight:600;">📝 契約書を作成 →</a>
+                    <a href="contract-form.html?id=${job.customer_id}" target="_blank" style="display:block;text-align:center;margin-top:6px;font-size:0.72rem;color:var(--blue);text-decoration:none;font-weight:600;">📝 契約書を作成 →</a>
                 </div>
                 ` : ''}
 
@@ -2052,20 +2052,20 @@
         //  顧客別処分先契約
         // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-        // 処分先 → デフォルト廃棄物種類マッピング
+        // 処分先 → デフォルト廃棄物種類マッピング（配列で複数品目対応）
         const DISPOSAL_WASTE_MAP = {
-            '公社': '',
-            '光アスコン': '廃プラ・発泡',
-            '木材開発': '木くず',
-            '旭興産業': '蛍光灯・電池類',
-            '厳本金属': '金属くず',
-            'HIRAYAMA': 'オール品目',
-            '西山環境サービス': 'オール品目',
-            '京都有機資源': '残渣',
-            'ホームケルン': 'オール品目',
-            '大剛': '',
-            '京都環境保全公社': '',
-            '家電リサイクル': '家電4品目',
+            '公社': [],
+            '光アスコン': ['廃プラ・発泡'],
+            '木材開発': ['木くず'],
+            '旭興産業': ['蛍光灯・電池類'],
+            '厳本金属': ['金属くず'],
+            'HIRAYAMA': ['廃プラ', '木くず', '金属くず', 'ガラ・陶', 'ゴムくず', '繊維くず', '紙くず'],
+            '西山環境サービス': ['廃プラ', '木くず', '金属くず', 'ガラ・陶', 'ゴムくず', '繊維くず', '紙くず'],
+            '京都有機資源': ['残渣', '動植物性残渣'],
+            'ホームケルン': ['廃プラ', '木くず', '金属くず', 'ガラ・陶', '繊維くず', '紙くず', 'がれき類'],
+            '大剛': ['廃プラ', '木くず', '金属くず'],
+            '京都環境保全公社': ['燃え殻', '汚泥', '廃油', '廃酸', '廃アルカリ', '廃プラ', '紙くず', '木くず', '繊維くず', '動植物性残渣', 'ゴムくず', '金属くず', 'ガラス・陶磁器', '鉱さい', 'がれき類', 'ばいじん'],
+            '家電リサイクル': ['家電4品目'],
         };
 
         let _contractsMaster = null;
@@ -2244,12 +2244,48 @@
                     return;
                 }
             }
-            // 廃棄物種類をデフォルト入力
-            const defaultWaste = DISPOSAL_WASTE_MAP[val] || DISPOSAL_WASTE_MAP[sel.value] || '';
+            // 廃棄物種類をデフォルト入力（複数品目対応）
+            const wasteTypes = DISPOSAL_WASTE_MAP[val] || DISPOSAL_WASTE_MAP[sel.value] || [];
             const wasteInput = document.getElementById('ccWasteType');
-            if (!wasteInput.value && defaultWaste) {
-                wasteInput.value = defaultWaste;
+            if (!wasteInput.value) {
+                if (wasteTypes.length === 1) {
+                    wasteInput.value = wasteTypes[0];
+                } else if (wasteTypes.length > 1) {
+                    // 複数品目のセレクタを表示
+                    showWasteTypeSelector(wasteTypes);
+                }
             }
+        }
+
+        function showWasteTypeSelector(types) {
+            // 既存のセレクタがあれば削除
+            const existing = document.getElementById('wasteTypeSelector');
+            if (existing) existing.remove();
+
+            const wasteInput = document.getElementById('ccWasteType');
+            const container = wasteInput.parentElement;
+            const selector = document.createElement('div');
+            selector.id = 'wasteTypeSelector';
+            selector.style.cssText = 'display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;';
+            types.forEach(t => {
+                const chip = document.createElement('button');
+                chip.type = 'button';
+                chip.textContent = t;
+                chip.style.cssText = 'padding:4px 10px;font-size:0.75rem;border-radius:12px;border:1px solid var(--border);background:#fff;cursor:pointer;transition:all 0.15s;font-family:inherit;';
+                chip.onclick = () => {
+                    wasteInput.value = t;
+                    selector.querySelectorAll('button').forEach(b => {
+                        b.style.background = '#fff';
+                        b.style.color = 'inherit';
+                        b.style.borderColor = 'var(--border)';
+                    });
+                    chip.style.background = 'var(--blue)';
+                    chip.style.color = '#fff';
+                    chip.style.borderColor = 'var(--blue)';
+                };
+                selector.appendChild(chip);
+            });
+            container.appendChild(selector);
         }
 
         async function saveContract() {
