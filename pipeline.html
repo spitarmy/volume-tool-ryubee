@@ -1586,16 +1586,34 @@
 
         async function linkCustomerToJob(jobId) {
             const sel = document.getElementById('customerLinkSelect');
-            const val = sel ? sel.value : '';
+            let val = sel ? sel.value : '';
+
+            // フォールバック: hidden inputが空でも検索テキストから顧客を探す
+            if (!val) {
+                const searchInput = document.getElementById('customerSearchInput');
+                const searchText = (searchInput?.value || '').trim();
+                if (searchText && _cachedCustomers) {
+                    const match = _cachedCustomers.find(c => c.name === searchText);
+                    if (match) {
+                        val = match.id;
+                    }
+                }
+            }
 
             if (!val) {
-                alert('顧客を選択してください');
+                alert('顧客を選択してください。\nドロップダウンからお客様名を選択するか、「➕ 新規顧客として登録」を選んでください。');
                 return;
+            }
+
+            // ボタンの多重タップ防止
+            const btn = event?.target;
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = '処理中...';
             }
 
             try {
                 if (val === '__new__') {
-                    // Find current job name for default
                     let job = null;
                     for (const jobs of Object.values(pipelineData)) {
                         job = jobs.find(j => j.job_id === jobId);
@@ -1603,7 +1621,10 @@
                     }
                     const custName = job ? job.customer_name : '';
                     const name = prompt('新規顧客の「お客様名 / 法人名」を入力してください:', custName);
-                    if (!name) return;
+                    if (!name) {
+                        if (btn) { btn.disabled = false; btn.textContent = '紐づけ'; }
+                        return;
+                    }
 
                     const cPayload = {
                         name: name,
@@ -1618,18 +1639,20 @@
                     await RyubeeAPI.updateJob(jobId, { customer_id: newCus.id, customer_name: name });
                     showToast(`✅ "${name}" 様を登録して紐づけました`);
                 } else {
-                    // Link to existing customer
-                    const cust = _cachedCustomers.find(c => c.id === val);
+                    // 既存顧客に紐づけ
+                    const cust = _cachedCustomers ? _cachedCustomers.find(c => String(c.id) === String(val)) : null;
                     const custName = cust ? cust.name : '';
-                    await RyubeeAPI.updateJob(jobId, { customer_id: val, customer_name: custName });
+                    await RyubeeAPI.updateJob(jobId, { customer_id: String(val), customer_name: custName });
                     showToast(`✅ "${custName}" 様を紐づけました`);
                 }
 
-                _cachedCustomers = null; // clear cache
+                _cachedCustomers = null;
                 document.getElementById('drawerOverlay').classList.remove('show');
                 loadPipeline();
             } catch (e) {
-                alert('エラーが発生しました: ' + e.message);
+                console.error('紐づけエラー:', e);
+                alert('紐づけエラーが発生しました:\n' + e.message);
+                if (btn) { btn.disabled = false; btn.textContent = '紐づけ'; }
             }
         }
 
