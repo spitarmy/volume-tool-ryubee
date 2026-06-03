@@ -2055,9 +2055,9 @@
         // 処分先 → デフォルト廃棄物種類マッピング（配列で複数品目対応）
         const DISPOSAL_WASTE_MAP = {
             '公社': [],
-            '光アスコン': ['廃プラ・発泡'],
+            '光アスコン': ['廃プラ・発泡', 'がれき類', 'ガラス・陶磁器', 'コンクリート'],
             '木材開発': ['木くず'],
-            '旭興産業': ['蛍光灯・電池類'],
+            '旭興産業': ['蛍光灯', '乾電池', '電池類', 'スプレー缶', '消火器'],
             '厳本金属': ['金属くず'],
             'HIRAYAMA': ['廃プラ', '木くず', '金属くず', 'ガラ・陶', 'ゴムくず', '繊維くず', '紙くず'],
             '西山環境サービス': ['廃プラ', '木くず', '金属くず', 'ガラ・陶', 'ゴムくず', '繊維くず', '紙くず'],
@@ -2067,6 +2067,8 @@
             '京都環境保全公社': ['燃え殻', '汚泥', '廃油', '廃酸', '廃アルカリ', '廃プラ', '紙くず', '木くず', '繊維くず', '動植物性残渣', 'ゴムくず', '金属くず', 'ガラス・陶磁器', '鉱さい', 'がれき類', 'ばいじん'],
             '家電リサイクル': ['家電4品目'],
         };
+
+        let _selectedWasteTypes = new Set();
 
         let _contractsMaster = null;
         let _editingContractId = null;
@@ -2247,44 +2249,78 @@
             // 廃棄物種類をデフォルト入力（複数品目対応）
             const wasteTypes = DISPOSAL_WASTE_MAP[val] || DISPOSAL_WASTE_MAP[sel.value] || [];
             const wasteInput = document.getElementById('ccWasteType');
+            _selectedWasteTypes.clear();
             if (!wasteInput.value) {
                 if (wasteTypes.length === 1) {
                     wasteInput.value = wasteTypes[0];
+                    _selectedWasteTypes.add(wasteTypes[0]);
                 } else if (wasteTypes.length > 1) {
-                    // 複数品目のセレクタを表示
+                    wasteInput.value = '';
                     showWasteTypeSelector(wasteTypes);
                 }
             }
         }
 
         function showWasteTypeSelector(types) {
-            // 既存のセレクタがあれば削除
             const existing = document.getElementById('wasteTypeSelector');
             if (existing) existing.remove();
 
             const wasteInput = document.getElementById('ccWasteType');
             const container = wasteInput.parentElement;
+
+            // 説明テキスト
+            let hint = document.getElementById('wasteTypeHint');
+            if (!hint) {
+                hint = document.createElement('div');
+                hint.id = 'wasteTypeHint';
+                hint.style.cssText = 'font-size:0.7rem;color:var(--text-tertiary);margin-top:4px;';
+                container.appendChild(hint);
+            }
+            hint.textContent = '複数選択可 — タップで選択/解除';
+
             const selector = document.createElement('div');
             selector.id = 'wasteTypeSelector';
-            selector.style.cssText = 'display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;';
+            selector.style.cssText = 'display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;';
             types.forEach(t => {
                 const chip = document.createElement('button');
                 chip.type = 'button';
                 chip.textContent = t;
-                chip.style.cssText = 'padding:4px 10px;font-size:0.75rem;border-radius:12px;border:1px solid var(--border);background:#fff;cursor:pointer;transition:all 0.15s;font-family:inherit;';
+                chip.dataset.waste = t;
+                const isSelected = _selectedWasteTypes.has(t);
+                chip.style.cssText = `padding:4px 10px;font-size:0.75rem;border-radius:12px;border:1px solid ${isSelected ? 'var(--blue)' : 'var(--border)'};background:${isSelected ? 'var(--blue)' : '#fff'};color:${isSelected ? '#fff' : 'inherit'};cursor:pointer;transition:all 0.15s;font-family:inherit;`;
                 chip.onclick = () => {
-                    wasteInput.value = t;
-                    selector.querySelectorAll('button').forEach(b => {
-                        b.style.background = '#fff';
-                        b.style.color = 'inherit';
-                        b.style.borderColor = 'var(--border)';
-                    });
-                    chip.style.background = 'var(--blue)';
-                    chip.style.color = '#fff';
-                    chip.style.borderColor = 'var(--blue)';
+                    if (_selectedWasteTypes.has(t)) {
+                        _selectedWasteTypes.delete(t);
+                        chip.style.background = '#fff';
+                        chip.style.color = 'inherit';
+                        chip.style.borderColor = 'var(--border)';
+                    } else {
+                        _selectedWasteTypes.add(t);
+                        chip.style.background = 'var(--blue)';
+                        chip.style.color = '#fff';
+                        chip.style.borderColor = 'var(--blue)';
+                    }
+                    wasteInput.value = Array.from(_selectedWasteTypes).join(', ');
                 };
                 selector.appendChild(chip);
             });
+
+            // 全選択ボタン
+            const allBtn = document.createElement('button');
+            allBtn.type = 'button';
+            allBtn.textContent = '✅ 全選択';
+            allBtn.style.cssText = 'padding:4px 10px;font-size:0.75rem;border-radius:12px;border:1px solid var(--green-dark);background:var(--green-light);color:var(--green-dark);cursor:pointer;transition:all 0.15s;font-family:inherit;font-weight:700;';
+            allBtn.onclick = () => {
+                types.forEach(t => _selectedWasteTypes.add(t));
+                wasteInput.value = Array.from(_selectedWasteTypes).join(', ');
+                selector.querySelectorAll('button[data-waste]').forEach(b => {
+                    b.style.background = 'var(--blue)';
+                    b.style.color = '#fff';
+                    b.style.borderColor = 'var(--blue)';
+                });
+            };
+            selector.appendChild(allBtn);
+
             container.appendChild(selector);
         }
 
@@ -2294,9 +2330,9 @@
                 alert('処分先を選択してください');
                 return;
             }
-            const body = {
+
+            const baseBody = {
                 disposal_company: disposal,
-                waste_type: document.getElementById('ccWasteType').value.trim(),
                 unit_price: parseFloat(document.getElementById('ccUnitPrice').value) || null,
                 unit: document.getElementById('ccUnit').value,
                 contract_date: document.getElementById('ccContractDate').value || null,
@@ -2307,12 +2343,22 @@
 
             try {
                 if (_editingContractId) {
-                    await RyubeeAPI.updateCustomerContract(_currentContractCustomerId, _editingContractId, body);
+                    // 編集モード: 1件だけ更新
+                    baseBody.waste_type = document.getElementById('ccWasteType').value.trim();
+                    await RyubeeAPI.updateCustomerContract(_currentContractCustomerId, _editingContractId, baseBody);
                     showToast('✅ 契約を更新しました');
                 } else {
-                    await RyubeeAPI.createCustomerContract(_currentContractCustomerId, body);
-                    showToast('✅ 契約を追加しました');
+                    // 新規: 複数品目が選択されていれば品目ごとに1件ずつ作成
+                    const wasteTypes = _selectedWasteTypes.size > 0
+                        ? Array.from(_selectedWasteTypes)
+                        : [document.getElementById('ccWasteType').value.trim() || ''];
+
+                    for (const wt of wasteTypes) {
+                        await RyubeeAPI.createCustomerContract(_currentContractCustomerId, { ...baseBody, waste_type: wt });
+                    }
+                    showToast(`✅ ${wasteTypes.length}件の契約を追加しました`);
                 }
+                _selectedWasteTypes.clear();
                 document.getElementById('contractModalOverlay').classList.remove('show');
                 loadCustomerContracts(_currentContractCustomerId);
             } catch (e) {
