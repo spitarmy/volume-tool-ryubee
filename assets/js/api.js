@@ -31,7 +31,21 @@ async function apiFetch(path, options = {}) {
     delete headers["Content-Type"];
   }
 
-  const res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+  let res;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    try {
+      res = await fetch(`${API_BASE}${path}`, { ...options, headers });
+      break; // 成功したらループを抜ける
+    } catch (fetchErr) {
+      // ネットワークエラー（Load failed等）
+      console.warn(`Fetch attempt ${attempt + 1} failed:`, fetchErr.message, path);
+      if (attempt === 2) {
+        throw new Error(`ネットワークエラー: サーバーに接続できません（${fetchErr.message}）`);
+      }
+      // 2秒待ってリトライ
+      await new Promise(r => setTimeout(r, 2000));
+    }
+  }
 
   if (res.status === 401) {
     // トークン期限切れ → 強制ログアウト

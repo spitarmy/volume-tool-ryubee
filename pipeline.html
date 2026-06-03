@@ -2438,22 +2438,31 @@
                 return;
             }
 
+            if (!_currentContractCustomerId) {
+                alert('顧客IDが未設定です。ドロワーを開き直してください。');
+                return;
+            }
+
             const btn = event?.target;
             if (btn) { btn.disabled = true; btn.textContent = '保存中...'; }
 
             try {
+                let created = 0;
                 for (const { company, waste } of pairs) {
+                    console.log(`Creating contract: customer=${_currentContractCustomerId}, company=${company}, waste=${waste}`);
                     await RyubeeAPI.createCustomerContract(_currentContractCustomerId, {
                         disposal_company: company,
                         waste_type: waste,
-                        status: 'active',
+                        status: 'pending',
                     });
+                    created++;
                 }
-                showToast(`✅ ${pairs.length}件の契約を追加しました`);
+                showToast(`✅ ${created}件の契約を追加しました`);
                 document.getElementById('contractModalOverlay').classList.remove('show');
                 loadCustomerContracts(_currentContractCustomerId);
             } catch (e) {
-                alert('エラー: ' + e.message);
+                console.error('Contract save error:', e);
+                alert(`エラー: ${e.message}\n\n顧客ID: ${_currentContractCustomerId}\n件数: ${pairs.length}`);
                 if (btn) { btn.disabled = false; btn.textContent = '一括保存する'; }
             }
         }

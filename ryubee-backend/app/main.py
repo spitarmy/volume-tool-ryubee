@@ -37,6 +37,13 @@ try:
             ("invoices", "invoice_type", "VARCHAR(20) DEFAULT 'mixed'"),
             ("calendar_events", "is_done", "BOOLEAN DEFAULT FALSE"),
             ("calendar_events", "end_date", "VARCHAR(20) DEFAULT NULL"),
+            # 産廃3社間契約の追跡カラム
+            ("customer_contracts", "delivery_method", "VARCHAR(20) DEFAULT ''"),
+            ("customer_contracts", "sent_date", "VARCHAR(20) DEFAULT NULL"),
+            ("customer_contracts", "returned_date", "VARCHAR(20) DEFAULT NULL"),
+            ("customer_contracts", "accepted", "BOOLEAN DEFAULT FALSE"),
+            ("customer_contracts", "manifest_registered", "BOOLEAN DEFAULT FALSE"),
+            ("customer_contracts", "completion_date", "VARCHAR(20) DEFAULT NULL"),
         ]
         for _table, _col, _coltype in _migrations:
             try:
