@@ -771,6 +771,26 @@ const RyubeeAPI = {
     });
   },
 
+  // ── Customer Contracts (顧客別処分先契約) ─────────────────
+  async fetchCustomerContracts(customerId) {
+    return apiFetch(`/v1/customers/${customerId}/contracts`);
+  },
+  async createCustomerContract(customerId, body) {
+    return apiFetch(`/v1/customers/${customerId}/contracts`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+  },
+  async updateCustomerContract(customerId, contractId, body) {
+    return apiFetch(`/v1/customers/${customerId}/contracts/${contractId}`, {
+      method: "PUT",
+      body: JSON.stringify(body),
+    });
+  },
+  async deleteCustomerContract(customerId, contractId) {
+    return apiFetch(`/v1/customers/${customerId}/contracts/${contractId}`, { method: "DELETE" });
+  },
+
   // ── Photo URL Helper ──────────────────────────────────────
   /**
    * 写真URLを解決する。

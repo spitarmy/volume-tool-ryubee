@@ -199,6 +199,7 @@ class Customer(Base):
     manifests: Mapped[list["Manifest"]] = relationship(back_populates="customer")
     invoices: Mapped[list["Invoice"]] = relationship(back_populates="customer")
     history_logs: Mapped[list["CustomerHistory"]] = relationship("CustomerHistory", back_populates="customer", cascade="all, delete-orphan", order_by="desc(CustomerHistory.created_at)")
+    contracts: Mapped[list["CustomerContract"]] = relationship("CustomerContract", back_populates="customer", cascade="all, delete-orphan")
 
 
 class CustomerHistory(Base):
@@ -516,6 +517,30 @@ class WasteContract(Base):
     notes: Mapped[str] = mapped_column(Text, default="")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+
+# ── 顧客別処分先契約 ──────────────────────────────────────
+class CustomerContract(Base):
+    __tablename__ = "customer_contracts"
+    __table_args__ = (
+        Index('ix_customer_contracts_customer', 'customer_id'),
+    )
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    company_id: Mapped[str] = mapped_column(String, ForeignKey("companies.id"), nullable=False)
+    customer_id: Mapped[str] = mapped_column(String, ForeignKey("customers.id"), nullable=False)
+    disposal_company: Mapped[str] = mapped_column(String(255), default="")   # 処分先名
+    waste_type: Mapped[str] = mapped_column(String(255), default="")         # 廃棄物種類
+    unit_price: Mapped[float | None] = mapped_column(Float, nullable=True)   # 契約単価
+    unit: Mapped[str] = mapped_column(String(20), default="kg")              # 単位 (kg, m³)
+    contract_date: Mapped[str | None] = mapped_column(String(20), nullable=True)  # 契約日
+    expiry_date: Mapped[str | None] = mapped_column(String(20), nullable=True)    # 契約期限
+    status: Mapped[str] = mapped_column(String(20), default="active")  # active / pending / expired
+    notes: Mapped[str] = mapped_column(Text, default="")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+    customer: Mapped["Customer"] = relationship(back_populates="contracts")
 
 
 # ── 車両履歴（修理歴・事故歴・車検証） ───────────────────

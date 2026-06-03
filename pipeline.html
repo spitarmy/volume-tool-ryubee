@@ -744,6 +744,149 @@
         .advance-btn:hover {
             box-shadow: 0 4px 16px rgba(124, 58, 237, 0.3);
         }
+
+        /* ── Customer Contract Styles ── */
+        .contract-card {
+            background: #fff;
+            border-radius: 10px;
+            padding: 12px 14px;
+            margin-bottom: 8px;
+            border: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            transition: transform 0.15s, box-shadow 0.15s;
+        }
+
+        .contract-card:active {
+            transform: scale(0.98);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .contract-card .cc-info {
+            flex: 1;
+        }
+
+        .contract-card .cc-company {
+            font-weight: 700;
+            font-size: 0.9rem;
+            color: var(--text-primary);
+        }
+
+        .contract-card .cc-waste {
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+            margin-top: 2px;
+        }
+
+        .contract-card .cc-price {
+            font-size: 0.72rem;
+            color: var(--text-tertiary);
+            margin-top: 2px;
+        }
+
+        .contract-card .cc-status {
+            font-size: 0.68rem;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 10px;
+            flex-shrink: 0;
+        }
+
+        .contract-card .cc-status.active {
+            background: var(--green-light);
+            color: var(--green-dark);
+        }
+
+        .contract-card .cc-status.pending {
+            background: var(--orange-light);
+            color: #C06000;
+        }
+
+        .contract-card .cc-status.expired {
+            background: var(--red-light);
+            color: var(--red);
+        }
+
+        .contract-add-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            width: 100%;
+            padding: 10px;
+            margin-top: 8px;
+            background: #fff;
+            border: 2px dashed var(--border);
+            border-radius: 10px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: var(--text-tertiary);
+            cursor: pointer;
+            transition: border-color 0.2s, color 0.2s;
+        }
+
+        .contract-add-btn:hover {
+            border-color: var(--blue);
+            color: var(--blue);
+        }
+
+        .contract-modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(8px);
+            display: none;
+            z-index: 4000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .contract-modal-overlay.show {
+            display: flex;
+        }
+
+        .contract-modal {
+            background: #fff;
+            border-radius: 16px;
+            width: 100%;
+            max-width: 440px;
+            padding: 24px 20px;
+            animation: sheetUp 0.25s ease-out;
+            max-height: 85vh;
+            overflow-y: auto;
+        }
+
+        .contract-modal h3 {
+            font-size: 1.1rem;
+            margin-bottom: 16px;
+        }
+
+        .contract-form-group {
+            margin-bottom: 12px;
+        }
+
+        .contract-form-group label {
+            display: block;
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+        }
+
+        .contract-form-group select,
+        .contract-form-group input,
+        .contract-form-group textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            font-size: 0.88rem;
+            box-sizing: border-box;
+            font-family: inherit;
+        }
     </style>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#1A237E">
@@ -1311,6 +1454,16 @@
                     </a>
                 </div>
 
+                <!-- 📄 契約書セクション -->
+                ${job.customer_id ? `
+                <div class="drawer-section">
+                    <div class="drawer-section-title">📄 処分先契約</div>
+                    <div id="contractsList">読み込み中...</div>
+                    <button class="contract-add-btn" onclick="openContractModal('${job.customer_id}')">➕ 契約を追加</button>
+                    <a href="contract-form.html?customer_id=${job.customer_id}" target="_blank" style="display:block;text-align:center;margin-top:6px;font-size:0.72rem;color:var(--blue);text-decoration:none;font-weight:600;">📝 契約書を作成 →</a>
+                </div>
+                ` : ''}
+
                 <!-- ③ 写真（回収前/回収後） -->
                 <div class="drawer-section">
                     <div class="drawer-section-title">📸 写真</div>
@@ -1366,6 +1519,10 @@
             drawer.classList.add('show');
             if (!job.customer_id) {
                 populateCustomerDropdown();
+            }
+            // 契約一覧をロード
+            if (job.customer_id) {
+                loadCustomerContracts(job.customer_id);
             }
         }
 
@@ -1867,6 +2024,254 @@
             document.getElementById('njAddressGroup').style.display = isProspect ? 'block' : 'none';
             document.getElementById('njAmountGroup').style.display = isProspect ? 'none' : 'block';
         });
+
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        //  顧客別処分先契約
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+        // 処分先 → デフォルト廃棄物種類マッピング
+        const DISPOSAL_WASTE_MAP = {
+            '公社': '',
+            '光アスコン': '廃プラ・発泡',
+            '木材開発': '木くず',
+            '旭興産業': '蛍光灯・電池類',
+            '厳本金属': '金属くず',
+            'HIRAYAMA': 'オール品目',
+            '西山環境サービス': 'オール品目',
+            '京都有機資源': '残渣',
+            'ホームケルン': 'オール品目',
+            '大剛': '',
+            '京都環境保全公社': '',
+            '家電リサイクル': '家電4品目',
+        };
+
+        let _contractsMaster = null;
+        let _editingContractId = null;
+        let _currentContractCustomerId = null;
+
+        async function getContractorsMaster() {
+            if (_contractsMaster) return _contractsMaster;
+            try {
+                const settings = await RyubeeAPI.fetchSettings();
+                _contractsMaster = JSON.parse(settings.contractors_master || '[]');
+            } catch (e) {
+                _contractsMaster = Object.keys(DISPOSAL_WASTE_MAP);
+            }
+            return _contractsMaster;
+        }
+
+        async function loadCustomerContracts(customerId) {
+            const el = document.getElementById('contractsList');
+            if (!el) return;
+            try {
+                const contracts = await RyubeeAPI.fetchCustomerContracts(customerId);
+                if (!contracts.length) {
+                    el.innerHTML = '<p style="font-size:0.82rem;color:var(--text-tertiary);text-align:center;margin:8px 0;">契約なし</p>';
+                    return;
+                }
+                el.innerHTML = contracts.map(c => {
+                    const statusLabels = { active: '有効', pending: '申請中', expired: '期限切れ' };
+                    const statusClass = c.status || 'active';
+                    return `
+                        <div class="contract-card" onclick="openContractModal('${customerId}', '${c.id}')">
+                            <div class="cc-info">
+                                <div class="cc-company">🏭 ${utils.escapeHtml(c.disposal_company || '–')}</div>
+                                <div class="cc-waste">♻️ ${utils.escapeHtml(c.waste_type || '–')}</div>
+                                ${c.unit_price ? `<div class="cc-price">💰 ¥${Number(c.unit_price).toLocaleString()} /${c.unit || 'kg'}</div>` : ''}
+                            </div>
+                            <span class="cc-status ${statusClass}">${statusLabels[statusClass] || '有効'}</span>
+                        </div>
+                    `;
+                }).join('');
+            } catch (e) {
+                el.innerHTML = '<p style="font-size:0.82rem;color:var(--red);text-align:center;">読込失敗</p>';
+            }
+        }
+
+        async function openContractModal(customerId, contractId = null) {
+            _currentContractCustomerId = customerId;
+            _editingContractId = contractId;
+
+            // モーダルが無ければ生成
+            let overlay = document.getElementById('contractModalOverlay');
+            if (!overlay) {
+                overlay = document.createElement('div');
+                overlay.id = 'contractModalOverlay';
+                overlay.className = 'contract-modal-overlay';
+                overlay.onclick = (e) => { if (e.target === overlay) overlay.classList.remove('show'); };
+                overlay.innerHTML = `
+                    <div class="contract-modal">
+                        <h3 id="contractModalTitle">📄 処分先契約</h3>
+                        <div class="contract-form-group">
+                            <label>処分先</label>
+                            <select id="ccDisposalCompany" onchange="onDisposalCompanyChange()">
+                                <option value="">-- 選択してください --</option>
+                            </select>
+                        </div>
+                        <div class="contract-form-group">
+                            <label>廃棄物種類</label>
+                            <input type="text" id="ccWasteType" placeholder="例: 廃プラ・発泡">
+                        </div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                            <div class="contract-form-group">
+                                <label>契約単価</label>
+                                <input type="number" id="ccUnitPrice" placeholder="30">
+                            </div>
+                            <div class="contract-form-group">
+                                <label>単位</label>
+                                <select id="ccUnit">
+                                    <option value="kg">/kg</option>
+                                    <option value="m³">/m³</option>
+                                    <option value="式">/式</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                            <div class="contract-form-group">
+                                <label>契約日</label>
+                                <input type="date" id="ccContractDate">
+                            </div>
+                            <div class="contract-form-group">
+                                <label>契約期限</label>
+                                <input type="date" id="ccExpiryDate">
+                            </div>
+                        </div>
+                        <div class="contract-form-group">
+                            <label>ステータス</label>
+                            <select id="ccStatus">
+                                <option value="active">有効</option>
+                                <option value="pending">申請中</option>
+                                <option value="expired">期限切れ</option>
+                            </select>
+                        </div>
+                        <div class="contract-form-group">
+                            <label>備考</label>
+                            <textarea id="ccNotes" rows="2" placeholder="任意"></textarea>
+                        </div>
+                        <button class="btn btn-primary" onclick="saveContract()" style="width:100%;">保存する</button>
+                        <button class="btn btn-secondary mt-1" onclick="document.getElementById('contractModalOverlay').classList.remove('show')" style="width:100%;">キャンセル</button>
+                        <button class="btn btn-danger mt-1" id="ccDeleteBtn" style="width:100%;display:none;" onclick="deleteContract()">削除する</button>
+                    </div>
+                `;
+                document.body.appendChild(overlay);
+            }
+
+            // 処分先セレクトボックスを最新マスターで更新
+            const master = await getContractorsMaster();
+            const sel = document.getElementById('ccDisposalCompany');
+            sel.innerHTML = '<option value="">-- 選択してください --</option>' +
+                master.map(m => `<option value="${utils.escapeHtml(m)}">${utils.escapeHtml(m)}</option>`).join('') +
+                '<option value="__other__">その他（手入力）</option>';
+
+            // フォームリセット
+            document.getElementById('ccWasteType').value = '';
+            document.getElementById('ccUnitPrice').value = '';
+            document.getElementById('ccUnit').value = 'kg';
+            document.getElementById('ccContractDate').value = '';
+            document.getElementById('ccExpiryDate').value = '';
+            document.getElementById('ccStatus').value = 'active';
+            document.getElementById('ccNotes').value = '';
+            document.getElementById('ccDeleteBtn').style.display = 'none';
+            document.getElementById('contractModalTitle').textContent = '📄 処分先契約 追加';
+
+            // 編集モード: 既存データを読み込み
+            if (contractId) {
+                document.getElementById('contractModalTitle').textContent = '📄 処分先契約 編集';
+                document.getElementById('ccDeleteBtn').style.display = 'block';
+                try {
+                    const contracts = await RyubeeAPI.fetchCustomerContracts(customerId);
+                    const c = contracts.find(x => x.id === contractId);
+                    if (c) {
+                        // 処分先がマスターにあるか確認
+                        const inMaster = master.includes(c.disposal_company);
+                        if (inMaster) {
+                            sel.value = c.disposal_company;
+                        } else {
+                            sel.value = '__other__';
+                        }
+                        document.getElementById('ccWasteType').value = c.waste_type || '';
+                        document.getElementById('ccUnitPrice').value = c.unit_price || '';
+                        document.getElementById('ccUnit').value = c.unit || 'kg';
+                        document.getElementById('ccContractDate').value = c.contract_date || '';
+                        document.getElementById('ccExpiryDate').value = c.expiry_date || '';
+                        document.getElementById('ccStatus').value = c.status || 'active';
+                        document.getElementById('ccNotes').value = c.notes || '';
+                    }
+                } catch (e) {
+                    console.error('Failed to load contract for edit:', e);
+                }
+            }
+
+            overlay.classList.add('show');
+        }
+
+        function onDisposalCompanyChange() {
+            const sel = document.getElementById('ccDisposalCompany');
+            const val = sel.value;
+            if (val === '__other__') {
+                const name = prompt('処分先名を入力してください:');
+                if (name) {
+                    const opt = document.createElement('option');
+                    opt.value = name;
+                    opt.textContent = name;
+                    sel.insertBefore(opt, sel.lastElementChild);
+                    sel.value = name;
+                } else {
+                    sel.value = '';
+                    return;
+                }
+            }
+            // 廃棄物種類をデフォルト入力
+            const defaultWaste = DISPOSAL_WASTE_MAP[val] || DISPOSAL_WASTE_MAP[sel.value] || '';
+            const wasteInput = document.getElementById('ccWasteType');
+            if (!wasteInput.value && defaultWaste) {
+                wasteInput.value = defaultWaste;
+            }
+        }
+
+        async function saveContract() {
+            const disposal = document.getElementById('ccDisposalCompany').value;
+            if (!disposal) {
+                alert('処分先を選択してください');
+                return;
+            }
+            const body = {
+                disposal_company: disposal,
+                waste_type: document.getElementById('ccWasteType').value.trim(),
+                unit_price: parseFloat(document.getElementById('ccUnitPrice').value) || null,
+                unit: document.getElementById('ccUnit').value,
+                contract_date: document.getElementById('ccContractDate').value || null,
+                expiry_date: document.getElementById('ccExpiryDate').value || null,
+                status: document.getElementById('ccStatus').value,
+                notes: document.getElementById('ccNotes').value.trim(),
+            };
+
+            try {
+                if (_editingContractId) {
+                    await RyubeeAPI.updateCustomerContract(_currentContractCustomerId, _editingContractId, body);
+                    showToast('✅ 契約を更新しました');
+                } else {
+                    await RyubeeAPI.createCustomerContract(_currentContractCustomerId, body);
+                    showToast('✅ 契約を追加しました');
+                }
+                document.getElementById('contractModalOverlay').classList.remove('show');
+                loadCustomerContracts(_currentContractCustomerId);
+            } catch (e) {
+                alert('エラー: ' + e.message);
+            }
+        }
+
+        async function deleteContract() {
+            if (!confirm('この契約を削除しますか？')) return;
+            try {
+                await RyubeeAPI.deleteCustomerContract(_currentContractCustomerId, _editingContractId);
+                showToast('🗑️ 契約を削除しました');
+                document.getElementById('contractModalOverlay').classList.remove('show');
+                loadCustomerContracts(_currentContractCustomerId);
+            } catch (e) {
+                alert('エラー: ' + e.message);
+            }
+        }
     </script>
     <script>
         if ('serviceWorker' in navigator) {

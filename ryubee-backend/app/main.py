@@ -104,6 +104,11 @@ try:
     app.include_router(auto_debit.router)
 except ImportError as _e:
     print(f"auto_debit router not loaded: {_e}")
+try:
+    from app.routers import customer_contracts
+    app.include_router(customer_contracts.router)
+except ImportError as _e:
+    print(f"customer_contracts router not loaded: {_e}")
 
 
 @app.get("/")
