@@ -943,6 +943,45 @@
             color: #059669;
             font-weight: 700;
         }
+        .cc-tracking {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 3px;
+            margin-top: 4px;
+        }
+        .cc-track {
+            font-size: 0.65rem;
+            padding: 2px 6px;
+            border-radius: 6px;
+            background: #F3F4F6;
+            color: var(--text-tertiary);
+        }
+        .cc-track.cc-ok {
+            background: #ECFDF5;
+            color: #059669;
+            font-weight: 600;
+        }
+        .cc-status.pending { background: #FEF3C7; color: #92400E; }
+        .cc-status.sent { background: #DBEAFE; color: #1D4ED8; }
+        .cc-status.returned { background: #E0E7FF; color: #4338CA; }
+        .cc-status.completed { background: #ECFDF5; color: #059669; }
+        .cc-checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            padding: 8px 10px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: #FAFAFA;
+        }
+        .cc-checkbox-label input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--blue);
+        }
     </style>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#1A237E">
@@ -2151,16 +2190,23 @@
                     return;
                 }
                 el.innerHTML = contracts.map(c => {
-                    const statusLabels = { active: '有効', pending: '申請中', expired: '期限切れ' };
-                    const statusClass = c.status || 'active';
+                    const statusLabels = { pending: '未送付', sent: '送付済', returned: '返却済', completed: '完了' };
+                    const statusClass = c.status || 'pending';
+                    // 日付トラッキング表示
+                    let tracking = '';
+                    if (c.sent_date) tracking += `<span class="cc-track">📤 ${c.sent_date}</span>`;
+                    if (c.returned_date) tracking += `<span class="cc-track">📥 ${c.returned_date}</span>`;
+                    if (c.accepted) tracking += `<span class="cc-track cc-ok">✅ 排受OK</span>`;
+                    if (c.manifest_registered) tracking += `<span class="cc-track cc-ok">📋 マニ登録</span>`;
+                    if (c.completion_date) tracking += `<span class="cc-track">🏁 ${c.completion_date}</span>`;
                     return `
                         <div class="contract-card" onclick="openContractModal('${customerId}', '${c.id}')">
                             <div class="cc-info">
                                 <div class="cc-company">🏭 ${utils.escapeHtml(c.disposal_company || '–')}</div>
                                 <div class="cc-waste">♻️ ${utils.escapeHtml(c.waste_type || '–')}</div>
-                                ${c.unit_price ? `<div class="cc-price">💰 ¥${Number(c.unit_price).toLocaleString()} /${c.unit || 'kg'}</div>` : ''}
+                                ${tracking ? `<div class="cc-tracking">${tracking}</div>` : ''}
                             </div>
-                            <span class="cc-status ${statusClass}">${statusLabels[statusClass] || '有効'}</span>
+                            <span class="cc-status ${statusClass}">${statusLabels[statusClass] || '未送付'}</span>
                         </div>
                     `;
                 }).join('');
@@ -2209,13 +2255,48 @@
                                 </select>
                             </div>
                         </div>
+
+                        <div style="border-top:1px solid var(--border);margin:14px 0 10px;padding-top:12px;">
+                            <div style="font-size:0.82rem;font-weight:700;color:var(--text-secondary);margin-bottom:8px;">📋 契約書追跡</div>
+                        </div>
                         <div class="contract-form-group">
                             <label>ステータス</label>
                             <select id="ccEditStatus">
-                                <option value="active">有効</option>
-                                <option value="pending">申請中</option>
-                                <option value="expired">期限切れ</option>
+                                <option value="pending">📝 未送付</option>
+                                <option value="sent">📤 送付済</option>
+                                <option value="returned">📥 返却済</option>
+                                <option value="completed">✅ 完了</option>
                             </select>
+                        </div>
+                        <div class="contract-form-group">
+                            <label>送付方法</label>
+                            <select id="ccEditDelivery">
+                                <option value="">-- 未選択 --</option>
+                                <option value="郵送">📮 郵送</option>
+                                <option value="持参">🚗 持参</option>
+                            </select>
+                        </div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                            <div class="contract-form-group">
+                                <label>📤 送付日</label>
+                                <input type="date" id="ccEditSentDate">
+                            </div>
+                            <div class="contract-form-group">
+                                <label>📥 返却日</label>
+                                <input type="date" id="ccEditReturnedDate">
+                            </div>
+                        </div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+                            <label class="cc-checkbox-label">
+                                <input type="checkbox" id="ccEditAccepted"> ✅ 排受OK
+                            </label>
+                            <label class="cc-checkbox-label">
+                                <input type="checkbox" id="ccEditManifest"> 📋 マニ登録済
+                            </label>
+                        </div>
+                        <div class="contract-form-group">
+                            <label>🏁 完了日</label>
+                            <input type="date" id="ccEditCompletionDate">
                         </div>
                         <div class="contract-form-group">
                             <label>備考</label>
@@ -2237,7 +2318,13 @@
                         document.getElementById('ccEditWaste').value = c.waste_type || '';
                         document.getElementById('ccEditPrice').value = c.unit_price || '';
                         document.getElementById('ccEditUnit').value = c.unit || 'kg';
-                        document.getElementById('ccEditStatus').value = c.status || 'active';
+                        document.getElementById('ccEditStatus').value = c.status || 'pending';
+                        document.getElementById('ccEditDelivery').value = c.delivery_method || '';
+                        document.getElementById('ccEditSentDate').value = c.sent_date || '';
+                        document.getElementById('ccEditReturnedDate').value = c.returned_date || '';
+                        document.getElementById('ccEditAccepted').checked = !!c.accepted;
+                        document.getElementById('ccEditManifest').checked = !!c.manifest_registered;
+                        document.getElementById('ccEditCompletionDate').value = c.completion_date || '';
                         document.getElementById('ccEditNotes').value = c.notes || '';
                     }
                 } catch (e) { console.error(e); }
@@ -2379,6 +2466,12 @@
                 unit_price: parseFloat(document.getElementById('ccEditPrice').value) || null,
                 unit: document.getElementById('ccEditUnit').value,
                 status: document.getElementById('ccEditStatus').value,
+                delivery_method: document.getElementById('ccEditDelivery').value,
+                sent_date: document.getElementById('ccEditSentDate').value || null,
+                returned_date: document.getElementById('ccEditReturnedDate').value || null,
+                accepted: document.getElementById('ccEditAccepted').checked,
+                manifest_registered: document.getElementById('ccEditManifest').checked,
+                completion_date: document.getElementById('ccEditCompletionDate').value || null,
                 notes: document.getElementById('ccEditNotes').value.trim(),
             };
             if (!body.disposal_company) { alert('処分先を入力してください'); return; }

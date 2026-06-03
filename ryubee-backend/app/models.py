@@ -535,7 +535,14 @@ class CustomerContract(Base):
     unit: Mapped[str] = mapped_column(String(20), default="kg")              # 単位 (kg, m³)
     contract_date: Mapped[str | None] = mapped_column(String(20), nullable=True)  # 契約日
     expiry_date: Mapped[str | None] = mapped_column(String(20), nullable=True)    # 契約期限
-    status: Mapped[str] = mapped_column(String(20), default="active")  # active / pending / expired
+    # ── 3社間契約の追跡フィールド ──
+    delivery_method: Mapped[str] = mapped_column(String(20), default="")     # 郵送 / 持参
+    sent_date: Mapped[str | None] = mapped_column(String(20), nullable=True)       # 送付日
+    returned_date: Mapped[str | None] = mapped_column(String(20), nullable=True)   # 返却日
+    accepted: Mapped[bool] = mapped_column(Boolean, default=False)                 # 排受OK
+    manifest_registered: Mapped[bool] = mapped_column(Boolean, default=False)      # マニ登録済み
+    completion_date: Mapped[str | None] = mapped_column(String(20), nullable=True) # 完了日
+    status: Mapped[str] = mapped_column(String(20), default="pending")  # pending / sent / returned / completed
     notes: Mapped[str] = mapped_column(Text, default="")
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)

@@ -1,5 +1,6 @@
 """
 顧客別処分先契約ルーター — Customer-level disposal contract CRUD
+産廃3社間契約の追跡管理（送付日・返却日・排受・マニ登録・完了日）
 """
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
@@ -20,7 +21,13 @@ class CustomerContractIn(BaseModel):
     unit: str = "kg"
     contract_date: str | None = None
     expiry_date: str | None = None
-    status: str = "active"
+    delivery_method: str = ""
+    sent_date: str | None = None
+    returned_date: str | None = None
+    accepted: bool = False
+    manifest_registered: bool = False
+    completion_date: str | None = None
+    status: str = "pending"
     notes: str = ""
 
 
@@ -29,12 +36,14 @@ class CustomerContractIn(BaseModel):
 CUSTOMER_CONTRACT_FIELDS = [
     "id", "customer_id", "disposal_company", "waste_type",
     "unit_price", "unit", "contract_date", "expiry_date",
+    "delivery_method", "sent_date", "returned_date",
+    "accepted", "manifest_registered", "completion_date",
     "status", "notes",
 ]
 
 
 def _contract_dict(c):
-    d = {f: getattr(c, f) for f in CUSTOMER_CONTRACT_FIELDS}
+    d = {f: getattr(c, f, None) for f in CUSTOMER_CONTRACT_FIELDS}
     d["created_at"] = c.created_at.isoformat() if c.created_at else None
     d["updated_at"] = c.updated_at.isoformat() if c.updated_at else None
     return d
