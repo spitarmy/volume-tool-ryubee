@@ -7,7 +7,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 from app.database import get_db
 from app.auth import get_current_user
-from app.models import CustomerContract
+from app.models import CustomerContract, User
 
 router = APIRouter(prefix="/v1/customers", tags=["Customer Contracts"])
 
@@ -54,18 +54,18 @@ def _contract_dict(c):
 # ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
 @router.get("/{cid}/contracts")
-def list_customer_contracts(cid: str, user=Depends(get_current_user), db: Session = Depends(get_db)):
+def list_customer_contracts(cid: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     rows = db.query(CustomerContract).filter(
         CustomerContract.customer_id == cid,
-        CustomerContract.company_id == user["company_id"],
+        CustomerContract.company_id == current_user.company_id,
     ).order_by(CustomerContract.created_at.desc()).all()
     return [_contract_dict(r) for r in rows]
 
 
 @router.post("/{cid}/contracts", status_code=201)
-def create_customer_contract(cid: str, body: CustomerContractIn, user=Depends(get_current_user), db: Session = Depends(get_db)):
+def create_customer_contract(cid: str, body: CustomerContractIn, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     c = CustomerContract(
-        company_id=user["company_id"],
+        company_id=current_user.company_id,
         customer_id=cid,
         **body.model_dump(),
     )
@@ -76,11 +76,11 @@ def create_customer_contract(cid: str, body: CustomerContractIn, user=Depends(ge
 
 
 @router.put("/{cid}/contracts/{contract_id}")
-def update_customer_contract(cid: str, contract_id: str, body: CustomerContractIn, user=Depends(get_current_user), db: Session = Depends(get_db)):
+def update_customer_contract(cid: str, contract_id: str, body: CustomerContractIn, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     c = db.query(CustomerContract).filter(
         CustomerContract.id == contract_id,
         CustomerContract.customer_id == cid,
-        CustomerContract.company_id == user["company_id"],
+        CustomerContract.company_id == current_user.company_id,
     ).first()
     if not c:
         raise HTTPException(404, "Contract not found")
@@ -92,11 +92,11 @@ def update_customer_contract(cid: str, contract_id: str, body: CustomerContractI
 
 
 @router.delete("/{cid}/contracts/{contract_id}", status_code=204)
-def delete_customer_contract(cid: str, contract_id: str, user=Depends(get_current_user), db: Session = Depends(get_db)):
+def delete_customer_contract(cid: str, contract_id: str, current_user: User = Depends(get_current_user), db: Session = Depends(get_db)):
     c = db.query(CustomerContract).filter(
         CustomerContract.id == contract_id,
         CustomerContract.customer_id == cid,
-        CustomerContract.company_id == user["company_id"],
+        CustomerContract.company_id == current_user.company_id,
     ).first()
     if not c:
         raise HTTPException(404, "Contract not found")
