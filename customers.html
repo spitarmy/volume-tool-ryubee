@@ -228,7 +228,7 @@
 
             <h4 class="section-title">📍 事業所・回収情報</h4>
             <div class="form-group"><label>事業所名（店舗名・マンション名）</label><input type="text" id="custBranchName"></div>
-            <div class="form-group"><label>事業所住所</label><input type="text" id="custBranchAddress"></div>
+            <div class="form-group"><label>事業所住所 <button type="button" onclick="document.getElementById('custBranchAddress').value=document.getElementById('custAddress').value" style="font-size:0.7rem;padding:2px 8px;border-radius:4px;border:1px solid var(--border);background:#EBF5FF;color:var(--blue);cursor:pointer;margin-left:4px;">📋 住所と同じ</button></label><input type="text" id="custBranchAddress"></div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
                 <div class="form-group"><label>業種形態</label>
                     <select id="custIndustryType">
@@ -317,7 +317,7 @@
                 </div>
             </div>
 
-            <div class="form-group"><label>ご請求先 宛名 / 住所</label><input type="text" id="custBillingAddress"
+            <div class="form-group"><label>ご請求先 宛名 / 住所 <button type="button" onclick="document.getElementById('custBillingAddress').value=document.getElementById('custAddress').value" style="font-size:0.7rem;padding:2px 8px;border-radius:4px;border:1px solid var(--border);background:#EBF5FF;color:var(--blue);cursor:pointer;margin-left:4px;">📋 住所と同じ</button></label><input type="text" id="custBillingAddress"
                     placeholder="○○株式会社 京都市..."></div>
             <div class="form-group"><label>ご請求先 メールアドレス (freee等)</label><input type="email" id="custBillingEmail"
                     placeholder="billing@example.com"></div>
@@ -631,9 +631,23 @@
                 <input type="text" class="pr-item" placeholder="品名(例: 一般ごみ)" value="${utils.escapeHtml(item)}">
                 <input type="number" class="pr-price" placeholder="単価" style="max-width:80px;" value="${price}">
                 <input type="text" class="pr-unit" placeholder="単位(kg等)" style="max-width:70px;" value="${utils.escapeHtml(unit)}">
+                <button type="button" style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:6px;width:30px;cursor:pointer;font-size:0.8rem;" onclick="movePricingRow(this.parentElement,-1)" title="上に移動">▲</button>
+                <button type="button" style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:6px;width:30px;cursor:pointer;font-size:0.8rem;" onclick="movePricingRow(this.parentElement,1)" title="下に移動">▼</button>
                 <button class="del-btn" onclick="this.parentElement.remove()">×</button>
             `;
             container.appendChild(row);
+        }
+
+        // ── O-4: 単価リスト行の並び替え ──
+        function movePricingRow(row, direction) {
+            const container = document.getElementById('pricingListContainer');
+            const rows = Array.from(container.children);
+            const idx = rows.indexOf(row);
+            if (direction === -1 && idx > 0) {
+                container.insertBefore(row, rows[idx - 1]);
+            } else if (direction === 1 && idx < rows.length - 1) {
+                container.insertBefore(rows[idx + 1], row);
+            }
         }
 
         function closeModal() { document.getElementById('custOverlay').classList.remove('show'); editingId = null; }
@@ -903,6 +917,18 @@
             document.body.appendChild(t);
             setTimeout(() => t.remove(), 2500);
         }
+
+        // ── O-1: Enterキーで次入力項目に移動 ──
+        document.getElementById('custOverlay').addEventListener('keydown', function(e) {
+            if (e.key === 'Enter' && (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT')) {
+                e.preventDefault();
+                const focusable = Array.from(this.querySelectorAll('input:not([type=hidden]):not([type=checkbox]), select, textarea'));
+                const idx = focusable.indexOf(e.target);
+                if (idx >= 0 && idx < focusable.length - 1) {
+                    focusable[idx + 1].focus();
+                }
+            }
+        });
     </script>
     <script>
         if ('serviceWorker' in navigator) {

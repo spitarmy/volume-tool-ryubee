@@ -1517,7 +1517,7 @@
                 ${!job.customer_id ? `
                     <div id="customerLinkSection" style="margin-top:8px;padding:10px;background:#FEF3C7;border-radius:var(--r-md);border:1px solid #FDE68A;">
                         <div style="position:relative;">
-                            <input type="text" id="customerSearchInput" placeholder="🔍 顧客名で検索..." autocomplete="off"
+                            <input type="text" id="customerSearchInput" placeholder="🔍 顧客名・管理番号で検索..." autocomplete="off"
                                 oninput="filterCustomerDropdown()"
                                 onfocus="document.getElementById('customerDropdownList').style.display='block'"
                                 style="width:100%;padding:8px 12px;border-radius:8px;border:1px solid var(--border);font-size:0.85rem;box-sizing:border-box;">
@@ -1636,11 +1636,16 @@
             // Clear existing items (keep the '新規顧客' option)
             list.innerHTML = `<div class="cust-dd-item" data-value="__new__" style="padding:10px 12px;cursor:pointer;font-size:0.85rem;color:var(--primary);font-weight:600;border-bottom:1px solid var(--border);" onclick="selectCustomerOption('__new__', '➕ 新規顧客として登録')">➕ 新規顧客として登録</div>`;
             _cachedCustomers.forEach(c => {
-                const label = `${c.name}${c.address ? ' — ' + c.address : ''}`;
+                // 管理番号をform_dataから抽出して検索・表示に利用
+                let custFd = {};
+                try { custFd = JSON.parse(c.form_data || '{}'); } catch (e) { }
+                const yamaNum = custFd.yamabun_management_number || '';
+                const label = `${c.name}${yamaNum ? ' [' + yamaNum + ']' : ''}${c.address ? ' — ' + c.address : ''}`;
                 const div = document.createElement('div');
                 div.className = 'cust-dd-item';
                 div.dataset.value = c.id;
-                div.dataset.search = (c.name + ' ' + (c.address || '')).toLowerCase();
+                // 管理番号も検索対象に含める
+                div.dataset.search = (c.name + ' ' + (c.address || '') + ' ' + yamaNum).toLowerCase();
                 div.style.cssText = 'padding:8px 12px;cursor:pointer;font-size:0.82rem;border-bottom:1px solid rgba(0,0,0,0.04);transition:background 0.15s;';
                 div.textContent = label;
                 div.onmouseenter = () => div.style.background = '#f0f4ff';
