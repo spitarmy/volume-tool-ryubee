@@ -353,6 +353,21 @@
     <script>
         if (!RyubeeAPI.requireAuth()) throw new Error("Not authenticated");
 
+        // 処分先ごとの処分項目マスタ
+        const CONTRACTOR_ITEMS = {
+            'ホームケルン': ['一般廃棄物', '粗大ごみ', '事業系一般'],
+            '光アスコン': ['がれき類', 'コンクリート殻', 'アスファルト殻'],
+            '旭興産業': ['廃プラスチック類', '木くず', '金属くず', 'ガラス・陶磁器類', '紙くず', '繊維くず', 'ゴムくず', '動植物性残渣'],
+            '木材開発': ['木くず', '剪定枝', '木製パレット'],
+            '厳本金属': ['金属くず', '鉄くず', '非鉄金属', '廃家電'],
+            '京都有機資源': ['動植物性残渣', '食品残渣', '有機汚泥'],
+            'HIRAYAMA': ['廃プラスチック類', '発泡スチロール', 'RPF原料'],
+            '大剛': ['一般廃棄物', '産業廃棄物', '廃プラスチック類'],
+            '京都環境保全公社': ['焼却灰', '汚泥', '廃油', '廃酸・廃アルカリ', '感染性廃棄物'],
+            '西山環境サービス': ['一般廃棄物', '事業系一般', '資源ごみ'],
+            '家電リサイクル': ['テレビ', 'エアコン', '冷蔵庫・冷凍庫', '洗濯機・乾燥機'],
+        };
+
         let allCustomers = [];
         let allWasteContracts = [];
         let allUsers = [];
@@ -605,6 +620,7 @@
             const contractorsListDiv = document.getElementById('custContractorsList');
             contractorsListDiv.innerHTML = '';
             const activeCbs = Array.isArray(fd.active_contractors) ? fd.active_contractors : [];
+            const savedContractorItems = fd.contractor_items || {};  // {会社名: [選択項目...]}
             const masterList = Array.isArray(appSettings.contractors_master) && appSettings.contractors_master.length > 0
                 ? appSettings.contractors_master
                 : ['ホームケルン', '光アスコン', '旭興産業', '木材開発', '厳本金属', '京都有機資源', 'HIRAYAMA', '大剛', '京都環境保全公社', '西山環境サービス', '家電リサイクル'];
@@ -614,10 +630,40 @@
 
             allContractors.forEach(ct => {
                 const isChecked = activeCbs.includes(ct);
+                const wrapper = document.createElement('div');
+                wrapper.style.cssText = 'width:100%; margin-bottom:4px;';
                 const label = document.createElement('label');
                 label.style.cssText = 'display:flex; align-items:center; gap:4px; font-size:0.85rem; padding:4px 8px; background:#fff; border:1px solid var(--border); border-radius:4px; cursor:pointer;';
-                label.innerHTML = `<input type="checkbox" class="cust-contractor-cb" value="${utils.escapeHtml(ct)}" ${isChecked ? 'checked' : ''}> ${utils.escapeHtml(ct)}`;
-                contractorsListDiv.appendChild(label);
+                const cb = document.createElement('input');
+                cb.type = 'checkbox';
+                cb.className = 'cust-contractor-cb';
+                cb.value = ct;
+                cb.checked = isChecked;
+                label.appendChild(cb);
+                label.appendChild(document.createTextNode(' ' + ct));
+                wrapper.appendChild(label);
+
+                // 処分項目サブリスト
+                const items = CONTRACTOR_ITEMS[ct];
+                if (items && items.length > 0) {
+                    const subDiv = document.createElement('div');
+                    subDiv.className = 'contractor-sub-items';
+                    subDiv.style.cssText = `display:${isChecked ? 'flex' : 'none'}; flex-wrap:wrap; gap:4px; margin:4px 0 4px 24px; padding:6px 8px; background:#f0f7ff; border-radius:4px; border-left:3px solid var(--blue);`;
+                    const savedItems = savedContractorItems[ct] || [];
+                    items.forEach(item => {
+                        const itemLabel = document.createElement('label');
+                        itemLabel.style.cssText = 'display:flex; align-items:center; gap:3px; font-size:0.78rem; padding:2px 6px; background:#fff; border:1px solid #ddd; border-radius:3px; cursor:pointer; white-space:nowrap;';
+                        itemLabel.innerHTML = `<input type="checkbox" class="contractor-item-cb" data-contractor="${utils.escapeHtml(ct)}" value="${utils.escapeHtml(item)}" ${savedItems.includes(item) ? 'checked' : ''}> ${utils.escapeHtml(item)}`;
+                        subDiv.appendChild(itemLabel);
+                    });
+                    wrapper.appendChild(subDiv);
+
+                    cb.addEventListener('change', function() {
+                        subDiv.style.display = this.checked ? 'flex' : 'none';
+                    });
+                }
+
+                contractorsListDiv.appendChild(wrapper);
             });
 
             document.getElementById('custOverlay').classList.add('show');
@@ -824,23 +870,33 @@
                 }
             });
 
+            const savedContractorItems = fd.contractor_items || {};
             const contractListHtml = dynamicDisposers.map(disp => {
                 const contract = customerContracts.find(ct => ct.disposal_company === disp);
                 const isChecked = activeCbs.includes(disp);
+                const itemsBadges = (savedContractorItems[disp] || []).map(item =>
+                    `<span style="display:inline-block;font-size:0.7rem;background:#DBEAFE;color:#1E40AF;padding:1px 6px;border-radius:3px;margin:1px;">${utils.escapeHtml(item)}</span>`
+                ).join('');
 
                 if (contract) {
                     const clickAction = contract.document_url ? `href="${contract.document_url}" target="_blank"` : `href="#" onclick="alert('契約書データ(PDF)が未登録です。データ管理で該当契約のPDFをアップロードしてください。');return false;"`;
                     return `
-                        <div style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px dashed var(--border);">
-                            <span style="font-size:0.85rem; font-weight:600;">${utils.escapeHtml(disp)}</span>
-                            <a ${clickAction} style="text-decoration:none; font-size:1.15rem; color:#111; line-height:1; cursor:pointer;" title="契約書を開く">⚫︎</a>
+                        <div style="display:flex; flex-direction:column; padding:6px 0; border-bottom:1px dashed var(--border);">
+                            <div style="display:flex; justify-content:space-between;">
+                                <span style="font-size:0.85rem; font-weight:600;">${utils.escapeHtml(disp)}</span>
+                                <a ${clickAction} style="text-decoration:none; font-size:1.15rem; color:#111; line-height:1; cursor:pointer;" title="契約書を開く">⚫︎</a>
+                            </div>
+                            ${itemsBadges ? `<div style="margin-top:2px;">${itemsBadges}</div>` : ''}
                         </div>
                     `;
                 } else if (isChecked) {
                     return `
-                        <div style="display:flex; justify-content:space-between; padding:6px 0; border-bottom:1px dashed var(--border);">
-                            <span style="font-size:0.85rem; font-weight:600;">${utils.escapeHtml(disp)}</span>
-                            <a href="#" onclick="alert('チェックは入っていますが、契約書PDFデータがシステムに存在しません。\\n必要に応じて「データ・マニフェスト」画面から『契約書アップロード』を行ってください。');return false;" style="text-decoration:none; font-size:1.15rem; color:var(--blue); line-height:1; cursor:pointer;" title="契約PDF 未登録">⚫︎</a>
+                        <div style="display:flex; flex-direction:column; padding:6px 0; border-bottom:1px dashed var(--border);">
+                            <div style="display:flex; justify-content:space-between;">
+                                <span style="font-size:0.85rem; font-weight:600;">${utils.escapeHtml(disp)}</span>
+                                <a href="#" onclick="alert('チェックは入っていますが、契約書PDFデータがシステムに存在しません。\\n必要に応じて「データ・マニフェスト」画面から『契約書アップロード』を行ってください。');return false;" style="text-decoration:none; font-size:1.15rem; color:var(--blue); line-height:1; cursor:pointer;" title="契約PDF 未登録">⚫︎</a>
+                            </div>
+                            ${itemsBadges ? `<div style="margin-top:2px;">${itemsBadges}</div>` : ''}
                         </div>
                     `;
                 } else {
@@ -1005,6 +1061,13 @@
 
             const activeContractors = Array.from(document.querySelectorAll('.cust-contractor-cb:checked')).map(cb => cb.value);
 
+            // 処分先ごとの選択項目を収集
+            const contractorItems = {};
+            activeContractors.forEach(ct => {
+                const items = Array.from(document.querySelectorAll(`.contractor-item-cb[data-contractor="${ct}"]:checked`)).map(cb => cb.value);
+                if (items.length > 0) contractorItems[ct] = items;
+            });
+
             const formData = {
                 yamabun_management_number: document.getElementById('custYamabunNumber').value.trim(),
                 waste_category: document.getElementById('custWasteCategory').value,
@@ -1021,7 +1084,8 @@
                 contract_email: document.getElementById('custContractEmail').value.trim(),
                 contract_contact: document.getElementById('custContractContact').value.trim(),
                 pricing_list: pricing_list,
-                active_contractors: activeContractors
+                active_contractors: activeContractors,
+                contractor_items: contractorItems,
             };
 
             const body = {
