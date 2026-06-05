@@ -226,45 +226,10 @@
             <div class="form-group"><label>メールアドレス</label><input type="text" id="custEmail"
                     placeholder="info@example.com"></div>
 
-            <h4 class="section-title">📍 事業所・回収情報</h4>
-            <div class="form-group"><label>事業所名（店舗名・マンション名）</label><input type="text" id="custBranchName"></div>
-            <div class="form-group"><label>事業所住所 <button type="button" onclick="document.getElementById('custBranchAddress').value=document.getElementById('custAddress').value" style="font-size:0.7rem;padding:2px 8px;border-radius:4px;border:1px solid var(--border);background:#EBF5FF;color:var(--blue);cursor:pointer;margin-left:4px;">📋 住所と同じ</button></label><input type="text" id="custBranchAddress"></div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-                <div class="form-group"><label>業種形態</label>
-                    <select id="custIndustryType">
-                        <option value="">選択してください</option>
-                        <option value="マンション">マンション</option>
-                        <option value="飲食店">飲食店</option>
-                        <option value="オフィス">オフィス</option>
-                        <option value="ファミリー・単身">ファミリー・単身</option>
-                        <option value="その他">その他</option>
-                    </select>
-                </div>
-                <div class="form-group"><label>平均回収量</label><input type="text" id="custAvgVolume"
-                        placeholder="例: 2m3/回"></div>
-            </div>
-            <div style="background:var(--bg-secondary);padding:12px;border-radius:var(--r-md);margin-bottom:12px;">
-                <label style="font-size:0.85rem;font-weight:700;">回収頻度・内容</label>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;">
-                    <div class="form-group" style="margin:0;"><label style="font-size:0.75rem;">一般ごみ（可燃）</label><input
-                            type="text" id="custFreqGeneral" placeholder="例: 毎日"></div>
-                    <div class="form-group" style="margin:0;"><label style="font-size:0.75rem;">資源（缶ビンペット）</label><input
-                            type="text" id="custFreqRecycle" placeholder="例: 週2回"></div>
-                    <div class="form-group" style="margin:0;"><label style="font-size:0.75rem;">プラ産廃（包装）</label><input
-                            type="text" id="custFreqPlastic" placeholder="例: 月1回"></div>
-                    <div class="form-group" style="margin:0;"><label style="font-size:0.75rem;">ダンボール・雑紙</label><input
-                            type="text" id="custFreqPaper" placeholder="例: 週1回"></div>
-                </div>
-            </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-                <div class="form-group"><label>営業時間</label><input type="text" id="custBusinessHours"
-                        placeholder="9:00 - 18:00"></div>
-                <div class="form-group"><label>定休日</label><input type="text" id="custHoliday" placeholder="土日祝"></div>
-            </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-                <div class="form-group"><label>回収開始予定日</label><input type="date" id="custStartDate"></div>
-                <div class="form-group"><label>終了日/解約日</label><input type="date" id="custEndDate"></div>
-            </div>
+            <h4 class="section-title">📍 事業所・回収情報 <span id="branchCount" style="font-size:0.75rem;font-weight:400;color:var(--text-tertiary);"></span></h4>
+            <p style="font-size:0.78rem;color:var(--text-secondary);margin-bottom:8px;">回収場所ごとに情報を登録できます（複数可）</p>
+            <div id="branchesContainer"></div>
+            <button class="btn btn-secondary btn-sm mt-1" style="width:100%;" onclick="addBranchCard()">＋ 事業所（回収場所）を追加</button>
 
             <h4 class="section-title">💰 請求・契約情報</h4>
             <div class="form-group">
@@ -319,10 +284,20 @@
 
             <div class="form-group"><label>ご請求先 宛名 / 住所 <button type="button" onclick="document.getElementById('custBillingAddress').value=document.getElementById('custAddress').value" style="font-size:0.7rem;padding:2px 8px;border-radius:4px;border:1px solid var(--border);background:#EBF5FF;color:var(--blue);cursor:pointer;margin-left:4px;">📋 住所と同じ</button></label><input type="text" id="custBillingAddress"
                     placeholder="○○株式会社 京都市..."></div>
-            <div class="form-group"><label>ご請求先 メールアドレス (freee等)</label><input type="email" id="custBillingEmail"
+            <div class="form-group"><label>ご請求先 メールアドレス</label><input type="email" id="custBillingEmail"
                     placeholder="billing@example.com"></div>
             <div class="form-group"><label>ご請求先 ご担当者名</label><input type="text" id="custBillingContact"
                     placeholder="経理担当者名"></div>
+
+            <div style="background:var(--bg-secondary);padding:14px;border-radius:var(--r-md);margin:12px 0;">
+                <label style="font-weight:700;font-size:0.85rem;">📄 契約書送付先（請求先と異なる場合）</label>
+                <button type="button" onclick="copyBillingToContract()" style="font-size:0.7rem;padding:2px 8px;border-radius:4px;border:1px solid var(--border);background:#EBF5FF;color:var(--blue);cursor:pointer;margin-left:4px;">📋 請求先と同じ</button>
+                <div style="margin-top:8px;">
+                    <div class="form-group" style="margin-bottom:6px;"><input type="text" id="custContractAddress" placeholder="契約書送付先 宛名 / 住所"></div>
+                    <div class="form-group" style="margin-bottom:6px;"><input type="email" id="custContractEmail" placeholder="契約書送付先 メールアドレス"></div>
+                    <div class="form-group" style="margin-bottom:0;"><input type="text" id="custContractContact" placeholder="契約書送付先 ご担当者名"></div>
+                </div>
+            </div>
 
             <h4 class="section-title">📄 単価・契約リスト</h4>
             <p style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:12px;">顧客固有の品目別単価（例: 一般ごみ / 40 / kg）
@@ -576,22 +551,43 @@
             document.getElementById('custYamabunNumber').value = fd.yamabun_management_number || '';
             document.getElementById('custWasteCategory').value = fd.waste_category || 'general';
             document.getElementById('custMobile').value = fd.mobile || '';
-            document.getElementById('custBranchName').value = fd.branch_name || '';
-            document.getElementById('custBranchAddress').value = fd.branch_address || '';
-            document.getElementById('custIndustryType').value = fd.industry_type || '';
-            document.getElementById('custAvgVolume').value = fd.average_volume || '';
-            document.getElementById('custFreqGeneral').value = fd.collection_general || '';
-            document.getElementById('custFreqRecycle').value = fd.collection_recycle || '';
-            document.getElementById('custFreqPlastic').value = fd.collection_plastic || '';
-            document.getElementById('custFreqPaper').value = fd.collection_paper || '';
-            document.getElementById('custBusinessHours').value = fd.business_hours || '';
-            document.getElementById('custHoliday').value = fd.regular_holiday || '';
-            document.getElementById('custStartDate').value = fd.collection_start_date || '';
-            document.getElementById('custEndDate').value = fd.collection_end_date || '';
             document.getElementById('custPaymentMethod').value = fd.payment_method || '振込';
             document.getElementById('custBillingAddress').value = fd.billing_address || '';
             document.getElementById('custBillingEmail').value = fd.billing_email || '';
             document.getElementById('custBillingContact').value = fd.billing_contact || '';
+            // 契約書送付先（2-4）
+            document.getElementById('custContractAddress').value = fd.contract_address || '';
+            document.getElementById('custContractEmail').value = fd.contract_email || '';
+            document.getElementById('custContractContact').value = fd.contract_contact || '';
+
+            // ── 複数事業所の読み込み（2-1）──
+            document.getElementById('branchesContainer').innerHTML = '';
+            if (fd.branches && Array.isArray(fd.branches) && fd.branches.length > 0) {
+                // 新形式: branches配列
+                fd.branches.forEach(b => addBranchCard(b));
+            } else if (fd.branch_name || fd.branch_address) {
+                // 旧形式: 単一事業所 → 自動変換
+                addBranchCard({
+                    branch_name: fd.branch_name || '',
+                    branch_address: fd.branch_address || '',
+                    industry_type: fd.industry_type || '',
+                    average_volume: fd.average_volume || '',
+                    vehicle_number: fd.vehicle_number || '',
+                    subcontractor: fd.subcontractor || '',
+                    collection_general: fd.collection_general || '',
+                    collection_recycle: fd.collection_recycle || '',
+                    collection_plastic: fd.collection_plastic || '',
+                    collection_paper: fd.collection_paper || '',
+                    business_hours: fd.business_hours || '',
+                    regular_holiday: fd.regular_holiday || '',
+                    collection_start_date: fd.collection_start_date || '',
+                    collection_end_date: fd.collection_end_date || '',
+                });
+            } else if (!cust) {
+                // 新規: 空の事業所カード1枚
+                addBranchCard();
+            }
+            updateBranchCount();
 
             // 単価リストの展開
             document.getElementById('pricingListContainer').innerHTML = '';
@@ -621,6 +617,118 @@
             });
 
             document.getElementById('custOverlay').classList.add('show');
+        }
+
+        // ── 事業所カード動的生成（2-1）──
+        let _branchCounter = 0;
+        function addBranchCard(data = {}) {
+            _branchCounter++;
+            const idx = _branchCounter;
+            const container = document.getElementById('branchesContainer');
+            const card = document.createElement('div');
+            card.className = 'branch-card';
+            card.dataset.branchIdx = idx;
+            card.style.cssText = 'border:1px solid var(--border);border-radius:var(--r-md);margin-bottom:10px;overflow:hidden;';
+            
+            const headerLabel = data.branch_name ? utils.escapeHtml(data.branch_name) : `事業所 #${container.children.length + 1}`;
+            card.innerHTML = `
+                <div class="branch-header" onclick="toggleBranch(this)" style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--bg-secondary);cursor:pointer;font-weight:700;font-size:0.88rem;">
+                    <span class="branch-label">📍 ${headerLabel}</span>
+                    <div style="display:flex;gap:6px;align-items:center;">
+                        <button type="button" onclick="event.stopPropagation();this.closest('.branch-card').remove();updateBranchCount()" style="background:var(--danger);color:#fff;border:none;border-radius:6px;padding:2px 10px;cursor:pointer;font-size:0.75rem;">削除</button>
+                        <span class="branch-chevron" style="font-size:0.8rem;">▼</span>
+                    </div>
+                </div>
+                <div class="branch-body" style="padding:12px 14px;">
+                    <div class="form-group"><label>事業所名</label><input type="text" class="br-name" value="${utils.escapeHtml(data.branch_name || '')}" placeholder="店舗名・マンション名" oninput="this.closest('.branch-card').querySelector('.branch-label').textContent='📍 '+(this.value||'事業所')"></div>
+                    <div class="form-group"><label>事業所住所 <button type="button" onclick="this.closest('.branch-card').querySelector('.br-address').value=document.getElementById('custAddress').value" style="font-size:0.7rem;padding:2px 8px;border-radius:4px;border:1px solid var(--border);background:#EBF5FF;color:var(--blue);cursor:pointer;margin-left:4px;">📋 住所と同じ</button></label><input type="text" class="br-address" value="${utils.escapeHtml(data.branch_address || '')}"></div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                        <div class="form-group"><label>業種形態</label>
+                            <select class="br-industry">
+                                <option value="">選択</option>
+                                <option value="マンション" ${data.industry_type==='マンション'?'selected':''}>マンション</option>
+                                <option value="飲食店" ${data.industry_type==='飲食店'?'selected':''}>飲食店</option>
+                                <option value="オフィス" ${data.industry_type==='オフィス'?'selected':''}>オフィス</option>
+                                <option value="ファミリー・単身" ${data.industry_type==='ファミリー・単身'?'selected':''}>ファミリー・単身</option>
+                                <option value="その他" ${data.industry_type==='その他'?'selected':''}>その他</option>
+                            </select>
+                        </div>
+                        <div class="form-group"><label>平均回収量</label><input type="text" class="br-volume" value="${utils.escapeHtml(data.average_volume || '')}" placeholder="例: 2m3/回"></div>
+                    </div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                        <div class="form-group"><label>🚛 号車</label><input type="text" class="br-vehicle" value="${utils.escapeHtml(data.vehicle_number || '')}" placeholder="例: 2号車"></div>
+                        <div class="form-group"><label>👥 下請け業者</label><input type="text" class="br-subcontractor" value="${utils.escapeHtml(data.subcontractor || '')}" placeholder="業者名"></div>
+                    </div>
+                    <div style="background:#f8f9fa;padding:10px;border-radius:8px;margin:8px 0;">
+                        <label style="font-size:0.8rem;font-weight:700;">回収頻度</label>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px;">
+                            <div class="form-group" style="margin:0;"><label style="font-size:0.72rem;">一般ごみ</label><input type="text" class="br-freq-general" value="${utils.escapeHtml(data.collection_general || '')}" placeholder="毎日"></div>
+                            <div class="form-group" style="margin:0;"><label style="font-size:0.72rem;">資源</label><input type="text" class="br-freq-recycle" value="${utils.escapeHtml(data.collection_recycle || '')}" placeholder="週2回"></div>
+                            <div class="form-group" style="margin:0;"><label style="font-size:0.72rem;">プラ</label><input type="text" class="br-freq-plastic" value="${utils.escapeHtml(data.collection_plastic || '')}" placeholder="月1回"></div>
+                            <div class="form-group" style="margin:0;"><label style="font-size:0.72rem;">段ボール</label><input type="text" class="br-freq-paper" value="${utils.escapeHtml(data.collection_paper || '')}" placeholder="週1回"></div>
+                        </div>
+                    </div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                        <div class="form-group"><label>営業時間</label><input type="text" class="br-hours" value="${utils.escapeHtml(data.business_hours || '')}" placeholder="9:00-18:00"></div>
+                        <div class="form-group"><label>定休日</label><input type="text" class="br-holiday" value="${utils.escapeHtml(data.regular_holiday || '')}" placeholder="土日祝"></div>
+                    </div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                        <div class="form-group"><label>回収開始日</label><input type="date" class="br-start" value="${data.collection_start_date || ''}"></div>
+                        <div class="form-group"><label>解約日</label><input type="date" class="br-end" value="${data.collection_end_date || ''}"></div>
+                    </div>
+                </div>
+            `;
+            container.appendChild(card);
+            updateBranchCount();
+        }
+
+        function toggleBranch(header) {
+            const body = header.nextElementSibling;
+            const chevron = header.querySelector('.branch-chevron');
+            if (body.style.display === 'none') {
+                body.style.display = 'block';
+                chevron.textContent = '▼';
+            } else {
+                body.style.display = 'none';
+                chevron.textContent = '▶';
+            }
+        }
+
+        function updateBranchCount() {
+            const count = document.querySelectorAll('.branch-card').length;
+            document.getElementById('branchCount').textContent = count > 0 ? `(${count}件)` : '';
+        }
+
+        function copyBillingToContract() {
+            document.getElementById('custContractAddress').value = document.getElementById('custBillingAddress').value;
+            document.getElementById('custContractEmail').value = document.getElementById('custBillingEmail').value;
+            document.getElementById('custContractContact').value = document.getElementById('custBillingContact').value;
+        }
+
+        // ── 事業所データ収集 ──
+        function collectBranches() {
+            const branches = [];
+            document.querySelectorAll('.branch-card').forEach(card => {
+                const b = {
+                    branch_name: card.querySelector('.br-name')?.value?.trim() || '',
+                    branch_address: card.querySelector('.br-address')?.value?.trim() || '',
+                    industry_type: card.querySelector('.br-industry')?.value || '',
+                    average_volume: card.querySelector('.br-volume')?.value?.trim() || '',
+                    vehicle_number: card.querySelector('.br-vehicle')?.value?.trim() || '',
+                    subcontractor: card.querySelector('.br-subcontractor')?.value?.trim() || '',
+                    collection_general: card.querySelector('.br-freq-general')?.value?.trim() || '',
+                    collection_recycle: card.querySelector('.br-freq-recycle')?.value?.trim() || '',
+                    collection_plastic: card.querySelector('.br-freq-plastic')?.value?.trim() || '',
+                    collection_paper: card.querySelector('.br-freq-paper')?.value?.trim() || '',
+                    business_hours: card.querySelector('.br-hours')?.value?.trim() || '',
+                    regular_holiday: card.querySelector('.br-holiday')?.value?.trim() || '',
+                    collection_start_date: card.querySelector('.br-start')?.value || '',
+                    collection_end_date: card.querySelector('.br-end')?.value || '',
+                };
+                // 何か入力があるカードだけ保存
+                if (Object.values(b).some(v => v)) branches.push(b);
+            });
+            return branches;
         }
 
         function addPricingRow(item = '', price = '', unit = 'kg') {
@@ -735,12 +843,34 @@
                     <span style="display:inline-block;width:60px;color:var(--text-tertiary);font-size:0.85rem;">Email:</span> ${utils.escapeHtml(c.email || '-')}
                 </div>
                 
-                <div style="background:var(--bg-secondary); padding:16px; border-radius:12px; margin-bottom:16px; font-size:0.95rem; line-height:1.6;">
-                    📝 <strong style="margin-left:4px;">回収・契約情報</strong><br>
-                    <span style="display:inline-block;width:70px;color:var(--text-tertiary);font-size:0.85rem;">開始予定:</span> ${utils.escapeHtml(fd.collection_start_date || '-')} <span style="margin-left:8px;color:var(--text-tertiary);font-size:0.85rem;">解約日:</span> <strong style="color:var(--danger);">${utils.escapeHtml(fd.collection_end_date || '-')}</strong><br>
-                    <span style="display:inline-block;width:70px;color:var(--text-tertiary);font-size:0.85rem;">平均量:</span> ${utils.escapeHtml(fd.average_volume || '-')} <span style="color:var(--text-tertiary);font-size:0.75rem;">(※実績推移は今後実装)</span><br>
-                    <span style="display:inline-block;width:70px;color:var(--text-tertiary);font-size:0.85rem;">一般ごみ:</span> ${utils.escapeHtml(fd.collection_general || '-')} <span style="margin-left:8px;color:var(--text-tertiary);font-size:0.85rem;">資源:</span> ${utils.escapeHtml(fd.collection_recycle || '-')}<br>
-                    <span style="display:inline-block;width:70px;color:var(--text-tertiary);font-size:0.85rem;">支払締:</span> ${utils.escapeHtml(fd.payment_method || '振込')} / ${c.billing_closing_day === 31 ? '月末' : c.billing_closing_day + '日'}締め
+                ${(() => {
+                    // 複数事業所表示（新形式 or 旧形式互換）
+                    const branches = fd.branches && Array.isArray(fd.branches) && fd.branches.length > 0
+                        ? fd.branches
+                        : (fd.branch_name || fd.branch_address) ? [{
+                            branch_name: fd.branch_name, branch_address: fd.branch_address,
+                            industry_type: fd.industry_type, average_volume: fd.average_volume,
+                            vehicle_number: fd.vehicle_number, subcontractor: fd.subcontractor,
+                            collection_general: fd.collection_general, collection_recycle: fd.collection_recycle,
+                            collection_plastic: fd.collection_plastic, collection_paper: fd.collection_paper,
+                            business_hours: fd.business_hours, regular_holiday: fd.regular_holiday,
+                            collection_start_date: fd.collection_start_date, collection_end_date: fd.collection_end_date,
+                        }] : [];
+                    if (branches.length === 0) return '<div style="background:var(--bg-secondary);padding:12px;border-radius:12px;margin-bottom:16px;font-size:0.85rem;color:var(--text-tertiary);text-align:center;">事業所未登録</div>';
+                    return branches.map((b, i) => `
+                        <div style="background:var(--bg-secondary); padding:14px; border-radius:12px; margin-bottom:10px; font-size:0.9rem; line-height:1.6;">
+                            📍 <strong style="margin-left:4px;">${utils.escapeHtml(b.branch_name || `事業所 #${i+1}`)}</strong>
+                            ${b.branch_address ? `<br><span style="color:var(--text-tertiary);font-size:0.82rem;">住所:</span> ${utils.escapeHtml(b.branch_address)} ${b.branch_address ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(b.branch_address)}" target="_blank" style="font-size:0.75rem;text-decoration:none;background:#E2E8F0;padding:1px 6px;border-radius:4px;">🗺</a>` : ''}` : ''}
+                            ${b.vehicle_number ? `<br><span style="color:var(--text-tertiary);font-size:0.82rem;">🚛 号車:</span> ${utils.escapeHtml(b.vehicle_number)}` : ''}
+                            ${b.subcontractor ? ` <span style="color:var(--text-tertiary);font-size:0.82rem;">👥 下請:</span> ${utils.escapeHtml(b.subcontractor)}` : ''}
+                            ${b.collection_general || b.collection_recycle ? `<br><span style="color:var(--text-tertiary);font-size:0.82rem;">回収:</span> ${[b.collection_general ? '一般:'+b.collection_general : '', b.collection_recycle ? '資源:'+b.collection_recycle : ''].filter(x=>x).join(' / ')}` : ''}
+                            ${b.collection_start_date ? `<br><span style="color:var(--text-tertiary);font-size:0.82rem;">開始:</span> ${b.collection_start_date}` : ''} ${b.collection_end_date ? `<span style="margin-left:8px;color:var(--danger);font-size:0.82rem;">解約: ${b.collection_end_date}</span>` : ''}
+                        </div>
+                    `).join('');
+                })()}
+
+                <div style="background:var(--bg-secondary); padding:12px; border-radius:12px; margin-bottom:16px; font-size:0.88rem; line-height:1.5;">
+                    💰 <strong>支払情報:</strong> ${utils.escapeHtml(fd.payment_method || '振込')} / ${c.billing_closing_day === 31 ? '月末' : c.billing_closing_day + '日'}締め
                 </div>
 
                 <!-- 契約リスト（コード表連携） -->
@@ -851,22 +981,17 @@
                 yamabun_management_number: document.getElementById('custYamabunNumber').value.trim(),
                 waste_category: document.getElementById('custWasteCategory').value,
                 mobile: document.getElementById('custMobile').value.trim(),
-                branch_name: document.getElementById('custBranchName').value.trim(),
-                branch_address: document.getElementById('custBranchAddress').value.trim(),
-                industry_type: document.getElementById('custIndustryType').value,
-                average_volume: document.getElementById('custAvgVolume').value.trim(),
-                collection_general: document.getElementById('custFreqGeneral').value.trim(),
-                collection_recycle: document.getElementById('custFreqRecycle').value.trim(),
-                collection_plastic: document.getElementById('custFreqPlastic').value.trim(),
-                collection_paper: document.getElementById('custFreqPaper').value.trim(),
-                business_hours: document.getElementById('custBusinessHours').value.trim(),
-                regular_holiday: document.getElementById('custHoliday').value.trim(),
-                collection_start_date: document.getElementById('custStartDate').value,
-                collection_end_date: document.getElementById('custEndDate').value,
+                // 複数事業所（2-1）
+                branches: collectBranches(),
+                // 請求・支払
                 payment_method: document.getElementById('custPaymentMethod').value,
                 billing_address: document.getElementById('custBillingAddress').value.trim(),
                 billing_email: document.getElementById('custBillingEmail').value.trim(),
                 billing_contact: document.getElementById('custBillingContact').value.trim(),
+                // 契約書送付先（2-4）
+                contract_address: document.getElementById('custContractAddress').value.trim(),
+                contract_email: document.getElementById('custContractEmail').value.trim(),
+                contract_contact: document.getElementById('custContractContact').value.trim(),
                 pricing_list: pricing_list,
                 active_contractors: activeContractors
             };
