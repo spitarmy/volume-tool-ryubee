@@ -355,6 +355,7 @@
         let allCustomers = [];
         let allWasteContracts = [];
         let allUsers = [];
+        let allTemplates = [];
         let appSettings = {};
         let editingId = null;
 
@@ -362,16 +363,18 @@
 
         async function loadCustomers() {
             try {
-                const [custRes, contractsRes, usersRes, settingsRes] = await Promise.all([
+                const [custRes, contractsRes, usersRes, settingsRes, templatesRes] = await Promise.all([
                     RyubeeAPI.fetchCustomers(),
                     RyubeeAPI.fetchWasteContracts().catch(() => []),
                     RyubeeAPI.fetchUsers().catch(() => []),
-                    RyubeeAPI.fetchSettings().catch(() => ({}))
+                    RyubeeAPI.fetchSettings().catch(() => ({})),
+                    RyubeeAPI.fetchTemplates().catch(() => [])
                 ]);
                 allCustomers = custRes;
                 allWasteContracts = contractsRes;
                 allUsers = usersRes || [];
                 appSettings = settingsRes || {};
+                allTemplates = templatesRes || [];
 
                 const sel = document.getElementById('custAssignedUser');
                 if (sel) {
@@ -733,16 +736,40 @@
 
         function addPricingRow(item = '', price = '', unit = 'kg') {
             const container = document.getElementById('pricingListContainer');
+            // テンプレートdatalistを生成（ページ内に1つだけ配置）
+            if (!document.getElementById('templateItemList')) {
+                const dl = document.createElement('datalist');
+                dl.id = 'templateItemList';
+                allTemplates.forEach(t => {
+                    const opt = document.createElement('option');
+                    opt.value = t.name;
+                    opt.dataset.price = t.unit_price || '';
+                    opt.dataset.unit = t.unit || '';
+                    dl.appendChild(opt);
+                });
+                document.body.appendChild(dl);
+            }
             const row = document.createElement('div');
             row.className = 'pricing-row';
             row.innerHTML = `
-                <input type="text" class="pr-item" placeholder="品名(例: 一般ごみ)" value="${utils.escapeHtml(item)}">
+                <input type="text" class="pr-item" list="templateItemList" placeholder="品名(選択/入力)" value="${utils.escapeHtml(item)}">
                 <input type="number" class="pr-price" placeholder="単価" style="max-width:80px;" value="${price}">
-                <input type="text" class="pr-unit" placeholder="単位(kg等)" style="max-width:70px;" value="${utils.escapeHtml(unit)}">
+                <input type="text" class="pr-unit" placeholder="単位" style="max-width:70px;" value="${utils.escapeHtml(unit)}">
                 <button type="button" style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:6px;width:30px;cursor:pointer;font-size:0.8rem;" onclick="movePricingRow(this.parentElement,-1)" title="上に移動">▲</button>
                 <button type="button" style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:6px;width:30px;cursor:pointer;font-size:0.8rem;" onclick="movePricingRow(this.parentElement,1)" title="下に移動">▼</button>
                 <button class="del-btn" onclick="this.parentElement.remove()">×</button>
             `;
+            // 品目選択時に単価・単位を自動入力
+            const itemInput = row.querySelector('.pr-item');
+            itemInput.addEventListener('input', function() {
+                const tpl = allTemplates.find(t => t.name === this.value);
+                if (tpl) {
+                    const priceInput = row.querySelector('.pr-price');
+                    const unitInput = row.querySelector('.pr-unit');
+                    if (!priceInput.value || priceInput.value === '0') priceInput.value = tpl.unit_price || '';
+                    if (!unitInput.value || unitInput.value === 'kg') unitInput.value = tpl.unit || '';
+                }
+            });
             container.appendChild(row);
         }
 

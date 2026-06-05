@@ -101,3 +101,43 @@ def delete_template(
     
     db.delete(t)
     db.commit()
+
+
+class BulkImportRequest(BaseModel):
+    items: list[ItemTemplateCreate]
+
+class BulkImportResponse(BaseModel):
+    created: int
+    skipped: int
+
+@router.post("/bulk-import", response_model=BulkImportResponse, status_code=201)
+def bulk_import_templates(
+    body: BulkImportRequest,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user),
+):
+    """品目テンプレートの一括インポート。同名の品目が既に存在する場合はスキップ。"""
+    existing = db.query(models.ItemTemplate).filter_by(
+        company_id=current_user.company_id
+    ).all()
+    existing_names = {t.name for t in existing}
+
+    created = 0
+    skipped = 0
+    for item in body.items:
+        if item.name in existing_names:
+            skipped += 1
+            continue
+        t = models.ItemTemplate(
+            company_id=current_user.company_id,
+            name=item.name,
+            unit_price=item.unit_price,
+            unit=item.unit,
+            description=item.description,
+        )
+        db.add(t)
+        existing_names.add(item.name)
+        created += 1
+
+    db.commit()
+    return BulkImportResponse(created=created, skipped=skipped)

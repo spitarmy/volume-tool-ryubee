@@ -1559,6 +1559,9 @@ async def send_invoice_email(
             raise HTTPException(500, f"メール送信に失敗しました: {e}")
 
         inv.sent_at = datetime.now().isoformat(timespec='seconds')
+        # ステータスが下書きなら「送信済」に自動更新
+        if inv.status == "draft":
+            inv.status = "sent"
         
         # 監査ログ
         audit = models.AuditLog(
@@ -1568,7 +1571,7 @@ async def send_invoice_email(
             action="email_sent",
             target_type="invoice",
             target_id=inv.id,
-            details=f"請求書メール送信: {customer.name} ({inv.month}) ¥{inv.total_amount:,} → {body.to_email}",
+            details=f"請求書メール送信: {inv.customer.name} ({inv.month}) ¥{inv.total_amount:,} → {inv.customer.email}",
         )
         db.add(audit)
         
