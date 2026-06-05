@@ -763,6 +763,8 @@
                                         style="padding:8px; border-bottom:1px solid var(--border); width:40px; text-align:center;">
                                         <input type="checkbox" id="rbCheckAll" onclick="toggleRbCheckboxes()" checked>
                                     </th>
+                                    <th style="padding:8px; border-bottom:1px solid var(--border); text-align:left; font-size:0.8rem;">番号
+                                    </th>
                                     <th style="padding:8px; border-bottom:1px solid var(--border); text-align:left;">顧客名
                                     </th>
                                     <th style="padding:8px; border-bottom:1px solid var(--border); text-align:right;">
@@ -1717,10 +1719,12 @@
 
             tbody.innerHTML = subs.map((c, i) => {
                 let basePrice = 0;
+                let yamaNum = '';
                 try {
                     const fd = JSON.parse(c.form_data || "{}");
                     const pr = fd.pricing_list || [];
                     basePrice = pr.reduce((sum, item) => sum + (parseFloat(item.price) || 0), 0);
+                    yamaNum = fd.yamabun_management_number || '';
                 } catch (e) { }
 
                 return `
@@ -1728,6 +1732,7 @@
                         <td style="padding:8px; border-bottom:1px solid var(--border); text-align:center;">
                             <input type="checkbox" class="rb-cust-check" data-id="${c.id}" checked>
                         </td>
+                        <td style="padding:8px; border-bottom:1px solid var(--border); font-size:0.8rem; color:var(--text-secondary); white-space:nowrap;">${utils.escapeHtml(yamaNum)}</td>
                         <td style="padding:8px; border-bottom:1px solid var(--border);">${utils.escapeHtml(c.name)}</td>
                         <td style="padding:8px; border-bottom:1px solid var(--border); text-align:right;">
                             <input type="number" id="rbBase_${c.id}" value="${basePrice}" style="width:80px; padding:4px;" step="100">

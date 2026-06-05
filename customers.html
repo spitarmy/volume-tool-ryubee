@@ -218,12 +218,12 @@
             <div class="form-group"><label>ご住所</label><input type="text" id="custAddress" placeholder="京都市..."></div>
             <div class="form-group"><label>担当者名</label><input type="text" id="custContact" placeholder="山田太郎"></div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-                <div class="form-group"><label>電話番号</label><input type="text" id="custPhone" placeholder="075-XXX-XXXX">
+                <div class="form-group"><label>電話番号</label><input type="tel" id="custPhone" inputmode="tel" placeholder="075-XXX-XXXX">
                 </div>
-                <div class="form-group"><label>携帯番号</label><input type="text" id="custMobile"
+                <div class="form-group"><label>携帯番号</label><input type="tel" id="custMobile" inputmode="tel"
                         placeholder="090-XXXX-XXXX"></div>
             </div>
-            <div class="form-group"><label>メールアドレス</label><input type="text" id="custEmail"
+            <div class="form-group"><label>メールアドレス</label><input type="email" id="custEmail" inputmode="email"
                     placeholder="info@example.com"></div>
 
             <h4 class="section-title">📍 事業所・回収情報 <span id="branchCount" style="font-size:0.75rem;font-weight:400;color:var(--text-tertiary);"></span></h4>
@@ -273,6 +273,7 @@
                         <label style="font-size:0.78rem;">支払日</label>
                         <select id="custPayDay">
                             <option value="31">月末</option>
+                            <option value="27">27日</option>
                             <option value="25">25日</option>
                             <option value="20">20日</option>
                             <option value="15">15日</option>
@@ -897,7 +898,7 @@
                 })()}
 
                 <div style="background:var(--bg-secondary); padding:12px; border-radius:12px; margin-bottom:16px; font-size:0.88rem; line-height:1.5;">
-                    💰 <strong>支払情報:</strong> ${utils.escapeHtml(fd.payment_method || '振込')} / ${c.billing_closing_day === 31 ? '月末' : c.billing_closing_day + '日'}締め
+                    💰 <strong>支払情報:</strong> ${utils.escapeHtml(fd.payment_method || '振込')} / ${c.billing_closing_day === 31 ? '月末' : c.billing_closing_day + '日'}締め → ${c.payment_due_month_offset === 0 ? '当月' : c.payment_due_month_offset === 1 ? '翌月' : c.payment_due_month_offset + 'ヶ月後'}${c.payment_due_day === 31 ? '末日' : c.payment_due_day + '日'}払い
                 </div>
 
                 <!-- 契約リスト（コード表連携） -->
