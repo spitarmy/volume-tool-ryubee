@@ -651,6 +651,26 @@
                         <label>備考</label>
                         <input type="text" id="payNotes" placeholder="任意">
                     </div>
+                    <details style="margin-bottom:12px; border:1px solid var(--border); border-radius:8px; padding:8px 12px;">
+                        <summary style="cursor:pointer; font-size:0.85rem; font-weight:600; color:var(--text-secondary);">💰 手数料差引き・差額処理</summary>
+                        <div style="margin-top:8px;">
+                            <div class="form-group" style="margin-bottom:8px;">
+                                <label style="font-size:0.8rem;">差額理由</label>
+                                <select id="payFeeReason" style="padding:8px; width:100%; border:1px solid var(--border); border-radius:var(--r-sm);">
+                                    <option value="">なし</option>
+                                    <option value="振込手数料">振込手数料</option>
+                                    <option value="協力会費">協力会費</option>
+                                    <option value="値引き">値引き</option>
+                                    <option value="その他">その他</option>
+                                </select>
+                            </div>
+                            <div class="form-group" style="margin-bottom:4px;">
+                                <label style="font-size:0.8rem;">差引額 (円)</label>
+                                <input type="number" id="payFeeAmount" placeholder="440" style="max-width:120px;">
+                            </div>
+                            <p style="font-size:0.72rem; color:var(--text-tertiary); margin:0;">※ 差額が手数料等の場合、差引額を入力すると入金+手数料で完了扱いにできます</p>
+                        </div>
+                    </details>
                     <button class="btn btn-primary" onclick="submitPayment()">入金を登録</button>
                     <button class="btn btn-secondary mt-1" onclick="closePaymentModal()">キャンセル</button>
                 </div>
@@ -1456,6 +1476,12 @@
                         <div style="font-weight:700; color:${remaining > 0 ? 'var(--red)' : 'var(--green-dark)'};">¥${remaining.toLocaleString()}</div>
                     </div>
                 </div>
+                ${remaining > 0 && inv.paid_total > 0 ? `
+                <div class="print-hide" style="margin-top:8px; text-align:right;">
+                    <button class="btn btn-xs" style="background:#FEF3C7; border:1px solid #F59E0B; color:#92400E; font-size:0.78rem;" onclick="settleDifference('${inv.id}', ${remaining})">
+                        💰 差額¥${remaining.toLocaleString()}を承認して完了
+                    </button>
+                </div>` : ''}
 
                 <!-- 振込先 -->
                 <div style="margin-top:16px; font-size:0.85rem;">
@@ -1484,6 +1510,26 @@
 
         function closeInvDetail() {
             document.getElementById('invDetailOverlay').classList.remove('show');
+        }
+
+        // M-2: 差額承認
+        async function settleDifference(invoiceId, remaining) {
+            const reason = prompt(`差額 ¥${remaining.toLocaleString()} の理由を選択してください:\n\n1: 振込手数料\n2: 協力会費\n3: 値引き\n4: その他\n\n番号を入力:`, '1');
+            if (!reason) return;
+            const reasons = {'1': '振込手数料', '2': '協力会費', '3': '値引き', '4': 'その他'};
+            const feeReason = reasons[reason] || reason;
+            if (!confirm(`差額 ¥${remaining.toLocaleString()} を「${feeReason}」として承認し、完了にしますか？`)) return;
+            try {
+                const result = await RyubeeAPI.settleDifference({
+                    invoice_id: invoiceId,
+                    fee_amount: remaining,
+                    fee_reason: feeReason,
+                });
+                showToast(`✅ ${result.message}`);
+                await loadInvoices();
+                loadAlerts();
+                viewInvoice(invoiceId);
+            } catch (e) { alert('エラー: ' + e.message); }
         }
 
         // ── 請求書編集モード ────────────────────────
@@ -1798,18 +1844,23 @@
         async function submitPayment() {
             const invoiceId = document.getElementById('payInvoiceId').value;
             if (!invoiceId) { alert('請求書を選択してください'); return; }
+            const feeReason = document.getElementById('payFeeReason')?.value || '';
+            const feeAmount = parseInt(document.getElementById('payFeeAmount')?.value) || 0;
             const body = {
                 invoice_id: invoiceId,
                 amount: parseInt(document.getElementById('payAmount').value) || 0,
                 payment_date: document.getElementById('payDate').value,
                 payment_method: document.getElementById('payMethod').value,
                 notes: document.getElementById('payNotes').value,
+                fee_amount: feeAmount,
+                fee_reason: feeReason,
             };
             if (!body.amount) { alert('入金額を入力してください'); return; }
             try {
                 await RyubeeAPI.registerPayment(body);
                 closePaymentModal();
-                showToast('✅ 入金を登録しました');
+                const feeMsg = feeAmount > 0 ? ` (${feeReason}: ¥${feeAmount.toLocaleString()}差引)` : '';
+                showToast(`✅ 入金を登録しました${feeMsg}`);
                 loadInvoices();
                 loadAlerts();
             } catch (e) { alert('エラー: ' + e.message); }

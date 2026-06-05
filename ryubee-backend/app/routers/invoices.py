@@ -625,7 +625,9 @@ def generate_monthly_invoices(
 
     manifests = db.query(models.Manifest).filter(
         models.Manifest.customer_id.in_(c_ids),
-        models.Manifest.issue_date.like(f"{month}%")
+        models.Manifest.issue_date.like(f"{month}%"),
+        # M-1: 返却済（確認済み）のマニフェストのみ請求対象にする
+        models.Manifest.status == "returned"
     ).all()
 
     # 一般案件取得（契約/スケジュール/完了ステージのみ。見積・問合せ段階は除外）

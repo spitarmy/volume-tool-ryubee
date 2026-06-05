@@ -358,6 +358,22 @@ const RyubeeAPI = {
     });
   },
 
+  // M-2: 複数請求書への一括振り分け入金
+  async bulkAllocatePayment(body) {
+    return apiFetch("/v1/payments/bulk-allocate", {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+  },
+
+  // M-2: 差額承認
+  async settleDifference(body) {
+    return apiFetch("/v1/payments/settle-difference", {
+      method: "POST",
+      body: JSON.stringify(body),
+    });
+  },
+
   async deletePayment(paymentId) {
     return apiFetch(`/v1/payments/${paymentId}`, { method: "DELETE" });
   },
