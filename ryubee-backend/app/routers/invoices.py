@@ -1682,3 +1682,84 @@ def send_reminders(
 
     db.commit()
     return SendRemindersResponse(sent_count=sent_count, logs=logs)
+
+
+@router.get("/csv-export")
+def export_invoices_csv(
+    month: str,
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(get_db)
+):
+    """
+    郵送代行会社用のCSVデータを出力する。
+    exclude_from_mailing フラグが立っている顧客は除外。
+    """
+    import io
+    import csv
+    from fastapi.responses import StreamingResponse
+    import json
+
+    company_id = current_user.company_id
+    invoices = db.query(models.Invoice).options(
+        joinedload(models.Invoice.customer)
+    ).filter(
+        models.Invoice.company_id == company_id,
+        models.Invoice.month == month
+    ).all()
+
+    output = io.StringIO()
+    writer = csv.writer(output)
+    
+    # CSVヘッダー（郵送代行で一般的に必要な項目）
+    writer.writerow([
+        "請求書番号", "請求月", "顧客番号", "郵便番号", "住所", 
+        "宛名", "ご担当者名", "請求金額", "消費税", "総合計", 
+        "支払期日", "備考"
+    ])
+
+    count = 0
+    for inv in invoices:
+        c = inv.customer
+        if not c: continue
+
+        # 除外フラグチェック
+        try:
+            fd = json.loads(c.form_data or "{}")
+            if fd.get("exclude_from_mailing"):
+                continue
+        except:
+            pass
+            
+        # 宛先情報の決定（契約書送付先優先、なければ請求先、なければ基本住所）
+        address = fd.get("billing_address") or c.address or ""
+        contact = fd.get("billing_contact") or c.contact_person or ""
+        zip_code = "" # Ryubeeには現在郵便番号単独の必須フィールドがないため住所から抽出するか空
+        yama_num = fd.get("yamabun_management_number", "")
+
+        writer.writerow([
+            inv.invoice_number,
+            inv.month,
+            yama_num,
+            zip_code,
+            address,
+            c.name,
+            contact,
+            inv.subtotal,
+            inv.tax,
+            inv.total_amount,
+            inv.payment_due_date or "",
+            "" # 備考
+        ])
+        count += 1
+
+    output.seek(0)
+    # SJISでエンコード（日本のシステム・Excel用）
+    sjis_content = output.getvalue().encode('cp932', errors='replace')
+    
+    return StreamingResponse(
+        io.BytesIO(sjis_content),
+        media_type="text/csv",
+        headers={
+            "Content-Disposition": f"attachment; filename=invoices_{month}.csv"
+        }
+    )

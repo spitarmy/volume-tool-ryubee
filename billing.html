@@ -544,8 +544,7 @@
                     style="width:100%;background:var(--blue-light);color:var(--blue-dark);border-color:var(--blue);">🏦
                     銀行入金取込</button>
                 <button class="btn btn-xs btn-secondary" onclick="exportCSV()"
-                    style="width:100%;background:#ECFDF5;color:#065F46;border-color:#10B981;">📥
-                    CSVエクスポート</button>
+                    style="width:100%; grid-column: span 2; background:var(--bg-secondary); color:var(--text-primary); border-color:var(--border);">📥 郵送代行用 CSV エクスポート</button>
                 <button class="btn btn-xs btn-ghost" onclick="connectFreee()" id="freeeBtn" style="width:100;">🔗
                     freee連携</button>
                 <button class="btn btn-xs btn-secondary" onclick="showCarryoverDialog()"
@@ -868,6 +867,35 @@
             loadAlerts();
             loadInvoices();
         });
+
+        // CSVエクスポート
+        function exportCSV() {
+            const token = localStorage.getItem('ryubee_token');
+            if (!token) {
+                alert('認証が必要です。');
+                return;
+            }
+            const month = document.getElementById('monthFilter').value;
+            const url = `https://ryubee-backend.onrender.com/v1/invoices/csv-export?month=${month}`;
+            
+            // fetchを使ってTokenヘッダー付きでダウンロード
+            fetch(url, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            })
+            .then(response => {
+                if (!response.ok) throw new Error('ダウンロードに失敗しました');
+                return response.blob();
+            })
+            .then(blob => {
+                const a = document.createElement('a');
+                a.href = URL.createObjectURL(blob);
+                a.download = `invoices_${month}.csv`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+            })
+            .catch(err => alert(err.message));
+        }
 
         function setInvTab(tab) {
             currentInvTab = tab;

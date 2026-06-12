@@ -289,6 +289,12 @@
                     placeholder="billing@example.com"></div>
             <div class="form-group"><label>ご請求先 ご担当者名</label><input type="text" id="custBillingContact"
                     placeholder="経理担当者名"></div>
+            <div class="form-group" style="margin-top:12px;">
+                <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:600;color:var(--text-primary);background:#FEF2F2;padding:8px 12px;border:1px solid #FCA5A5;border-radius:6px;">
+                    <input type="checkbox" id="custExcludeMailing">
+                    システムからの郵送代行CSV・メール一括送信の対象から除外する<br>(BtoBプラットフォームや専用用紙などを使用する場合)
+                </label>
+            </div>
 
             <div style="background:var(--bg-secondary);padding:14px;border-radius:var(--r-md);margin:12px 0;">
                 <label style="font-weight:700;font-size:0.85rem;">📄 契約書送付先（請求先と異なる場合）</label>
@@ -574,7 +580,8 @@
             document.getElementById('custBillingAddress').value = fd.billing_address || '';
             document.getElementById('custBillingEmail').value = fd.billing_email || '';
             document.getElementById('custBillingContact').value = fd.billing_contact || '';
-            // 契約書送付先（2-4）
+            document.getElementById('custExcludeMailing').checked = !!fd.exclude_from_mailing;
+
             document.getElementById('custContractAddress').value = fd.contract_address || '';
             document.getElementById('custContractEmail').value = fd.contract_email || '';
             document.getElementById('custContractContact').value = fd.contract_contact || '';
@@ -1079,6 +1086,7 @@
                 billing_address: document.getElementById('custBillingAddress').value.trim(),
                 billing_email: document.getElementById('custBillingEmail').value.trim(),
                 billing_contact: document.getElementById('custBillingContact').value.trim(),
+                exclude_from_mailing: document.getElementById('custExcludeMailing').checked,
                 // 契約書送付先（2-4）
                 contract_address: document.getElementById('custContractAddress').value.trim(),
                 contract_email: document.getElementById('custContractEmail').value.trim(),
