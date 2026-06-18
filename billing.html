@@ -1510,15 +1510,6 @@
                         💰 差額¥${remaining.toLocaleString()}を承認して完了
                     </button>
                 </div>` : ''}
-
-                <!-- 振込先 -->
-                <div style="margin-top:16px; font-size:0.85rem;">
-                    <div>お支払いは下記銀行口座へ振り込みくださいますようお願い申し上げます。</div>
-                    <div style="margin-top:8px; border:1px solid #ccc; padding:12px; border-radius:4px;">
-                        <div style="font-weight:700; margin-bottom:4px;">【振込先】</div>
-                        <div style="white-space:pre-wrap;">${utils.escapeHtml(companySettings.company_bank_info || '設定画面から口座情報を登録してください')}</div>
-                    </div>
-                </div>
             `;
             document.getElementById('invDetailOverlay').classList.add('show');
 
