@@ -128,6 +128,20 @@ class CustomerOut(BaseModel):
         )
 
 
+@router.get("/{customer_id}", response_model=CustomerOut)
+def get_customer(
+    customer_id: str,
+    db: Session = Depends(get_db),
+    current_user: models.User = Depends(auth.get_current_user),
+):
+    cust = db.query(models.Customer).filter_by(
+        id=customer_id, company_id=current_user.company_id
+    ).first()
+    if not cust:
+        raise HTTPException(404, "顧客が見つかりません")
+    return CustomerOut.from_orm_obj(cust)
+
+
 @router.get("")
 def list_customers(
     search: str | None = Query(None, description="名前で検索"),

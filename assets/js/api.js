@@ -426,6 +426,10 @@ const RyubeeAPI = {
     return Array.isArray(res) ? res : (res.items || []);
   },
 
+  async fetchCustomer(customerId) {
+    return apiFetch(`/v1/customers/${customerId}`);
+  },
+
   async createCustomer(body) {
     return apiFetch("/v1/customers", {
       method: "POST",

@@ -339,6 +339,13 @@
             border-radius: var(--r-md);
         }
 
+        .accordion-details summary::-webkit-details-marker {
+            display: none;
+        }
+        .accordion-details[open] .accordion-chevron {
+            transform: rotate(180deg);
+        }
+
         .drawer-section-title {
             font-size: 0.82rem;
             font-weight: 700;
@@ -1507,11 +1514,26 @@
                         <div class="drawer-customer-name">${utils.escapeHtml(job.customer_name || 'お客様名未設定')}</div>
                         <p style="font-size:0.82rem;color:var(--text-secondary);margin:2px 0 0;">
                             ${utils.escapeHtml(job.job_name || '')}
-                            ${job.work_date ? ` ・ ${job.work_date}` : ''}
                             ${job.address ? `<br>📍 ${utils.escapeHtml(job.address)} <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(job.address)}" target="_blank" style="margin-left:4px;text-decoration:none;font-size:0.72rem;background:#E2E8F0;padding:2px 6px;border-radius:4px;color:var(--text-primary);">🗺 マップ</a>` : ''}
                         </p>
                     </div>
                     <a href="jobs.html?id=${jobId}" style="flex-shrink:0;margin-left:8px;padding:4px 10px;font-size:0.72rem;background:#FEE2E2;color:#DC2626;border:1px solid #FECACA;border-radius:8px;text-decoration:none;font-weight:700;white-space:nowrap;">✏️ 編集</a>
+                </div>
+
+                <!-- 簡易業務詳細 (交換/積込み、回収日、m³) -->
+                <div style="background:var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--r-md); padding: 10px 12px; margin: 10px 0; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; font-size: 0.8rem;">
+                    <div>
+                        <div style="color:var(--text-tertiary); font-size: 0.72rem; margin-bottom: 2px;">業務種別</div>
+                        <div style="font-weight: 700; color: var(--text-primary);">${utils.escapeHtml(fd.yamabun_work_type || '未設定')}</div>
+                    </div>
+                    <div>
+                        <div style="color:var(--text-tertiary); font-size: 0.72rem; margin-bottom: 2px;">回収日</div>
+                        <div style="font-weight: 700; color: var(--text-primary);">${job.work_date || '未定'}</div>
+                    </div>
+                    <div>
+                        <div style="color:var(--text-tertiary); font-size: 0.72rem; margin-bottom: 2px;">立米 (m³)</div>
+                        <div style="font-weight: 700; color: var(--text-primary);">${job.total_volume_m3 != null ? job.total_volume_m3 + ' ㎥' : '未計算'}</div>
+                    </div>
                 </div>
 
                 ${!job.customer_id ? `
@@ -1551,11 +1573,19 @@
 
                 <!-- 📄 契約書セクション -->
                 ${job.customer_id ? `
-                <div class="drawer-section">
-                    <div class="drawer-section-title">📄 処分先契約</div>
-                    <div id="contractsList">読み込み中...</div>
-                    <button class="contract-add-btn" onclick="openContractModal('${job.customer_id}')">➕ 契約を追加</button>
-                    <a href="contract-form.html?id=${job.customer_id}" target="_blank" style="display:block;text-align:center;margin-top:6px;font-size:0.72rem;color:var(--blue);text-decoration:none;font-weight:600;">📝 契約書を作成 →</a>
+                <div class="drawer-section" style="padding:0; background:transparent;">
+                    <details class="accordion-details" style="background:var(--bg-secondary); border-radius:var(--r-md); border:1px solid var(--border); overflow:hidden;">
+                        <summary style="display:flex; justify-content:space-between; align-items:center; padding:14px; cursor:pointer; font-weight:700; font-size:0.82rem; color:var(--text-secondary); list-style:none; user-select:none;">
+                            <span style="display:flex; align-items:center; gap:6px;">📄 処分先契約</span>
+                            <span class="accordion-chevron" style="transition:transform 0.2s; font-size:0.8rem;">▼</span>
+                        </summary>
+                        <div style="padding: 0 14px 14px; border-top:1px solid var(--border);">
+                            <div id="customerActiveContractors" style="margin-top:12px; margin-bottom:12px; font-size:0.8rem;"></div>
+                            <div id="contractsList">読み込み中...</div>
+                            <button class="contract-add-btn" onclick="openContractModal('${job.customer_id}')" style="margin-top:10px;">➕ 契約を追加</button>
+                            <a href="contract-form.html?id=${job.customer_id}" target="_blank" style="display:block;text-align:center;margin-top:8px;font-size:0.72rem;color:var(--blue);text-decoration:none;font-weight:600;">📝 契約書を作成 →</a>
+                        </div>
+                    </details>
                 </div>
                 ` : ''}
 
@@ -2186,12 +2216,60 @@
         }
 
         async function loadCustomerContracts(customerId) {
+            const activeEl = document.getElementById('customerActiveContractors');
             const el = document.getElementById('contractsList');
-            if (!el) return;
+            if (activeEl) {
+                activeEl.innerHTML = '<p style="font-size:0.8rem;color:var(--text-tertiary);">読み込み中...</p>';
+            }
+            if (el) {
+                el.innerHTML = '<p style="font-size:0.8rem;color:var(--text-tertiary);">読み込み中...</p>';
+            }
+
+            try {
+                // Fetch customer details to get active contractors & contractor items
+                const customer = await RyubeeAPI.fetchCustomer(customerId);
+                let activeHtml = '';
+                if (customer && customer.form_data) {
+                    let fd = {};
+                    try { fd = JSON.parse(customer.form_data); } catch(e){}
+                    const activeContractors = fd.active_contractors || [];
+                    const contractorItems = fd.contractor_items || {};
+                    if (activeContractors.length > 0) {
+                        activeHtml = `
+                            <div style="margin-bottom: 12px; padding: 10px; background: #F0F9FF; border-left: 4px solid var(--blue); border-radius: 4px;">
+                                <div style="font-weight: 700; font-size: 0.78rem; color: #0369A1; margin-bottom: 6px;">📋 顧客設定の処分先</div>
+                                <div style="display:flex; flex-direction:column; gap: 6px;">
+                        `;
+                        activeContractors.forEach(ct => {
+                            const items = contractorItems[ct] || [];
+                            activeHtml += `
+                                <div style="font-size: 0.78rem; color: var(--text-primary);">
+                                    <strong>🏭 ${utils.escapeHtml(ct)}</strong>
+                                    ${items.length > 0 ? `<div style="display:flex; flex-wrap:wrap; gap:4px; margin-top:2px;">${items.map(it => `<span style="background:#fff; border:1px solid #BAE6FD; color:#0369A1; border-radius:3px; padding:1px 4px; font-size:0.7rem;">${utils.escapeHtml(it)}</span>`).join('')}</div>` : '<div style="color:var(--text-tertiary); font-size:0.7rem; margin-top:2px;">(項目未選択)</div>'}
+                                </div>
+                            `;
+                        });
+                        activeHtml += `
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        activeHtml = '<p style="font-size:0.78rem;color:var(--text-tertiary);margin:0 0 8px;">顧客設定の処分先なし</p>';
+                    }
+                } else {
+                    activeHtml = '<p style="font-size:0.78rem;color:var(--text-tertiary);margin:0 0 8px;">顧客情報が取得できません</p>';
+                }
+                if (activeEl) activeEl.innerHTML = activeHtml;
+            } catch (e) {
+                console.error("Failed to load customer settings:", e);
+                if (activeEl) activeEl.innerHTML = '<p style="font-size:0.78rem;color:var(--red);margin:0 0 8px;">顧客設定 読込失敗</p>';
+            }
+
+            // Load 3-party contracts
             try {
                 const contracts = await RyubeeAPI.fetchCustomerContracts(customerId);
                 if (!contracts.length) {
-                    el.innerHTML = '<p style="font-size:0.82rem;color:var(--text-tertiary);text-align:center;margin:8px 0;">契約なし</p>';
+                    el.innerHTML = '<p style="font-size:0.82rem;color:var(--text-tertiary);text-align:center;margin:8px 0;">3社契約なし</p>';
                     return;
                 }
                 el.innerHTML = contracts.map(c => {
@@ -2216,7 +2294,7 @@
                     `;
                 }).join('');
             } catch (e) {
-                el.innerHTML = '<p style="font-size:0.82rem;color:var(--red);text-align:center;">読込失敗</p>';
+                el.innerHTML = '<p style="font-size:0.82rem;color:var(--red);text-align:center;">3社契約 読込失敗</p>';
             }
         }
 

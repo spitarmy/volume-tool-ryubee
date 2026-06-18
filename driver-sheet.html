@@ -186,8 +186,19 @@
             <tr>
                 <th width="20%" class="text-left">コード / 締日</th>
                 <td colspan="3"><span class="print-field" id="dsCodeClosing"></span></td>
-                <th width="30%" class="text-center" style="font-size:1rem; padding:6px 8px; line-height:1.6;">
-                    引上げ<br>交　換<br>積込み</th>
+                <td width="30%" style="font-size:0.95rem; padding:8px 12px; line-height:1.7; vertical-align:middle; border:2px solid #333;">
+                    <div style="display: flex; flex-direction: column; gap: 4px; align-items: flex-start; justify-content: center; height: 100%;">
+                        <span id="dsWorkTypePull" style="display: inline-flex; align-items: center; gap: 6px; font-weight: bold;">
+                            <span style="display:inline-block; width:14px; height:14px; border:2px solid #333; border-radius:2px; position:relative; flex-shrink: 0;"><span id="dsWorkTypePullCheck" style="display:none; position:absolute; top:-1px; left:2px; font-size:12px;">✔</span></span> 引上げ
+                        </span>
+                        <span id="dsWorkTypeExchange" style="display: inline-flex; align-items: center; gap: 6px; font-weight: bold;">
+                            <span style="display:inline-block; width:14px; height:14px; border:2px solid #333; border-radius:2px; position:relative; flex-shrink: 0;"><span id="dsWorkTypeExchangeCheck" style="display:none; position:absolute; top:-1px; left:2px; font-size:12px;">✔</span></span> 交　換
+                        </span>
+                        <span id="dsWorkTypeLoading" style="display: inline-flex; align-items: center; gap: 6px; font-weight: bold;">
+                            <span style="display:inline-block; width:14px; height:14px; border:2px solid #333; border-radius:2px; position:relative; flex-shrink: 0;"><span id="dsWorkTypeLoadingCheck" style="display:none; position:absolute; top:-1px; left:2px; font-size:12px;">✔</span></span> 積込み
+                        </span>
+                    </div>
+                </td>
             </tr>
             <tr>
                 <th class="text-left">排出業者</th>
@@ -333,6 +344,19 @@
                 document.getElementById('dsNotes').textContent = notes;
 
                 document.getElementById('dsAddress').textContent = job.address ? `現場住所: ${job.address}` : '';
+                
+                // 業務種別の自動チェック
+                let fd = {};
+                try { fd = JSON.parse(job.form_data || "{}"); } catch (e) { }
+                const wt = fd.yamabun_work_type || '';
+                if (wt === '引上げ') {
+                    document.getElementById('dsWorkTypePullCheck').style.display = 'block';
+                } else if (wt === '交換') {
+                    document.getElementById('dsWorkTypeExchangeCheck').style.display = 'block';
+                } else if (wt === '積込み') {
+                    document.getElementById('dsWorkTypeLoadingCheck').style.display = 'block';
+                }
+
                 const displayPrice = job.final_price || job.estimated_price || job.price_total || 0;
                 document.getElementById('dsPrice').textContent = displayPrice ? displayPrice.toLocaleString() : '          ';
 

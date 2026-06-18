@@ -270,6 +270,97 @@
         left: 220px;
       }
     }
+
+    .photo-category-tabs {
+      display: flex;
+      gap: 0;
+      margin-bottom: 10px;
+      border-radius: 8px;
+      overflow: hidden;
+      border: 1px solid var(--border-color);
+    }
+    .photo-cat-tab {
+      flex: 1;
+      padding: 8px 0;
+      text-align: center;
+      font-size: 0.82rem;
+      font-weight: 700;
+      cursor: pointer;
+      border: none;
+      background: #fff;
+      color: var(--text-muted);
+      transition: all 0.2s;
+    }
+    .photo-cat-tab.active {
+      background: var(--primary);
+      color: #fff;
+    }
+    .photo-grid {
+      display: flex;
+      gap: 8px;
+      overflow-x: auto;
+      padding-bottom: 4px;
+    }
+    .photo-grid::-webkit-scrollbar {
+      height: 4px;
+    }
+    .photo-grid::-webkit-scrollbar-thumb {
+      background: var(--border-color);
+      border-radius: 4px;
+    }
+    .photo-thumb {
+      position: relative;
+      flex-shrink: 0;
+    }
+    .photo-thumb img {
+      width: 90px;
+      height: 90px;
+      object-fit: cover;
+      border-radius: 10px;
+      border: 1px solid var(--border-color);
+    }
+    .photo-thumb .photo-del {
+      position: absolute;
+      top: -6px;
+      right: -6px;
+      background: #EF4444;
+      color: white;
+      border: 2px solid #fff;
+      border-radius: 50%;
+      width: 22px;
+      height: 22px;
+      font-size: 10px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.2);
+    }
+    .photo-add-btn {
+      width: 90px;
+      height: 90px;
+      border-radius: 10px;
+      border: 2px dashed var(--border-color);
+      background: transparent;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      gap: 2px;
+      cursor: pointer;
+      font-size: 1.4rem;
+      color: var(--text-muted);
+      flex-shrink: 0;
+      transition: border-color 0.2s, background 0.2s;
+    }
+    .photo-add-btn:hover {
+      border-color: var(--primary);
+      background: rgba(10, 132, 255, 0.04);
+    }
+    .photo-add-btn span {
+      font-size: 0.65rem;
+      font-weight: 600;
+    }
   </style>
 
   <link rel="manifest" href="manifest.json">
@@ -364,6 +455,15 @@
           </select>
         </div>
         <div class="form-group">
+          <label>業務種別（ドライバー指示用）</label>
+          <div style="display:flex; gap:16px; margin-top:6px;">
+            <label style="display:inline-flex; align-items:center; gap:4px; font-weight:normal; cursor:pointer;"><input type="radio" name="yamabun_work_type" value="引上げ"> 引上げ</label>
+            <label style="display:inline-flex; align-items:center; gap:4px; font-weight:normal; cursor:pointer;"><input type="radio" name="yamabun_work_type" value="交換"> 交換</label>
+            <label style="display:inline-flex; align-items:center; gap:4px; font-weight:normal; cursor:pointer;"><input type="radio" name="yamabun_work_type" value="積込み"> 積込み</label>
+            <label style="display:inline-flex; align-items:center; gap:4px; font-weight:normal; cursor:pointer;"><input type="radio" name="yamabun_work_type" value=""> 未設定</label>
+          </div>
+        </div>
+        <div class="form-group">
           <label>パイプラインステージ</label>
           <select id="pipeline_stage">
             <option value="prospect">🎯 潜在顧客</option>
@@ -406,6 +506,15 @@
           <span style="font-size:.8rem;color:var(--text-muted);align-self:center;">※枠内にお書きください</span>
         </div>
         <button class="btn btn-primary" onclick="updateJob()" id="update-btn">更新を保存する</button>
+      </div>
+      <div class="section-title">📸 現場写真</div>
+      <div class="card" style="padding: 16px; margin-bottom: 20px;">
+        <div class="photo-category-tabs">
+            <button class="photo-cat-tab active" id="jobsPhotoTabBefore" onclick="switchJobsPhotoTab('before', this)">回収前 (0)</button>
+            <button class="photo-cat-tab" id="jobsPhotoTabAfter" onclick="switchJobsPhotoTab('after', this)">回収後 (0)</button>
+        </div>
+        <div id="jobsPhotosBeforeGrid" class="photo-grid"></div>
+        <div id="jobsPhotosAfterGrid" class="photo-grid" style="display:none;"></div>
       </div>
       <div class="section-title">AI立米解析結果</div>
       <div class="card" id="ai-summary-area"></div>
@@ -562,16 +671,122 @@
 
     function esc(s) { return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
 
-    function openDetail(jobId) {
+    async function openDetail(jobId) {
       currentJobId = jobId;
       document.getElementById('detail-drawer').classList.add('open');
-      const job = allJobs.find(j => j.job_id === jobId);
-      if (job) {
-        fillForm(job);
-        renderAiSummary(job.ai_result);
-        document.getElementById('pdf-link').href = `invoice.html?id=${jobId}`;
-        document.getElementById('driver-sheet-link').href = `driver-sheet.html?id=${jobId}`;
+      let job = allJobs.find(j => j.job_id === jobId) || {};
+      try {
+        const fullJob = await RyubeeAPI.fetchJob(jobId);
+        job = { ...job, ...fullJob };
+      } catch (e) {
+        console.warn('Failed to fetch full job data:', e);
       }
+      fillForm(job);
+      renderAiSummary(job.ai_result);
+      renderJobsPhotos(job);
+      document.getElementById('pdf-link').href = `invoice.html?id=${jobId}`;
+      document.getElementById('driver-sheet-link').href = `driver-sheet.html?id=${jobId}`;
+    }
+
+    function renderJobsPhotos(job) {
+      let fd = {};
+      if (job.form_data) {
+        try { fd = JSON.parse(job.form_data); } catch(e){}
+      }
+      let allPhotos = Array.isArray(job.photos) ? job.photos : [];
+      try { if (typeof job.photos === 'string') allPhotos = JSON.parse(job.photos); } catch (e) { }
+      allPhotos = RyubeeAPI.resolvePhotoUrls(allPhotos);
+
+      const beforeCount = fd.photos_before_count || 0;
+      const photosBefore = allPhotos.slice(0, beforeCount);
+      const photosAfter = allPhotos.slice(beforeCount);
+
+      document.getElementById('jobsPhotoTabBefore').textContent = `回収前 (${photosBefore.length})`;
+      document.getElementById('jobsPhotoTabAfter').textContent = `回収後 (${photosAfter.length})`;
+
+      document.getElementById('jobsPhotosBeforeGrid').innerHTML = renderJobsPhotoGridHtml(photosBefore, 'before', 0);
+      document.getElementById('jobsPhotosAfterGrid').innerHTML = renderJobsPhotoGridHtml(photosAfter, 'after', beforeCount);
+    }
+
+    function renderJobsPhotoGridHtml(photos, category, startIndex) {
+      let html = '';
+      photos.forEach((p, i) => {
+        const realIndex = startIndex + i;
+        html += `<div class="photo-thumb">
+            <img src="${p}" alt="写真">
+            <button class="photo-del" onclick="deleteJobsPhoto(${realIndex})">✕</button>
+        </div>`;
+      });
+      html += `<label class="photo-add-btn">
+          📷<span>追加</span>
+          <input type="file" style="display:none;" accept="image/*" multiple onchange="uploadJobsPhotos(event, '${category}')">
+      </label>`;
+      return html;
+    }
+
+    let _activeJobsPhotoTab = 'before';
+    function switchJobsPhotoTab(category, btn) {
+      _activeJobsPhotoTab = category;
+      document.querySelectorAll('.photo-cat-tab').forEach(el => el.classList.remove('active'));
+      btn.classList.add('active');
+      if (category === 'before') {
+        document.getElementById('jobsPhotosBeforeGrid').style.display = 'flex';
+        document.getElementById('jobsPhotosAfterGrid').style.display = 'none';
+      } else {
+        document.getElementById('jobsPhotosBeforeGrid').style.display = 'none';
+        document.getElementById('jobsPhotosAfterGrid').style.display = 'flex';
+      }
+    }
+
+    async function uploadJobsPhotos(event, category) {
+      const files = Array.from(event.target.files);
+      if (!files.length) return;
+      if (!currentJobId) return;
+
+      showToast(`📸 ${files.length}枚の写真をアップロード中...`);
+
+      try {
+        const job = await RyubeeAPI.fetchJob(currentJobId);
+        let fd = {};
+        try { fd = JSON.parse(job.form_data || "{}"); } catch (e) { }
+        let currentBeforeCount = fd.photos_before_count || 0;
+
+        const result = await RyubeeAPI.uploadJobPhotos(currentJobId, files);
+
+        if (category === 'before') {
+          currentBeforeCount += files.length;
+        }
+
+        fd.photos_before_count = currentBeforeCount;
+        await RyubeeAPI.updateJob(currentJobId, { form_data: JSON.stringify(fd) });
+
+        showToast(`📸 ${result.uploaded}枚の写真を保存しました`);
+        await openDetail(currentJobId);
+      } catch (err) { alert("アップロード失敗: " + err.message); }
+    }
+
+    async function deleteJobsPhoto(index) {
+      if (!currentJobId) return;
+      if (!confirm("この写真を削除しますか？")) return;
+
+      try {
+        const job = await RyubeeAPI.fetchJob(currentJobId);
+        let pArr = Array.isArray(job.photos) ? [...job.photos] : [];
+        try { if (typeof job.photos === 'string') pArr = JSON.parse(job.photos); } catch (e) { }
+
+        let fd = {};
+        try { fd = JSON.parse(job.form_data || "{}"); } catch (e) { }
+        let beforeCount = fd.photos_before_count || 0;
+
+        if (index < beforeCount) {
+          fd.photos_before_count = Math.max(0, beforeCount - 1);
+          await RyubeeAPI.updateJob(currentJobId, { form_data: JSON.stringify(fd) });
+        }
+
+        pArr.splice(index, 1);
+        await RyubeeAPI.updateJob(currentJobId, { photos: JSON.stringify(pArr) });
+        await openDetail(currentJobId);
+      } catch (err) { alert("削除失敗: " + err.message); }
     }
 
     function closeDetail() { document.getElementById('detail-drawer').classList.remove('open'); currentJobId = null; }
@@ -587,6 +802,17 @@
       document.getElementById('status').value = sm[job.status] || 'estimated';
       document.getElementById('job_type').value = job.job_type || 'other';
       document.getElementById('pipeline_stage').value = job.pipeline_stage || 'inquiry';
+      
+      let fd = {};
+      if (job.form_data) {
+        try { fd = JSON.parse(job.form_data); } catch(e){}
+      }
+      const wt = fd.yamabun_work_type || '';
+      const radios = document.getElementsByName('yamabun_work_type');
+      radios.forEach(r => {
+        r.checked = (r.value === wt);
+      });
+
       clearSignature();
       if (job.signature_data) { const img = new Image(); img.onload = () => sigCtx.drawImage(img, 0, 0, sigCanvas.width, sigCanvas.height); img.src = job.signature_data; }
     }
@@ -637,6 +863,20 @@
         pipeline_stage: document.getElementById('pipeline_stage').value || 'inquiry',
       };
       if (!isCanvasBlank()) payload.signature_data = sigCanvas.toDataURL('image/png');
+      
+      const job = allJobs.find(j => j.job_id === currentJobId);
+      let fd = {};
+      if (job && job.form_data) {
+        try { fd = JSON.parse(job.form_data); } catch (e) { }
+      }
+      const radios = document.getElementsByName('yamabun_work_type');
+      let selectedWt = '';
+      radios.forEach(r => {
+        if (r.checked) selectedWt = r.value;
+      });
+      fd.yamabun_work_type = selectedWt;
+      payload.form_data = JSON.stringify(fd);
+
       Object.keys(payload).forEach(k => payload[k] === undefined && delete payload[k]);
       try {
         await RyubeeAPI.updateJob(currentJobId, payload);
