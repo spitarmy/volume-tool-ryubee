@@ -2272,7 +2272,15 @@
                     el.innerHTML = '<p style="font-size:0.82rem;color:var(--text-tertiary);text-align:center;margin:8px 0;">3社契約なし</p>';
                     return;
                 }
-                el.innerHTML = contracts.map(c => {
+                
+                // Sort by contract_date DESC, then created_at DESC
+                const sortedContracts = [...contracts].sort((a, b) => {
+                    const dateA = a.contract_date || a.created_at;
+                    const dateB = b.contract_date || b.created_at;
+                    return new Date(dateB) - new Date(dateA);
+                });
+
+                el.innerHTML = sortedContracts.map(c => {
                     const statusLabels = { pending: '未送付', sent: '送付済', returned: '返却済', completed: '完了' };
                     const statusClass = c.status || 'pending';
                     // 日付トラッキング表示
@@ -2282,14 +2290,29 @@
                     if (c.accepted) tracking += `<span class="cc-track cc-ok">✅ 排受OK</span>`;
                     if (c.manifest_registered) tracking += `<span class="cc-track cc-ok">📋 マニ登録</span>`;
                     if (c.completion_date) tracking += `<span class="cc-track">🏁 ${c.completion_date}</span>`;
+
+                    // 単価・備考表示
+                    let priceHtml = '';
+                    if (c.unit_price != null) {
+                        priceHtml = `<span style="font-size:0.72rem; color:var(--text-secondary); background:#eef2f6; padding:2px 6px; border-radius:4px; margin-left:6px; font-weight:700;">¥${c.unit_price.toLocaleString()}/${c.unit || 'kg'}</span>`;
+                    }
+                    let notesHtml = '';
+                    if (c.notes) {
+                        notesHtml = `<div style="font-size:0.75rem; color:var(--text-tertiary); margin-top:4px; border-top:1px dashed #eee; padding-top:4px; white-space:pre-wrap;">📝 ${utils.escapeHtml(c.notes)}</div>`;
+                    }
+
                     return `
-                        <div class="contract-card" onclick="openContractModal('${customerId}', '${c.id}')">
-                            <div class="cc-info">
-                                <div class="cc-company">🏭 ${utils.escapeHtml(c.disposal_company || '–')}</div>
-                                <div class="cc-waste">♻️ ${utils.escapeHtml(c.waste_type || '–')}</div>
-                                ${tracking ? `<div class="cc-tracking">${tracking}</div>` : ''}
+                        <div class="contract-card" onclick="openContractModal('${customerId}', '${c.id}')" style="display:block; padding:12px; height:auto;">
+                            <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                                <div class="cc-company" style="font-weight:700; font-size:0.85rem;">🏭 ${utils.escapeHtml(c.disposal_company || '–')}</div>
+                                <span class="cc-status ${statusClass}" style="margin:0;">${statusLabels[statusClass] || '未送付'}</span>
                             </div>
-                            <span class="cc-status ${statusClass}">${statusLabels[statusClass] || '未送付'}</span>
+                            <div class="cc-waste" style="margin-top:4px; margin-bottom:4px; font-size:0.8rem;">
+                                ♻️ ${utils.escapeHtml(c.waste_type || '–')}
+                                ${priceHtml}
+                            </div>
+                            ${tracking ? `<div class="cc-tracking" style="margin-top:6px; margin-bottom:4px;">${tracking}</div>` : ''}
+                            ${notesHtml}
                         </div>
                     `;
                 }).join('');

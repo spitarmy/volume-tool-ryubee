@@ -101,6 +101,224 @@
             overflow-y: auto;
             animation: sheetUp 0.3s cubic-bezier(0.25, 1, 0.5, 1);
         }
+
+        /* ── Customer Contract Styles ── */
+        .contract-card {
+            background: #fff;
+            border-radius: 10px;
+            padding: 12px 14px;
+            margin-bottom: 8px;
+            border: 1px solid var(--border);
+            display: block;
+            cursor: pointer;
+            transition: transform 0.15s, box-shadow 0.15s;
+            height: auto;
+            text-align: left;
+        }
+
+        .contract-card:active {
+            transform: scale(0.98);
+            box-shadow: var(--shadow-sm);
+        }
+
+        .contract-card .cc-company {
+            font-weight: 700;
+            font-size: 0.85rem;
+            color: var(--text-primary);
+        }
+
+        .contract-card .cc-waste {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-top: 4px;
+            margin-bottom: 4px;
+        }
+
+        .contract-card .cc-status {
+            font-size: 0.68rem;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 10px;
+            flex-shrink: 0;
+        }
+
+        .contract-add-btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            width: 100%;
+            padding: 10px;
+            margin-top: 8px;
+            background: #fff;
+            border: 2px dashed var(--border);
+            border-radius: 10px;
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: var(--text-tertiary);
+            cursor: pointer;
+            transition: border-color 0.2s, color 0.2s;
+        }
+
+        .contract-add-btn:hover {
+            border-color: var(--blue);
+            color: var(--blue);
+        }
+
+        .contract-modal-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(8px);
+            display: none;
+            z-index: 4000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+        .contract-modal-overlay.show {
+            display: flex;
+        }
+
+        .contract-modal {
+            background: #fff;
+            border-radius: 16px;
+            width: 100%;
+            max-width: 440px;
+            padding: 24px 20px;
+            animation: sheetUp 0.25s ease-out;
+            max-height: 85vh;
+            overflow-y: auto;
+        }
+
+        .contract-modal h3 {
+            font-size: 1.1rem;
+            margin-bottom: 16px;
+        }
+
+        .contract-form-group {
+            margin-bottom: 12px;
+        }
+
+        .contract-form-group label {
+            display: block;
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+        }
+
+        .contract-form-group select,
+        .contract-form-group input,
+        .contract-form-group textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            font-size: 0.88rem;
+            box-sizing: border-box;
+            font-family: inherit;
+        }
+
+        /* 一括追加モーダル */
+        .cc-batch-row {
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 10px 12px;
+            margin-bottom: 6px;
+            background: #FAFAFA;
+            transition: all 0.15s;
+            text-align: left;
+        }
+        .cc-batch-row:has(.cc-company-check:checked) {
+            background: #EFF6FF;
+            border-color: var(--blue);
+        }
+        .cc-batch-company {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            cursor: pointer;
+            font-size: 0.88rem;
+            font-weight: 600;
+        }
+        .cc-batch-company input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--blue);
+            margin: 0;
+        }
+        .cc-batch-chips {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 4px;
+            margin-top: 8px;
+            padding-left: 26px;
+        }
+        .cc-waste-chip {
+            padding: 4px 10px;
+            font-size: 0.73rem;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+            background: #fff;
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.15s;
+            font-family: inherit;
+        }
+        .cc-waste-chip.selected {
+            background: var(--blue);
+            color: #fff;
+            border-color: var(--blue);
+        }
+        .cc-waste-chip.cc-all-btn {
+            border-color: #059669;
+            background: #ECFDF5;
+            color: #059669;
+            font-weight: 700;
+        }
+        .cc-tracking {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 3px;
+            margin-top: 4px;
+        }
+        .cc-track {
+            font-size: 0.65rem;
+            padding: 2px 6px;
+            border-radius: 6px;
+            background: #F3F4F6;
+            color: var(--text-tertiary);
+        }
+        .cc-track.cc-ok {
+            background: #ECFDF5;
+            color: #059669;
+            font-weight: 600;
+        }
+        .cc-status.pending { background: #FEF3C7; color: #92400E; }
+        .cc-status.sent { background: #DBEAFE; color: #1D4ED8; }
+        .cc-status.returned { background: #E0E7FF; color: #4338CA; }
+        .cc-status.completed { background: #ECFDF5; color: #059669; }
+        .cc-checkbox-label {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            cursor: pointer;
+            padding: 8px 10px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background: #FAFAFA;
+            margin-top: 6px;
+        }
+        .cc-checkbox-label input[type="checkbox"] {
+            width: 18px;
+            height: 18px;
+            accent-color: var(--blue);
+            margin: 0;
+        }
     </style>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#1A237E">
@@ -320,6 +538,12 @@
                 <!-- JSで動的にチェックボックスを生成 -->
             </div>
 
+            <div id="custContractsSection" style="display:none; border-top: 1px dashed var(--border); margin-top: 20px; padding-top: 10px;">
+                <h4 class="section-title">📄 3社間契約 状況・履歴</h4>
+                <div id="custContractsList" style="margin-bottom:12px;"></div>
+                <button type="button" class="contract-add-btn" id="custContractAddBtn" onclick="openCustContractModal()">➕ 新規3社契約を登録</button>
+            </div>
+
             <div class="form-group mt-2"><label>社内用メモ</label><textarea id="custNotes"
                     placeholder="特記事項など..."></textarea></div>
 
@@ -380,6 +604,9 @@
         let allTemplates = [];
         let appSettings = {};
         let editingId = null;
+        let _selectedWasteTypes = new Set();
+        let _contractsMaster = null;
+        let _editingContractId = null;
 
         document.addEventListener('DOMContentLoaded', loadCustomers);
 
@@ -672,6 +899,13 @@
 
                 contractorsListDiv.appendChild(wrapper);
             });
+
+            if (cust) {
+                document.getElementById('custContractsSection').style.display = 'block';
+                loadCustContracts(cust.id);
+            } else {
+                document.getElementById('custContractsSection').style.display = 'none';
+            }
 
             document.getElementById('custOverlay').classList.add('show');
         }
@@ -1141,6 +1375,369 @@
             t.style.cssText = 'position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#34C759;color:#fff;padding:10px 20px;border-radius:20px;font-weight:600;z-index:9999;';
             document.body.appendChild(t);
             setTimeout(() => t.remove(), 2500);
+        }
+
+        // ── 3社間契約 状況・履歴 処理ロジック ──
+        async function getContractorsMaster() {
+            if (_contractsMaster) return _contractsMaster;
+            let list = [];
+            if (appSettings && appSettings.contractors_master) {
+                try {
+                    list = typeof appSettings.contractors_master === 'string'
+                        ? JSON.parse(appSettings.contractors_master)
+                        : appSettings.contractors_master;
+                } catch(e) {}
+            }
+            if (!Array.isArray(list) || list.length === 0) {
+                list = ['ホームケルン', '光アスコン', '旭興産業', '木材開発', '厳本金属', '京都有機資源', 'HIRAYAMA', '大剛', '京都環境保全公社', '西山環境サービス', '家電リサイクル'];
+            }
+            _contractsMaster = list;
+            return _contractsMaster;
+        }
+
+        async function loadCustContracts(customerId) {
+            const el = document.getElementById('custContractsList');
+            if (el) {
+                el.innerHTML = '<p style="font-size:0.8rem;color:var(--text-tertiary);">読み込み中...</p>';
+            }
+
+            try {
+                const contracts = await RyubeeAPI.fetchCustomerContracts(customerId);
+                if (!contracts || contracts.length === 0) {
+                    el.innerHTML = '<p style="font-size:0.82rem;color:var(--text-tertiary);text-align:center;margin:8px 0;">3社契約なし</p>';
+                    return;
+                }
+
+                // Sort by contract_date DESC, then created_at DESC
+                const sortedContracts = [...contracts].sort((a, b) => {
+                    const dateA = a.contract_date || a.created_at;
+                    const dateB = b.contract_date || b.created_at;
+                    return new Date(dateB) - new Date(dateA);
+                });
+
+                el.innerHTML = sortedContracts.map(c => {
+                    const statusLabels = { pending: '未送付', sent: '送付済', returned: '返却済', completed: '完了' };
+                    const statusClass = c.status || 'pending';
+                    // 日付トラッキング表示
+                    let tracking = '';
+                    if (c.sent_date) tracking += `<span class="cc-track">📤 ${c.sent_date}</span>`;
+                    if (c.returned_date) tracking += `<span class="cc-track">📥 ${c.returned_date}</span>`;
+                    if (c.accepted) tracking += `<span class="cc-track cc-ok">✅ 排受OK</span>`;
+                    if (c.manifest_registered) tracking += `<span class="cc-track cc-ok">📋 マニ登録</span>`;
+                    if (c.completion_date) tracking += `<span class="cc-track">🏁 ${c.completion_date}</span>`;
+
+                    // 単価・備考表示
+                    let priceHtml = '';
+                    if (c.unit_price != null) {
+                        priceHtml = `<span style="font-size:0.72rem; color:var(--text-secondary); background:#eef2f6; padding:2px 6px; border-radius:4px; margin-left:6px; font-weight:700;">¥${c.unit_price.toLocaleString()}/${c.unit || 'kg'}</span>`;
+                    }
+                    let notesHtml = '';
+                    if (c.notes) {
+                        notesHtml = `<div style="font-size:0.75rem; color:var(--text-tertiary); margin-top:4px; border-top:1px dashed #eee; padding-top:4px; white-space:pre-wrap;">📝 ${utils.escapeHtml(c.notes)}</div>`;
+                    }
+
+                    return `
+                        <div class="contract-card" onclick="openCustContractModal('${c.id}')" style="display:block; padding:12px; height:auto;">
+                            <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                                <div class="cc-company" style="font-weight:700; font-size:0.85rem;">🏭 ${utils.escapeHtml(c.disposal_company || '–')}</div>
+                                <span class="cc-status ${statusClass}" style="margin:0;">${statusLabels[statusClass] || '未送付'}</span>
+                            </div>
+                            <div class="cc-waste" style="margin-top:4px; margin-bottom:4px; font-size:0.8rem;">
+                                ♻️ ${utils.escapeHtml(c.waste_type || '–')}
+                                ${priceHtml}
+                            </div>
+                            ${tracking ? `<div class="cc-tracking" style="margin-top:6px; margin-bottom:4px;">${tracking}</div>` : ''}
+                            ${notesHtml}
+                        </div>
+                    `;
+                }).join('');
+            } catch (e) {
+                console.error(e);
+                el.innerHTML = '<p style="font-size:0.82rem;color:var(--red);text-align:center;">3社契約 読込失敗</p>';
+            }
+        }
+
+        async function openCustContractModal(contractId = null) {
+            if (!editingId) {
+                alert('顧客情報が保存されていません。');
+                return;
+            }
+            _editingContractId = contractId;
+            _selectedWasteTypes.clear();
+
+            let overlay = document.getElementById('contractModalOverlay');
+            if (overlay) overlay.remove();
+
+            overlay = document.createElement('div');
+            overlay.id = 'contractModalOverlay';
+            overlay.className = 'contract-modal-overlay';
+            overlay.onclick = (e) => { if (e.target === overlay) overlay.classList.remove('show'); };
+
+            if (contractId) {
+                // ── 編集モード（1件） ──
+                overlay.innerHTML = `
+                    <div class="contract-modal">
+                        <h3>📄 処分先契約 編集</h3>
+                        <div class="contract-form-group">
+                            <label>処分先</label>
+                            <input type="text" id="ccEditDisposal" placeholder="処分先名">
+                        </div>
+                        <div class="contract-form-group">
+                            <label>廃棄物種類</label>
+                            <input type="text" id="ccEditWaste" placeholder="例: 廃プラ・発泡">
+                        </div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                            <div class="contract-form-group">
+                                <label>契約単価</label>
+                                <input type="number" id="ccEditPrice" placeholder="30">
+                            </div>
+                            <div class="contract-form-group">
+                                <label>単位</label>
+                                <select id="ccEditUnit">
+                                    <option value="kg">/kg</option>
+                                    <option value="m³">/m³</option>
+                                    <option value="式">/式</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div style="border-top:1px solid var(--border);margin:14px 0 10px;padding-top:12px;">
+                            <div style="font-size:0.82rem;font-weight:700;color:var(--text-secondary);margin-bottom:8px;">📋 契約書追跡</div>
+                        </div>
+                        <div class="contract-form-group">
+                            <label>ステータス</label>
+                            <select id="ccEditStatus">
+                                <option value="pending">📝 未送付</option>
+                                <option value="sent">📤 送付済</option>
+                                <option value="returned">📥 返却済</option>
+                                <option value="completed">✅ 完了</option>
+                            </select>
+                        </div>
+                        <div class="contract-form-group">
+                            <label>送付方法</label>
+                            <select id="ccEditDelivery">
+                                <option value="">-- 未選択 --</option>
+                                <option value="郵送">📮 郵送</option>
+                                <option value="持参">🚗 持参</option>
+                            </select>
+                        </div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                            <div class="contract-form-group">
+                                <label>📤 送付日</label>
+                                <input type="date" id="ccEditSentDate">
+                            </div>
+                            <div class="contract-form-group">
+                                <label>📥 返却日</label>
+                                <input type="date" id="ccEditReturnedDate">
+                            </div>
+                        </div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+                            <label class="cc-checkbox-label">
+                                <input type="checkbox" id="ccEditAccepted"> ✅ 排受OK
+                            </label>
+                            <label class="cc-checkbox-label">
+                                <input type="checkbox" id="ccEditManifest"> 📋 マニ登録済
+                            </label>
+                        </div>
+                        <div class="contract-form-group">
+                            <label>🏁 完了日</label>
+                            <input type="date" id="ccEditCompletionDate">
+                        </div>
+                        <div class="contract-form-group">
+                            <label>備考</label>
+                            <textarea id="ccEditNotes" rows="2" placeholder="任意"></textarea>
+                        </div>
+                        <button class="btn btn-primary" onclick="saveCustContractEdit()" style="width:100%;">保存する</button>
+                        <button class="btn btn-secondary mt-1" onclick="document.getElementById('contractModalOverlay').classList.remove('show')" style="width:100%;">キャンセル</button>
+                        <button class="btn btn-danger mt-1" onclick="deleteCustContract()" style="width:100%;">削除する</button>
+                    </div>
+                `;
+                document.body.appendChild(overlay);
+
+                // 既存データ読み込み
+                try {
+                    const contracts = await RyubeeAPI.fetchCustomerContracts(editingId);
+                    const c = contracts.find(x => x.id === contractId);
+                    if (c) {
+                        document.getElementById('ccEditDisposal').value = c.disposal_company || '';
+                        document.getElementById('ccEditWaste').value = c.waste_type || '';
+                        document.getElementById('ccEditPrice').value = c.unit_price || '';
+                        document.getElementById('ccEditUnit').value = c.unit || 'kg';
+                        document.getElementById('ccEditStatus').value = c.status || 'pending';
+                        document.getElementById('ccEditDelivery').value = c.delivery_method || '';
+                        document.getElementById('ccEditSentDate').value = c.sent_date || '';
+                        document.getElementById('ccEditReturnedDate').value = c.returned_date || '';
+                        document.getElementById('ccEditAccepted').checked = !!c.accepted;
+                        document.getElementById('ccEditManifest').checked = !!c.manifest_registered;
+                        document.getElementById('ccEditCompletionDate').value = c.completion_date || '';
+                        document.getElementById('ccEditNotes').value = c.notes || '';
+                    }
+                } catch (e) { console.error(e); }
+            } else {
+                // ── 一括追加モード ──
+                const master = await getContractorsMaster();
+                let listHtml = '';
+                master.forEach(company => {
+                    const wasteTypes = CONTRACTOR_ITEMS[company] || [];
+                    const chipsHtml = wasteTypes.length > 0
+                        ? wasteTypes.map(w => `<button type="button" class="cc-waste-chip" data-company="${utils.escapeHtml(company)}" data-waste="${utils.escapeHtml(w)}" onclick="toggleBatchWaste(this)">${utils.escapeHtml(w)}</button>`).join('')
+                        : `<input type="text" class="cc-custom-waste" data-company="${utils.escapeHtml(company)}" placeholder="品目を入力..." style="padding:4px 8px;font-size:0.75rem;border-radius:8px;border:1px solid var(--border);width:120px;">`;
+                    listHtml += `
+                        <div class="cc-batch-row" data-company="${utils.escapeHtml(company)}">
+                            <label class="cc-batch-company">
+                                <input type="checkbox" class="cc-company-check" data-company="${utils.escapeHtml(company)}" onchange="toggleBatchCompany(this)">
+                                <span>🏭 ${utils.escapeHtml(company)}</span>
+                            </label>
+                            <div class="cc-batch-chips" style="display:none;">
+                                ${chipsHtml}
+                                ${wasteTypes.length > 1 ? `<button type="button" class="cc-waste-chip cc-all-btn" onclick="selectAllWaste(this, '${utils.escapeHtml(company)}')">✅ 全選択</button>` : ''}
+                            </div>
+                        </div>
+                    `;
+                });
+
+                overlay.innerHTML = `
+                    <div class="contract-modal">
+                        <h3>📄 契約先を一括追加</h3>
+                        <p style="font-size:0.78rem;color:var(--text-tertiary);margin-bottom:12px;">処分先にチェック → 品目をタップで選択</p>
+                        <div id="ccBatchList" style="max-height:50vh;overflow-y:auto;margin-bottom:12px;">
+                            ${listHtml}
+                        </div>
+                        <div id="ccBatchSummary" style="font-size:0.78rem;color:var(--text-secondary);margin-bottom:8px;font-weight:600;"></div>
+                        <button class="btn btn-primary" onclick="saveCustContractBatch()" style="width:100%;">一括保存する</button>
+                        <button class="btn btn-secondary mt-1" onclick="document.getElementById('contractModalOverlay').classList.remove('show')" style="width:100%;">キャンセル</button>
+                    </div>
+                `;
+                document.body.appendChild(overlay);
+            }
+
+            overlay.classList.add('show');
+        }
+
+        function toggleBatchCompany(checkbox) {
+            const company = checkbox.dataset.company;
+            const row = checkbox.closest('.cc-batch-row');
+            const chipsDiv = row.querySelector('.cc-batch-chips');
+            chipsDiv.style.display = checkbox.checked ? 'flex' : 'none';
+            if (!checkbox.checked) {
+                row.querySelectorAll('.cc-waste-chip.selected').forEach(c => c.classList.remove('selected'));
+                row.querySelectorAll('.cc-custom-waste').forEach(i => i.value = '');
+            }
+            updateBatchSummary();
+        }
+
+        function toggleBatchWaste(chip) {
+            chip.classList.toggle('selected');
+            updateBatchSummary();
+        }
+
+        function selectAllWaste(btn, company) {
+            const row = btn.closest('.cc-batch-row');
+            const chips = row.querySelectorAll('.cc-waste-chip:not(.cc-all-btn)');
+            const allSelected = Array.from(chips).every(c => c.classList.contains('selected'));
+            chips.forEach(c => {
+                if (allSelected) c.classList.remove('selected');
+                else c.classList.add('selected');
+            });
+            updateBatchSummary();
+        }
+
+        function updateBatchSummary() {
+            const pairs = getBatchSelections();
+            const el = document.getElementById('ccBatchSummary');
+            if (el) {
+                el.textContent = pairs.length > 0 ? `📋 ${pairs.length}件の契約を追加します` : '';
+            }
+        }
+
+        function getBatchSelections() {
+            const pairs = [];
+            document.querySelectorAll('.cc-company-check:checked').forEach(cb => {
+                const company = cb.dataset.company;
+                const row = cb.closest('.cc-batch-row');
+                const selectedChips = row.querySelectorAll('.cc-waste-chip.selected:not(.cc-all-btn)');
+                const customInput = row.querySelector('.cc-custom-waste');
+                if (selectedChips.length > 0) {
+                    selectedChips.forEach(c => pairs.push({ company, waste: c.dataset.waste }));
+                } else if (customInput && customInput.value.trim()) {
+                    pairs.push({ company, waste: customInput.value.trim() });
+                } else {
+                    pairs.push({ company, waste: '' });
+                }
+            });
+            return pairs;
+        }
+
+        async function saveCustContractBatch() {
+            const pairs = getBatchSelections();
+            if (pairs.length === 0) {
+                alert('処分先を選択してください');
+                return;
+            }
+
+            if (!editingId) {
+                alert('顧客IDが未設定です。');
+                return;
+            }
+
+            const btn = event?.target;
+            if (btn) { btn.disabled = true; btn.textContent = '保存中...'; }
+
+            try {
+                let created = 0;
+                for (const { company, waste } of pairs) {
+                    console.log(`Creating contract: customer=${editingId}, company=${company}, waste=${waste}`);
+                    await RyubeeAPI.createCustomerContract(editingId, {
+                        disposal_company: company,
+                        waste_type: waste,
+                        status: 'pending',
+                    });
+                    created++;
+                }
+                showToast(`✅ ${created}件の契約を追加しました`);
+                document.getElementById('contractModalOverlay').classList.remove('show');
+                loadCustContracts(editingId);
+            } catch (e) {
+                console.error('Contract save error:', e);
+                alert(`エラー: ${e.message}\n\n顧客ID: ${editingId}\n件数: ${pairs.length}`);
+                if (btn) { btn.disabled = false; btn.textContent = '一括保存する'; }
+            }
+        }
+
+        async function saveCustContractEdit() {
+            const body = {
+                disposal_company: document.getElementById('ccEditDisposal').value.trim(),
+                waste_type: document.getElementById('ccEditWaste').value.trim(),
+                unit_price: parseFloat(document.getElementById('ccEditPrice').value) || null,
+                unit: document.getElementById('ccEditUnit').value,
+                status: document.getElementById('ccEditStatus').value,
+                delivery_method: document.getElementById('ccEditDelivery').value,
+                sent_date: document.getElementById('ccEditSentDate').value || null,
+                returned_date: document.getElementById('ccEditReturnedDate').value || null,
+                accepted: document.getElementById('ccEditAccepted').checked,
+                manifest_registered: document.getElementById('ccEditManifest').checked,
+                completion_date: document.getElementById('ccEditCompletionDate').value || null,
+                notes: document.getElementById('ccEditNotes').value.trim(),
+            };
+            if (!body.disposal_company) { alert('処分先を入力してください'); return; }
+            try {
+                await RyubeeAPI.updateCustomerContract(editingId, _editingContractId, body);
+                showToast('✅ 契約を更新しました');
+                document.getElementById('contractModalOverlay').classList.remove('show');
+                loadCustContracts(editingId);
+            } catch (e) { alert('エラー: ' + e.message); }
+        }
+
+        async function deleteCustContract() {
+            if (!confirm('この契約を削除しますか？')) return;
+            try {
+                await RyubeeAPI.deleteCustomerContract(editingId, _editingContractId);
+                showToast('🗑️ 契約を削除しました');
+                document.getElementById('contractModalOverlay').classList.remove('show');
+                loadCustContracts(editingId);
+            } catch (e) {
+                alert('エラー: ' + e.message);
+            }
         }
 
         // ── O-1: Enterキーで次入力項目に移動 ──

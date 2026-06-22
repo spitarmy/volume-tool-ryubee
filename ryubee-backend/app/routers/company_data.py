@@ -107,13 +107,13 @@ def _contract_dict(c):
 
 @router.get("/vehicles")
 def list_vehicles(user=Depends(get_current_user), db: Session = Depends(get_db)):
-    rows = db.query(Vehicle).filter(Vehicle.company_id == user["company_id"]).order_by(Vehicle.vehicle_number).all()
+    rows = db.query(Vehicle).filter(Vehicle.company_id == user.company_id).order_by(Vehicle.vehicle_number).all()
     return [_vehicle_dict(r) for r in rows]
 
 
 @router.post("/vehicles", status_code=201)
 def create_vehicle(body: VehicleIn, user=Depends(get_current_user), db: Session = Depends(get_db)):
-    v = Vehicle(company_id=user["company_id"], **body.model_dump())
+    v = Vehicle(company_id=user.company_id, **body.model_dump())
     db.add(v)
     db.commit()
     db.refresh(v)
@@ -122,7 +122,7 @@ def create_vehicle(body: VehicleIn, user=Depends(get_current_user), db: Session 
 
 @router.put("/vehicles/{vid}")
 def update_vehicle(vid: str, body: VehicleIn, user=Depends(get_current_user), db: Session = Depends(get_db)):
-    v = db.query(Vehicle).filter(Vehicle.id == vid, Vehicle.company_id == user["company_id"]).first()
+    v = db.query(Vehicle).filter(Vehicle.id == vid, Vehicle.company_id == user.company_id).first()
     if not v:
         raise HTTPException(404, "Vehicle not found")
     for k, val in body.model_dump().items():
@@ -134,7 +134,7 @@ def update_vehicle(vid: str, body: VehicleIn, user=Depends(get_current_user), db
 
 @router.delete("/vehicles/{vid}", status_code=204)
 def delete_vehicle(vid: str, user=Depends(get_current_user), db: Session = Depends(get_db)):
-    v = db.query(Vehicle).filter(Vehicle.id == vid, Vehicle.company_id == user["company_id"]).first()
+    v = db.query(Vehicle).filter(Vehicle.id == vid, Vehicle.company_id == user.company_id).first()
     if not v:
         raise HTTPException(404, "Vehicle not found")
     db.delete(v)
@@ -147,13 +147,13 @@ def delete_vehicle(vid: str, user=Depends(get_current_user), db: Session = Depen
 
 @router.get("/permits")
 def list_permits(user=Depends(get_current_user), db: Session = Depends(get_db)):
-    rows = db.query(Permit).filter(Permit.company_id == user["company_id"]).order_by(Permit.prefecture).all()
+    rows = db.query(Permit).filter(Permit.company_id == user.company_id).order_by(Permit.prefecture).all()
     return [_permit_dict(r) for r in rows]
 
 
 @router.post("/permits", status_code=201)
 def create_permit(body: PermitIn, user=Depends(get_current_user), db: Session = Depends(get_db)):
-    p = Permit(company_id=user["company_id"], **body.model_dump())
+    p = Permit(company_id=user.company_id, **body.model_dump())
     db.add(p)
     db.commit()
     db.refresh(p)
@@ -162,7 +162,7 @@ def create_permit(body: PermitIn, user=Depends(get_current_user), db: Session = 
 
 @router.put("/permits/{pid}")
 def update_permit(pid: str, body: PermitIn, user=Depends(get_current_user), db: Session = Depends(get_db)):
-    p = db.query(Permit).filter(Permit.id == pid, Permit.company_id == user["company_id"]).first()
+    p = db.query(Permit).filter(Permit.id == pid, Permit.company_id == user.company_id).first()
     if not p:
         raise HTTPException(404, "Permit not found")
     for k, val in body.model_dump().items():
@@ -174,7 +174,7 @@ def update_permit(pid: str, body: PermitIn, user=Depends(get_current_user), db: 
 
 @router.delete("/permits/{pid}", status_code=204)
 def delete_permit(pid: str, user=Depends(get_current_user), db: Session = Depends(get_db)):
-    p = db.query(Permit).filter(Permit.id == pid, Permit.company_id == user["company_id"]).first()
+    p = db.query(Permit).filter(Permit.id == pid, Permit.company_id == user.company_id).first()
     if not p:
         raise HTTPException(404, "Permit not found")
     db.delete(p)
@@ -187,13 +187,13 @@ def delete_permit(pid: str, user=Depends(get_current_user), db: Session = Depend
 
 @router.get("/waste-contracts")
 def list_waste_contracts(user=Depends(get_current_user), db: Session = Depends(get_db)):
-    rows = db.query(WasteContract).filter(WasteContract.company_id == user["company_id"]).order_by(WasteContract.contract_name).all()
+    rows = db.query(WasteContract).filter(WasteContract.company_id == user.company_id).order_by(WasteContract.contract_name).all()
     return [_contract_dict(r) for r in rows]
 
 
 @router.post("/waste-contracts", status_code=201)
 def create_waste_contract(body: WasteContractIn, user=Depends(get_current_user), db: Session = Depends(get_db)):
-    c = WasteContract(company_id=user["company_id"], **body.model_dump())
+    c = WasteContract(company_id=user.company_id, **body.model_dump())
     db.add(c)
     db.commit()
     db.refresh(c)
@@ -202,7 +202,7 @@ def create_waste_contract(body: WasteContractIn, user=Depends(get_current_user),
 
 @router.put("/waste-contracts/{cid}")
 def update_waste_contract(cid: str, body: WasteContractIn, user=Depends(get_current_user), db: Session = Depends(get_db)):
-    c = db.query(WasteContract).filter(WasteContract.id == cid, WasteContract.company_id == user["company_id"]).first()
+    c = db.query(WasteContract).filter(WasteContract.id == cid, WasteContract.company_id == user.company_id).first()
     if not c:
         raise HTTPException(404, "Contract not found")
     for k, val in body.model_dump().items():
@@ -214,7 +214,7 @@ def update_waste_contract(cid: str, body: WasteContractIn, user=Depends(get_curr
 
 @router.delete("/waste-contracts/{cid}", status_code=204)
 def delete_waste_contract(cid: str, user=Depends(get_current_user), db: Session = Depends(get_db)):
-    c = db.query(WasteContract).filter(WasteContract.id == cid, WasteContract.company_id == user["company_id"]).first()
+    c = db.query(WasteContract).filter(WasteContract.id == cid, WasteContract.company_id == user.company_id).first()
     if not c:
         raise HTTPException(404, "Contract not found")
     db.delete(c)
@@ -244,7 +244,7 @@ def get_data_alerts(user=Depends(get_current_user), db: Session = Depends(get_db
     alerts = []
 
     # 車検満了日
-    vehicles = db.query(Vehicle).filter(Vehicle.company_id == user["company_id"]).all()
+    vehicles = db.query(Vehicle).filter(Vehicle.company_id == user.company_id).all()
     for v in vehicles:
         d = _parse_date(v.inspection_expiry)
         if d is None:
@@ -257,7 +257,7 @@ def get_data_alerts(user=Depends(get_current_user), db: Session = Depends(get_db
             alerts.append({"type": "vehicle", "level": "warning", "label": f"🚛 {v.plate_area} {v.plate_class} {v.plate_kana} {v.plate_number}", "detail": f"車検 60日以内 ({v.inspection_expiry})", "date": v.inspection_expiry, "id": v.id})
 
     # 許可証
-    permits = db.query(Permit).filter(Permit.company_id == user["company_id"]).all()
+    permits = db.query(Permit).filter(Permit.company_id == user.company_id).all()
     for p in permits:
         d = _parse_date(p.expiry_date)
         if d is None:
@@ -270,7 +270,7 @@ def get_data_alerts(user=Depends(get_current_user), db: Session = Depends(get_db
             alerts.append({"type": "permit", "level": "warning", "label": f"📋 {p.prefecture} {p.permit_type}", "detail": f"許可 60日以内 ({p.expiry_date})", "date": p.expiry_date, "id": p.id})
 
     # 3社契約
-    contracts = db.query(WasteContract).filter(WasteContract.company_id == user["company_id"]).all()
+    contracts = db.query(WasteContract).filter(WasteContract.company_id == user.company_id).all()
     for c in contracts:
         d = _parse_date(c.expiry_date)
         if d is None:
@@ -306,7 +306,7 @@ def _record_dict(r):
 
 @router.get("/vehicles/{vid}/records")
 def list_vehicle_records(vid: str, user=Depends(get_current_user), db: Session = Depends(get_db)):
-    v = db.query(Vehicle).filter(Vehicle.id == vid, Vehicle.company_id == user["company_id"]).first()
+    v = db.query(Vehicle).filter(Vehicle.id == vid, Vehicle.company_id == user.company_id).first()
     if not v:
         raise HTTPException(404, "Vehicle not found")
     rows = db.query(VehicleRecord).filter(VehicleRecord.vehicle_id == vid).order_by(VehicleRecord.record_date.desc()).all()
@@ -325,7 +325,7 @@ async def create_vehicle_record(
     user=Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    v = db.query(Vehicle).filter(Vehicle.id == vid, Vehicle.company_id == user["company_id"]).first()
+    v = db.query(Vehicle).filter(Vehicle.id == vid, Vehicle.company_id == user.company_id).first()
     if not v:
         raise HTTPException(404, "Vehicle not found")
 
@@ -356,7 +356,7 @@ async def create_vehicle_record(
 
 @router.delete("/vehicles/{vid}/records/{rid}", status_code=204)
 def delete_vehicle_record(vid: str, rid: str, user=Depends(get_current_user), db: Session = Depends(get_db)):
-    v = db.query(Vehicle).filter(Vehicle.id == vid, Vehicle.company_id == user["company_id"]).first()
+    v = db.query(Vehicle).filter(Vehicle.id == vid, Vehicle.company_id == user.company_id).first()
     if not v:
         raise HTTPException(404, "Vehicle not found")
     rec = db.query(VehicleRecord).filter(VehicleRecord.id == rid, VehicleRecord.vehicle_id == vid).first()
@@ -381,7 +381,7 @@ def _training_dict(t):
 @router.get("/training-materials")
 def list_training_materials(user=Depends(get_current_user), db: Session = Depends(get_db)):
     rows = db.query(TrainingMaterial).filter(
-        TrainingMaterial.company_id == user["company_id"]
+        TrainingMaterial.company_id == user.company_id
     ).order_by(TrainingMaterial.created_at.desc()).all()
     return [_training_dict(r) for r in rows]
 
@@ -404,7 +404,7 @@ async def create_training_material(
     file_url = f"/uploads/training/{fname}"
 
     mat = TrainingMaterial(
-        company_id=user["company_id"],
+        company_id=user.company_id,
         title=title or file.filename,
         file_url=file_url,
         file_type=file_type,
@@ -419,7 +419,7 @@ async def create_training_material(
 @router.delete("/training-materials/{mid}", status_code=204)
 def delete_training_material(mid: str, user=Depends(get_current_user), db: Session = Depends(get_db)):
     m = db.query(TrainingMaterial).filter(
-        TrainingMaterial.id == mid, TrainingMaterial.company_id == user["company_id"]
+        TrainingMaterial.id == mid, TrainingMaterial.company_id == user.company_id
     ).first()
     if not m:
         raise HTTPException(404, "Material not found")
