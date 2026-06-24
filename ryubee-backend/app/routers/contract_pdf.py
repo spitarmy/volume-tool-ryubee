@@ -76,17 +76,23 @@ def generate_contract_pdf(
     startYear, startMonth, startDay = "  ", "  ", "  "
     endYear, endMonth, endDay = "  ", "  ", "  "
     
+    now = datetime.now()
+    currentYearReiwa = now.year - 2018
+    currentMonth = now.month
+    currentDay = now.day
+
     if start_date_raw:
         try:
             dt = datetime.strptime(start_date_raw, "%Y-%m-%d")
-            cStartDate = f"{dt.year}年{dt.month}月{dt.day}日"
-            startYear, startMonth, startDay = dt.year, dt.month, dt.day
-            end_dt = dt + timedelta(days=364)
-            endYear, endMonth, endDay = end_dt.year, end_dt.month, end_dt.day
         except:
-            cStartDate = start_date_raw
+            dt = now
     else:
-        cStartDate = "契約締結日"
+        dt = now
+
+    cStartDate = f"{dt.year}年{dt.month}月{dt.day}日"
+    startYear, startMonth, startDay = dt.year, dt.month, dt.day
+    end_dt = dt + timedelta(days=364)
+    endYear, endMonth, endDay = end_dt.year, end_dt.month, end_dt.day
 
     disposalCompany = contract.disposal_company or "（処分業者未設定）"
 
@@ -110,7 +116,10 @@ def generate_contract_pdf(
         "endYear": endYear,
         "endMonth": endMonth,
         "endDay": endDay,
-        "disposalCompany": disposalCompany
+        "disposalCompany": disposalCompany,
+        "currentYearReiwa": currentYearReiwa,
+        "currentMonth": currentMonth,
+        "currentDay": currentDay
     }
 
     disposal_company_str = contract.disposal_company or ""
