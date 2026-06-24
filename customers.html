@@ -296,10 +296,20 @@
             color: #059669;
             font-weight: 600;
         }
-        .cc-status.pending { background: #FEF3C7; color: #92400E; }
-        .cc-status.sent { background: #DBEAFE; color: #1D4ED8; }
-        .cc-status.returned { background: #E0E7FF; color: #4338CA; }
-        .cc-status.completed { background: #ECFDF5; color: #059669; }
+        .cc-status.pending { background: #FEF3C7; color: #92400E; border-color: #FDE68A; }
+        .cc-status.sent { background: #DBEAFE; color: #1D4ED8; border-color: #BFDBFE; }
+        .contract-card .cc-status.returned { background: #EBF8FF; color: #3182CE; border-color: #BEE3F8; }
+        .contract-card .cc-status.completed { background: #F0FFF4; color: #38A169; border-color: #C6F6D5; }
+
+        /* ナンバーインプットのスピンボタンを非表示にする */
+        input[type="number"]::-webkit-outer-spin-button,
+        input[type="number"]::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+        input[type="number"] {
+            -moz-appearance: textfield;
+        }
         .cc-checkbox-label {
             display: flex;
             align-items: center;
@@ -729,6 +739,21 @@
                         <div class="cc-meta">📍 ${utils.escapeHtml(c.address || '未設定')}</div>
                         <div class="cc-meta">📞 ${utils.escapeHtml(c.phone || '未設定')}</div>
                         ${c.email ? `<div class="cc-meta">✉️ ${utils.escapeHtml(c.email)}</div>` : ''}
+                        ${(() => {
+                            const b = (c.parsed_form?.branches && c.parsed_form.branches[0]) || c.parsed_form || {};
+                            if (!b.collection_general && !b.collection_recycle) return '';
+                            let genPrice = '';
+                            if (c.parsed_form?.pricing_list) {
+                                const p = c.parsed_form.pricing_list.find(x => x.item && (x.item.includes('一般') || x.item.includes('基本') || x.item.includes('定額')));
+                                if (p && p.price) genPrice = ` ${p.price}円`;
+                            }
+                            return `
+                                <div style="margin-top:8px; padding-top:8px; border-top:1px dashed var(--border); font-size:12px; color:var(--text-secondary);">
+                                    ${b.collection_general ? `<div><strong>回収:</strong> 一般 ${utils.escapeHtml(b.collection_general)} ${b.vehicle_number ? utils.escapeHtml(b.vehicle_number)+'号車' : ''}${genPrice}</div>` : ''}
+                                    ${b.collection_recycle ? `<div><strong>資源:</strong> ${utils.escapeHtml(b.collection_recycle)} ${b.vehicle_number ? utils.escapeHtml(b.vehicle_number)+'号車' : ''}</div>` : ''}
+                                </div>
+                            `;
+                        })()}
                         ${expiry}
                     </div>
                 `;
@@ -1024,28 +1049,61 @@
 
         function addPricingRow(item = '', price = '', unit = 'kg') {
             const container = document.getElementById('pricingListContainer');
-            // テンプレートdatalistを生成（ページ内に1つだけ配置）
-            if (!document.getElementById('templateItemList')) {
-                const dl = document.createElement('datalist');
-                dl.id = 'templateItemList';
-                allTemplates.forEach(t => {
-                    const opt = document.createElement('option');
-                    opt.value = t.name;
-                    opt.dataset.price = t.unit_price || '';
-                    opt.dataset.unit = t.unit || '';
-                    dl.appendChild(opt);
-                });
-                document.body.appendChild(dl);
+            let optionsHtml = '<option value="">-- 品目を選択 --</option>';
+            let found = false;
+            allTemplates.forEach(t => {
+                const selected = (t.name === item) ? 'selected' : '';
+                if (t.name === item) found = true;
+                optionsHtml += `<option value="${utils.escapeHtml(t.name)}" data-price="${t.unit_price || ''}" data-unit="${utils.escapeHtml(t.unit || '')}" ${selected}>${utils.escapeHtml(t.name)}</option>`;
+            });
+            if (item && !found) {
+                optionsHtml += `<option value="${utils.escapeHtml(item)}" selected>${utils.escapeHtml(item)}</option>`;
             }
+            optionsHtml += '<option value="__custom__">✏️ 直接入力...</option>';
+
             const row = document.createElement('div');
             row.className = 'pricing-row';
             row.innerHTML = `
-                <input type="text" class="pr-item" list="templateItemList" placeholder="品名(選択/入力)" value="${utils.escapeHtml(item)}">
-                <input type="number" class="pr-price" placeholder="単価" style="max-width:80px;" value="${price}">
-                <input type="text" class="pr-unit" placeholder="単位" style="max-width:70px;" value="${utils.escapeHtml(unit)}">
-                <button type="button" style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:6px;width:30px;cursor:pointer;font-size:0.8rem;" onclick="movePricingRow(this.parentElement,-1)" title="上に移動">▲</button>
-                <button type="button" style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:6px;width:30px;cursor:pointer;font-size:0.8rem;" onclick="movePricingRow(this.parentElement,1)" title="下に移動">▼</button>
-                <button class="del-btn" onclick="this.parentElement.remove()">×</button>
+                <div style="flex:1; min-width:140px; position:relative;">
+                    <select class="pr-item-sel" style="width:100%; border:1px solid var(--border); border-radius:6px; padding:8px; display:${(!item || found || item==='') ? 'block' : 'none'};" onchange="
+                        const input = this.nextElementSibling;
+                        if(this.value === '__custom__') {
+                            this.style.display = 'none';
+                            input.style.display = 'block';
+                            input.focus();
+                            input.value = '';
+                        } else {
+                            const opt = this.options[this.selectedIndex];
+                            if(opt.dataset.price) this.parentElement.parentElement.querySelector('.pr-price').value = opt.dataset.price;
+                            if(opt.dataset.unit) this.parentElement.parentElement.querySelector('.pr-unit').value = opt.dataset.unit;
+                            input.value = this.value;
+                        }
+                    ">
+                        ${optionsHtml}
+                    </select>
+                    <input type="text" class="pr-item" placeholder="品目を入力" style="width:100%; display:${(item && !found) ? 'block' : 'none'};" value="${utils.escapeHtml(item)}" onblur="
+                        const sel = this.previousElementSibling;
+                        if(this.value === '') {
+                            this.style.display = 'none';
+                            sel.style.display = 'block';
+                            sel.selectedIndex = 0;
+                        } else {
+                            let opt = Array.from(sel.options).find(o => o.value === this.value);
+                            if (!opt) {
+                                opt = new Option(this.value, this.value);
+                                sel.add(opt, sel.options.length - 1);
+                            }
+                            sel.value = this.value;
+                            this.style.display = 'none';
+                            sel.style.display = 'block';
+                        }
+                    ">
+                </div>
+                <input type="number" class="pr-price" placeholder="単価" style="width:100px; text-align:right;" value="${price}">
+                <input type="text" class="pr-unit" placeholder="単位" style="width:60px;" value="${utils.escapeHtml(unit)}">
+                <button type="button" style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:6px;width:30px;height:35px;cursor:pointer;font-size:0.8rem;display:flex;align-items:center;justify-content:center;" onclick="movePricingRow(this.parentElement,-1)" title="上に移動">▲</button>
+                <button type="button" style="background:var(--bg-secondary);border:1px solid var(--border);border-radius:6px;width:30px;height:35px;cursor:pointer;font-size:0.8rem;display:flex;align-items:center;justify-content:center;" onclick="movePricingRow(this.parentElement,1)" title="下に移動">▼</button>
+                <button class="del-btn" style="height:35px;display:flex;align-items:center;justify-content:center;" onclick="this.parentElement.remove()">×</button>
             `;
             // 品目選択時に単価・単位を自動入力
             const itemInput = row.querySelector('.pr-item');
@@ -1166,6 +1224,22 @@
                     <span style="display:inline-block;width:60px;color:var(--text-tertiary);font-size:0.85rem;">TEL:</span> ${utils.escapeHtml(c.phone || '-')} <span style="margin-left:8px;color:var(--text-tertiary);font-size:0.85rem;">携帯:</span> ${utils.escapeHtml(fd.mobile || '-')}<br>
                     <span style="display:inline-block;width:60px;color:var(--text-tertiary);font-size:0.85rem;">担当:</span> ${utils.escapeHtml(c.contact_person || '-')}<br>
                     <span style="display:inline-block;width:60px;color:var(--text-tertiary);font-size:0.85rem;">Email:</span> ${utils.escapeHtml(c.email || '-')}
+                    
+                    ${(() => {
+                        const b = (fd.branches && fd.branches[0]) || fd || {};
+                        if (!b.collection_general && !b.collection_recycle) return '';
+                        let genPrice = '';
+                        if (fd.pricing_list) {
+                            const p = fd.pricing_list.find(x => x.item && (x.item.includes('一般') || x.item.includes('基本') || x.item.includes('定額')));
+                            if (p && p.price) genPrice = ` ${p.price}円`;
+                        }
+                        return `
+                            <div style="margin-top:12px; padding-top:12px; border-top:1px dashed var(--border); font-size:0.9rem;">
+                                ${b.collection_general ? `<div><span style="display:inline-block;width:60px;color:var(--text-tertiary);font-size:0.85rem;">回収:</span> 一般 ${utils.escapeHtml(b.collection_general)} ${b.vehicle_number ? utils.escapeHtml(b.vehicle_number)+'号車' : ''}${genPrice}</div>` : ''}
+                                ${b.collection_recycle ? `<div style="margin-top:4px;"><span style="display:inline-block;width:60px;color:var(--text-tertiary);font-size:0.85rem;">資源:</span> ${utils.escapeHtml(b.collection_recycle)} ${b.vehicle_number ? utils.escapeHtml(b.vehicle_number)+'号車' : ''}</div>` : ''}
+                            </div>
+                        `;
+                    })()}
                 </div>
                 
                 ${(() => {
