@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>処分業者マスター — Ryu兵衛</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="assets/css/style.css">
+    <style>
+        .grid-cards {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+            gap: 16px;
+            margin-top: 16px;
+        }
+        .card {
+            background: #fff;
+            border-radius: 8px;
+            padding: 16px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            position: relative;
+        }
+        .card-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--text-primary);
+        }
+        .card-info {
+            font-size: 0.85rem;
+            color: var(--text-secondary);
+            margin-bottom: 4px;
+        }
+        .permit-badge {
+            background: #e3f2fd;
+            color: #1976d2;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            display: inline-block;
+            margin-top: 8px;
+        }
+        .card-actions {
+            margin-top: 16px;
+            display: flex;
+            gap: 8px;
+        }
+        .thumbnail {
+            margin-top: 12px;
+            max-width: 100%;
+            height: 100px;
+            object-fit: contain;
+            border: 1px solid #eee;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <header class="header">
+        <div class="logo">Ryu兵衛 <span style="font-size:0.8rem; font-weight:normal; color:#666;">処分業者マスター</span></div>
+        <div class="header-right">
+            <button class="btn btn-primary" onclick="openModal()">➕ 新規登録</button>
+            <button class="btn" style="margin-left:8px;" onclick="location.href='settings.html'">設定に戻る</button>
+        </div>
+    </header>
+
+    <main class="main-content">
+        <div id="loading" style="text-align:center; padding:40px; color:#666;">読み込み中...</div>
+        <div id="companyList" class="grid-cards" style="display:none;"></div>
+    </main>
+
+    <!-- 登録・編集モーダル -->
+    <div id="modalOverlay" class="modal-overlay">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="modalTitle">処分業者を登録</h3>
+                <button class="btn" onclick="closeModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <form id="companyForm" onsubmit="event.preventDefault(); saveCompany();">
+                    <div class="form-group">
+                        <label>会社名 / 氏名 <span style="color:red;">*</span></label>
+                        <input type="text" id="cName" class="form-control" required placeholder="例: 旭興産業株式会社">
+                    </div>
+                    <div class="form-group">
+                        <label>代表者名</label>
+                        <input type="text" id="cRep" class="form-control" placeholder="例: 代表取締役 三山信幸">
+                    </div>
+                    <div class="form-group">
+                        <label>住所</label>
+                        <input type="text" id="cAddress" class="form-control" placeholder="例: 京都市伏見区桃山町新町35番地">
+                    </div>
+
+                    <h4 style="margin-top:24px; margin-bottom:12px; font-size:0.95rem; color:#666; border-bottom:1px solid #eee; padding-bottom:4px;">許可証情報</h4>
+                    
+                    <div style="display:flex; gap:12px;">
+                        <div class="form-group" style="flex:1;">
+                            <label>許可都道府県・政令市</label>
+                            <input type="text" id="cPref" class="form-control" value="京都府">
+                        </div>
+                        <div class="form-group" style="flex:1;">
+                            <label>許可番号</label>
+                            <input type="text" id="cPermitNo" class="form-control" placeholder="例: 第06521051454号">
+                        </div>
+                    </div>
+
+                    <div style="display:flex; gap:12px;">
+                        <div class="form-group" style="flex:1;">
+                            <label>事業場の名称</label>
+                            <input type="text" id="cFacility" class="form-control" placeholder="例: 横大路リサイクルセンター">
+                        </div>
+                        <div class="form-group" style="flex:1;">
+                            <label>所在地 (事業場)</label>
+                            <input type="text" id="cFacilityAddr" class="form-control" placeholder="事業場の住所">
+                        </div>
+                    </div>
+
+                    <div class="form-group">
+                        <label>許可の有効期限</label>
+                        <input type="text" id="cValidity" class="form-control" value="許可証に記載の通り">
+                    </div>
+                    <div class="form-group">
+                        <label>事業の区分</label>
+                        <input type="text" id="cCategory" class="form-control" value="許可証に記載の通り">
+                    </div>
+                    <div class="form-group">
+                        <label>産業廃棄物の種類</label>
+                        <input type="text" id="cWasteTypes" class="form-control" value="許可証に記載の通り">
+                    </div>
+                    <div class="form-group">
+                        <label>許可の条件</label>
+                        <input type="text" id="cConditions" class="form-control" value="許可証に記載の通り">
+                    </div>
+
+                    <div class="form-actions" style="margin-top: 24px; display:flex; justify-content:space-between;">
+                        <button type="button" class="btn" style="background:#dc3545; color:#fff; display:none;" id="deleteBtn" onclick="deleteCompany()">削除</button>
+                        <div style="flex:1;"></div>
+                        <button type="button" class="btn" onclick="closeModal()">キャンセル</button>
+                        <button type="submit" class="btn btn-primary" id="saveBtn">保存する</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- 画像アップロード用非表示インプット -->
+    <input type="file" id="permitUploadInput" accept="image/*,.pdf" style="display:none;" onchange="handlePermitUpload(this)">
+
+    <script src="assets/js/utils.js"></script>
+    <script src="assets/js/api.js"></script>
+    <script>
+        if (!RyubeeAPI.requireAuth()) throw new Error("Not authenticated");
+
+        let companies = [];
+        let editingId = null;
+        let uploadTargetId = null;
+
+        document.addEventListener('DOMContentLoaded', loadCompanies);
+
+        async function loadCompanies() {
+            try {
+                companies = await RyubeeAPI.fetchDisposalCompanies();
+                renderList();
+            } catch (e) {
+                alert('エラー: ' + e.message);
+            }
+        }
+
+        function renderList() {
+            document.getElementById('loading').style.display = 'none';
+            const listEl = document.getElementById('companyList');
+            listEl.style.display = 'grid';
+
+            if (companies.length === 0) {
+                listEl.innerHTML = '<p style="color:#666; grid-column:1/-1;">登録された処分業者がありません。</p>';
+                return;
+            }
+
+            listEl.innerHTML = companies.map(c => {
+                let imgHtml = '';
+                if (c.permit_image_url) {
+                    imgHtml = `<img src="${RyubeeAPI.resolvePhotoUrl(c.permit_image_url)}" class="thumbnail" onclick="window.open(this.src, '_blank')" alt="許可証">`;
+                }
+
+                return `
+                    <div class="card">
+                        <div class="card-title">${utils.escapeHtml(c.name)}</div>
+                        <div class="card-info">🏢 ${utils.escapeHtml(c.facility_name || '事業場未設定')}</div>
+                        <div class="card-info">📍 ${utils.escapeHtml(c.facility_address || '-')}</div>
+                        <div class="permit-badge">${utils.escapeHtml(c.permit_prefecture)} | ${utils.escapeHtml(c.permit_number || '番号未設定')}</div>
+                        ${imgHtml}
+                        <div class="card-actions">
+                            <button class="btn btn-sm" onclick="openModal('${c.id}')">編集</button>
+                            <button class="btn btn-sm" style="background:#f5f5f5; color:#333; border:1px solid #ddd;" onclick="triggerUpload('${c.id}')">📎 許可証アップロード</button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function openModal(id = null) {
+            editingId = id;
+            document.getElementById('modalOverlay').classList.add('show');
+            document.getElementById('modalTitle').textContent = id ? '処分業者を編集' : '処分業者を登録';
+            document.getElementById('saveBtn').textContent = id ? '更新する' : '登録する';
+            document.getElementById('deleteBtn').style.display = id ? 'block' : 'none';
+
+            if (id) {
+                const c = companies.find(x => x.id === id);
+                if (c) {
+                    document.getElementById('cName').value = c.name;
+                    document.getElementById('cRep').value = c.representative || '';
+                    document.getElementById('cAddress').value = c.address || '';
+                    document.getElementById('cPref').value = c.permit_prefecture || '京都府';
+                    document.getElementById('cPermitNo').value = c.permit_number || '';
+                    document.getElementById('cFacility').value = c.facility_name || '';
+                    document.getElementById('cFacilityAddr').value = c.facility_address || '';
+                    document.getElementById('cValidity').value = c.permit_validity || '許可証に記載の通り';
+                    document.getElementById('cCategory').value = c.permit_category || '許可証に記載の通り';
+                    document.getElementById('cWasteTypes').value = c.waste_types || '許可証に記載の通り';
+                    document.getElementById('cConditions').value = c.permit_conditions || '許可証に記載の通り';
+                }
+            } else {
+                document.getElementById('companyForm').reset();
+                document.getElementById('cPref').value = '京都府';
+                document.getElementById('cValidity').value = '許可証に記載の通り';
+                document.getElementById('cCategory').value = '許可証に記載の通り';
+                document.getElementById('cWasteTypes').value = '許可証に記載の通り';
+                document.getElementById('cConditions').value = '許可証に記載の通り';
+            }
+        }
+
+        function closeModal() {
+            document.getElementById('modalOverlay').classList.remove('show');
+        }
+
+        async function saveCompany() {
+            const data = {
+                name: document.getElementById('cName').value,
+                representative: document.getElementById('cRep').value,
+                address: document.getElementById('cAddress').value,
+                permit_prefecture: document.getElementById('cPref').value,
+                permit_number: document.getElementById('cPermitNo').value,
+                facility_name: document.getElementById('cFacility').value,
+                facility_address: document.getElementById('cFacilityAddr').value,
+                permit_validity: document.getElementById('cValidity').value,
+                permit_category: document.getElementById('cCategory').value,
+                waste_types: document.getElementById('cWasteTypes').value,
+                permit_conditions: document.getElementById('cConditions').value,
+            };
+
+            const btn = document.getElementById('saveBtn');
+            btn.disabled = true;
+            btn.textContent = '保存中...';
+
+            try {
+                if (editingId) {
+                    await RyubeeAPI.updateDisposalCompany(editingId, data);
+                    alert('更新しました');
+                } else {
+                    await RyubeeAPI.createDisposalCompany(data);
+                    alert('登録しました');
+                }
+                closeModal();
+                loadCompanies();
+            } catch (e) {
+                alert('エラー: ' + e.message);
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        async function deleteCompany() {
+            if (!confirm('本当に削除しますか？')) return;
+            try {
+                await RyubeeAPI.deleteDisposalCompany(editingId);
+                closeModal();
+                loadCompanies();
+            } catch (e) {
+                alert('エラー: ' + e.message);
+            }
+        }
+
+        function triggerUpload(id) {
+            uploadTargetId = id;
+            document.getElementById('permitUploadInput').click();
+        }
+
+        async function handlePermitUpload(inputEl) {
+            if (!inputEl.files || inputEl.files.length === 0) return;
+            const file = inputEl.files[0];
+            try {
+                alert('アップロードを開始します...');
+                await RyubeeAPI.uploadDisposalCompanyPermit(uploadTargetId, file);
+                alert('アップロードが完了しました');
+                loadCompanies();
+            } catch (e) {
+                alert('アップロード失敗: ' + e.message);
+            }
+            inputEl.value = ''; // reset
+        }
+    </script>
+</body>
+</html>

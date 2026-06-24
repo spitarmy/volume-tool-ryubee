@@ -22,6 +22,36 @@ class Company(Base):
     customers: Mapped[list["Customer"]] = relationship(back_populates="company")
     routes: Mapped[list["Route"]] = relationship(back_populates="company")
     invoices: Mapped[list["Invoice"]] = relationship(back_populates="company")
+    disposal_companies: Mapped[list["DisposalCompanyMaster"]] = relationship(back_populates="company")
+
+
+class DisposalCompanyMaster(Base):
+    __tablename__ = "disposal_company_master"
+
+    id: Mapped[str] = mapped_column(String, primary_key=True, default=lambda: str(uuid.uuid4()))
+    company_id: Mapped[str] = mapped_column(String, ForeignKey("companies.id"), nullable=False)
+    
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    representative: Mapped[str] = mapped_column(String(255), default="")
+    address: Mapped[str] = mapped_column(Text, default="")
+    
+    permit_prefecture: Mapped[str] = mapped_column(String(255), default="京都府")
+    permit_number: Mapped[str] = mapped_column(String(255), default="")
+    
+    facility_name: Mapped[str] = mapped_column(String(255), default="")
+    facility_address: Mapped[str] = mapped_column(Text, default="")
+    
+    permit_validity: Mapped[str] = mapped_column(String(255), default="許可証に記載の通り")
+    permit_category: Mapped[str] = mapped_column(String(255), default="許可証に記載の通り")
+    waste_types: Mapped[str] = mapped_column(String(255), default="許可証に記載の通り")
+    permit_conditions: Mapped[str] = mapped_column(String(255), default="許可証に記載の通り")
+    
+    permit_image_url: Mapped[str | None] = mapped_column(Text, nullable=True)
+    
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), default=utcnow, onupdate=utcnow)
+
+    company: Mapped["Company"] = relationship(back_populates="disposal_companies")
 
 
 class User(Base):

@@ -9,7 +9,7 @@ from jinja2 import Environment, FileSystemLoader
 
 from app.database import get_db
 from app.auth import get_current_user
-from app.models import User, CustomerContract, Customer, CompanySettings
+from app.models import User, CustomerContract, Customer, CompanySettings, DisposalCompanyMaster
 from datetime import datetime, timedelta
 
 router = APIRouter(prefix="/v1/customers", tags=["Contract PDF"])
@@ -134,6 +134,34 @@ def generate_contract_pdf(
     else:
         template = env.get_template("template_yamabun_collection.html")
         html_content = template.render(**context)
+
+    # 処分業者マスターからの情報取得（別紙と許可証用）
+    active_contractors = form_data.get("active_contractors", [])
+    if active_contractors:
+        disposal_masters = db.query(DisposalCompanyMaster).filter(
+            DisposalCompanyMaster.company_id == current_user.company_id,
+            DisposalCompanyMaster.name.in_(active_contractors)
+        ).all()
+        
+        if disposal_masters:
+            # 別紙（搬入先一覧）のHTML生成
+            appendix_html = env.get_template("template_appendix_disposal.html").render(disposal_companies=disposal_masters)
+            html_content += '<div style="page-break-before: always;"></div>' + appendix_html
+            
+            # 許可証画像のHTML生成
+            permit_images = []
+            for m in disposal_masters:
+                if m.permit_image_url:
+                    # 相対URLを絶対ファイルパスまたはfile:// URLに変換
+                    # m.permit_image_url example: "/uploads/permits/xxx.jpg"
+                    local_path = os.path.join(os.getcwd(), m.permit_image_url.lstrip("/"))
+                    permit_images.append({
+                        "title": f"【許可証】{m.name}",
+                        "url": f"file://{local_path}"
+                    })
+            if permit_images:
+                images_html = env.get_template("template_appendix_images.html").render(images=permit_images)
+                html_content += images_html
 
     # WeasyPrint needs a base URL to resolve local files like fonts
     base_url = f"file://{os.path.abspath(TEMPLATE_DIR)}/"

@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <title>搬入先一覧（別紙）</title>
+    <style>
+        @page {
+            size: A4;
+            margin: 20mm;
+        }
+        body {
+            font-family: 'Noto Serif JP', serif;
+            font-size: 13px;
+            line-height: 1.6;
+            color: #000;
+        }
+        .company-block {
+            margin-bottom: 30px;
+            page-break-inside: avoid;
+        }
+        .header-row {
+            display: flex;
+            align-items: baseline;
+            margin-bottom: 15px;
+        }
+        .header-label {
+            width: 320px;
+        }
+        .header-value {
+            flex: 1;
+            border-bottom: 1px solid #000;
+            padding-bottom: 2px;
+            position: relative;
+        }
+        .header-value-center {
+            text-align: center;
+        }
+        
+        .address-row {
+            display: flex;
+            align-items: baseline;
+            margin-bottom: 10px;
+        }
+        .address-label {
+            width: 60px;
+        }
+        .address-value {
+            flex: 1;
+            border-bottom: 1px solid #000;
+            padding-bottom: 2px;
+            padding-left: 10px;
+        }
+
+        .category-title {
+            text-align: center;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        td {
+            padding: 5px;
+            vertical-align: bottom;
+        }
+        .col-label {
+            width: 180px;
+            position: relative;
+        }
+        .col-label::after {
+            content: "：";
+            position: absolute;
+            right: 0;
+            bottom: 5px;
+        }
+        .col-value {
+            border-bottom: 1px solid #000;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+
+{% for comp in disposal_companies %}
+    <div class="company-block">
+        <div class="header-row">
+            <div class="header-label">氏名<span style="font-size:10px;">(法人にあっては、会社名及び代表者の氏名)</span></div>
+            <div class="header-value">
+                <div class="header-value-center" style="margin-bottom:4px;">{{ comp.name }}</div>
+                <div class="header-value-center">代表取締役 {{ comp.representative }}</div>
+            </div>
+        </div>
+        
+        <div class="address-row">
+            <div class="address-label">住所：</div>
+            <div class="address-value">{{ comp.address }}</div>
+        </div>
+
+        <div class="category-title">【産廃】</div>
+
+        <table>
+            <tr>
+                <td class="col-label">許可都道府県・政令市</td>
+                <td class="col-value">{{ comp.permit_prefecture }}</td>
+            </tr>
+            <tr>
+                <td class="col-label">許可の有効期限</td>
+                <td class="col-value">{{ comp.permit_validity }}</td>
+            </tr>
+            <tr>
+                <td class="col-label">事業の区分</td>
+                <td class="col-value">{{ comp.permit_category }}</td>
+            </tr>
+            <tr>
+                <td class="col-label">産業廃棄物の種類</td>
+                <td class="col-value">{{ comp.waste_types }}</td>
+            </tr>
+            <tr>
+                <td class="col-label">許可の条件</td>
+                <td class="col-value">{{ comp.permit_conditions }}</td>
+            </tr>
+            <tr>
+                <td class="col-label">許可番号</td>
+                <td class="col-value">{{ comp.permit_number }}</td>
+            </tr>
+            <tr>
+                <td class="col-label">事業場の名称</td>
+                <td class="col-value">{{ comp.facility_name }}</td>
+            </tr>
+            <tr>
+                <td class="col-label">所在地</td>
+                <td class="col-value">{{ comp.facility_address }}</td>
+            </tr>
+        </table>
+    </div>
+{% endfor %}
+
+</body>
+</html>

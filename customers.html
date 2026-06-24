@@ -620,20 +620,24 @@
 
         document.addEventListener('DOMContentLoaded', loadCustomers);
 
+        let allDisposalCompaniesMaster = [];
+
         async function loadCustomers() {
             try {
-                const [custRes, contractsRes, usersRes, settingsRes, templatesRes] = await Promise.all([
+                const [custRes, contractsRes, usersRes, settingsRes, templatesRes, disposalRes] = await Promise.all([
                     RyubeeAPI.fetchCustomers(),
                     RyubeeAPI.fetchWasteContracts().catch(() => []),
                     RyubeeAPI.fetchUsers().catch(() => []),
                     RyubeeAPI.fetchSettings().catch(() => ({})),
-                    RyubeeAPI.fetchTemplates().catch(() => [])
+                    RyubeeAPI.fetchTemplates().catch(() => []),
+                    RyubeeAPI.fetchDisposalCompanies().catch(() => [])
                 ]);
                 allCustomers = custRes;
                 allWasteContracts = contractsRes;
                 allUsers = usersRes || [];
                 appSettings = settingsRes || {};
                 allTemplates = templatesRes || [];
+                allDisposalCompaniesMaster = disposalRes || [];
 
                 const sel = document.getElementById('custAssignedUser');
                 if (sel) {
@@ -880,19 +884,25 @@
             contractorsListDiv.innerHTML = '';
             const activeCbs = Array.isArray(fd.active_contractors) ? fd.active_contractors : [];
             const savedContractorItems = fd.contractor_items || {};  // {会社名: [選択項目...]}
-            const masterList = Array.isArray(appSettings.contractors_master) && appSettings.contractors_master.length > 0
-                ? appSettings.contractors_master
-                : ['ホームケルン', '光アスコン', '旭興産業', '木材開発', '厳本金属', '京都有機資源', 'HIRAYAMA', '大剛', '京都環境保全公社', '西山環境サービス', '家電リサイクル'];
+            const masterNames = allDisposalCompaniesMaster.map(c => c.name);
+            const oldMasterList = Array.isArray(appSettings.contractors_master) ? appSettings.contractors_master : [];
+            const masterList = [...new Set([...masterNames, ...oldMasterList])];
+            if (masterList.length === 0) {
+                masterList.push('ホームケルン', '光アスコン', '旭興産業', '木材開発', '厳本金属', '京都有機資源', 'HIRAYAMA', '大剛', '京都環境保全公社', '西山環境サービス', '家電リサイクル');
+            }
 
             const allContractors = [...masterList];
             activeCbs.forEach(ct => { if (ct && !allContractors.includes(ct)) allContractors.push(ct); });
 
             allContractors.forEach(ct => {
                 const isChecked = activeCbs.includes(ct);
+                const hasDetails = allDisposalCompaniesMaster.some(c => c.name === ct);
+                const badgeHtml = hasDetails ? '<span style="font-size:0.7rem; color:#1976d2; background:#e3f2fd; padding:2px 6px; border-radius:4px; margin-left:8px;">✅ マスタ登録済</span>' : '<span style="font-size:0.7rem; color:#d32f2f; background:#ffebee; padding:2px 6px; border-radius:4px; margin-left:8px;">⚠️ マスタ未登録</span>';
+                
                 const wrapper = document.createElement('div');
                 wrapper.style.cssText = 'width:100%; margin-bottom:4px;';
                 const label = document.createElement('label');
-                label.style.cssText = 'display:flex; align-items:center; gap:4px; font-size:0.85rem; padding:4px 8px; background:#fff; border:1px solid var(--border); border-radius:4px; cursor:pointer;';
+                label.style.cssText = 'display:flex; align-items:center; gap:4px; font-size:0.85rem; padding:6px 10px; background:#fff; border:1px solid var(--border); border-radius:6px; cursor:pointer;';
                 const cb = document.createElement('input');
                 cb.type = 'checkbox';
                 cb.className = 'cust-contractor-cb';
@@ -900,6 +910,11 @@
                 cb.checked = isChecked;
                 label.appendChild(cb);
                 label.appendChild(document.createTextNode(' ' + ct));
+                
+                const badgeSpan = document.createElement('span');
+                badgeSpan.innerHTML = badgeHtml;
+                label.appendChild(badgeSpan);
+                
                 wrapper.appendChild(label);
 
                 // 処分項目サブリスト

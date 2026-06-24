@@ -6,7 +6,7 @@ from app.database import engine, Base
 from app.routers import (
     auth, jobs, admin, customers, manifests, routes,
     invoices, payments, settings, bank, freee, templates, volume, daily_reports,
-    company_data
+    company_data, disposal_companies
 )
 # テーブルを自動作成（本番ではAlembicマイグレーション推奨）
 Base.metadata.create_all(bind=engine)
@@ -102,6 +102,7 @@ app.include_router(templates.router)
 app.include_router(volume.router)
 app.include_router(daily_reports.router)
 app.include_router(company_data.router)
+app.include_router(disposal_companies.router)
 
 try:
     from app.routers import calendar_events

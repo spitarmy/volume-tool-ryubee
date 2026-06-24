@@ -876,6 +876,35 @@ const RyubeeAPI = {
     if (!Array.isArray(photos)) return [];
     return photos.map(p => this.resolvePhotoUrl(p));
   },
+  // ── 処分業者マスター (Disposal Companies) ──
+  async fetchDisposalCompanies() {
+    return apiFetch('/v1/disposal-companies/');
+  },
+  async createDisposalCompany(data) {
+    return apiFetch('/v1/disposal-companies/', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+  },
+  async updateDisposalCompany(id, data) {
+    return apiFetch(`/v1/disposal-companies/${id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(data)
+    });
+  },
+  async deleteDisposalCompany(id) {
+    return apiFetch(`/v1/disposal-companies/${id}`, { method: 'DELETE' });
+  },
+  async uploadDisposalCompanyPermit(id, file) {
+    const formData = new FormData();
+    formData.append('file', file);
+    return apiFetch(`/v1/disposal-companies/${id}/upload-permit`, {
+      method: 'POST',
+      body: formData
+    });
+  }
 };
 
 // グローバルに公開
