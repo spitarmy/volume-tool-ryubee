@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>産業廃棄物処理委託契約書【収集・運搬用】</title>
+    <style>
+        @font-face {
+            font-family: 'Noto Serif JP';
+            src: url('https://fonts.googleapis.com/css2?family=Noto+Serif+JP:wght@400;700&display=swap');
+        }
+        body {
+            font-family: 'Noto Serif JP', serif;
+            color: #000;
+            line-height: 1.6;
+            margin: 0;
+            padding: 40px;
+            font-size: 14px;
+        }
+        h1 {
+            text-align: center;
+            font-size: 20px;
+            margin-bottom: 40px;
+            letter-spacing: 2px;
+        }
+        .stamp-box {
+            position: absolute;
+            top: 40px;
+            left: 40px;
+            width: 60px;
+            height: 60px;
+            border: 1px dotted #999;
+            text-align: center;
+            font-size: 10px;
+            line-height: 60px;
+            color: #999;
+        }
+        .contract-parties {
+            margin-bottom: 30px;
+        }
+        .party-line {
+            display: flex;
+            align-items: baseline;
+            margin-bottom: 10px;
+        }
+        .party-role {
+            width: 120px;
+        }
+        .party-name {
+            flex: 1;
+            border-bottom: 1px solid #000;
+            padding: 0 10px;
+            font-weight: bold;
+        }
+        .party-suffix {
+            margin-left: 10px;
+        }
+        h2 {
+            font-size: 16px;
+            margin-top: 30px;
+            margin-bottom: 10px;
+        }
+        .clause-content {
+            padding-left: 20px;
+            margin-bottom: 20px;
+        }
+        .permit-info {
+            margin-left: 20px;
+            margin-bottom: 20px;
+        }
+        .permit-row {
+            display: flex;
+            margin-bottom: 5px;
+        }
+        .permit-label {
+            width: 200px;
+        }
+        .permit-value {
+            flex: 1;
+            border-bottom: 1px solid #000;
+            text-align: center;
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            margin-bottom: 20px;
+        }
+        th, td {
+            border: 1px solid #000;
+            padding: 8px;
+            text-align: center;
+        }
+        th {
+            background-color: #f9f9f9;
+        }
+        .signature-section {
+            margin-top: 60px;
+            display: flex;
+            justify-content: space-between;
+        }
+        .signature-date {
+            margin-bottom: 20px;
+        }
+        .signature-block {
+            width: 45%;
+        }
+        .signature-label {
+            margin-bottom: 10px;
+        }
+        .signature-field {
+            margin-bottom: 10px;
+            padding-left: 30px;
+        }
+        .page-break {
+            page-break-before: always;
+        }
+    </style>
+</head>
+<body>
+    <div class="stamp-box">収入印紙<br>200円</div>
+    
+    <h1>産業廃棄物処理委託契約書【収集・運搬用】</h1>
+
+    <div class="contract-parties">
+        <div class="party-line">
+            <div class="party-role">排出事業者</div>
+            <div class="party-name">{{ cName }}</div>
+            <div class="party-suffix">（以下「甲」という。）と、</div>
+        </div>
+        <div class="party-line">
+            <div class="party-role">収集運搬業者</div>
+            <div class="party-name">株式会社　山文</div>
+            <div class="party-suffix">（以下「乙」という。）は、</div>
+        </div>
+        <div class="party-line">
+            <div class="party-role">甲の事業場</div>
+            <div class="party-name">{{ cBranchAddress or cAddress }}</div>
+            <div class="party-suffix">から排出される産業廃棄物</div>
+        </div>
+        <div>の収集・運搬に関して次のとおり契約を締結する。</div>
+    </div>
+
+    <h2>第1条（委託内容）</h2>
+    <div class="clause-content">
+        1（乙の事業範囲）<br>
+        乙の事業範囲は以下のとおりであり、乙はこの事業範囲を証するものとして、許可証の写しを甲に提出する。なお、許可事項に変更があったときは、乙は速やかにその旨を甲に通知するとともに、変更後の許可証の写しを甲に提出する。
+        
+        <div style="text-align:center; margin-top:10px; margin-bottom:10px;">【産廃】</div>
+        
+        <div class="permit-info">
+            <div class="permit-row"><div class="permit-label">許可都道府県・政令市：</div><div class="permit-value">京都府</div></div>
+            <div class="permit-row"><div class="permit-label">許可の有効期限：</div><div class="permit-value">許可証に記載の通り</div></div>
+            <div class="permit-row"><div class="permit-label">事業の範囲：</div><div class="permit-value">許可証に記載の通り</div></div>
+            <div class="permit-row"><div class="permit-label">許可の条件：</div><div class="permit-value">許可証に記載の通り</div></div>
+            <div class="permit-row"><div class="permit-label">許可番号：</div><div class="permit-value">第 02600002617 号</div></div>
+        </div>
+        
+        <div class="permit-info">
+            <div class="permit-row"><div class="permit-label">許可都道府県・政令市：</div><div class="permit-value">京都市</div></div>
+            <div class="permit-row"><div class="permit-label">許可の有効期限：</div><div class="permit-value">許可証に記載の通り</div></div>
+            <div class="permit-row"><div class="permit-label">事業の範囲：</div><div class="permit-value">許可証に記載の通り</div></div>
+            <div class="permit-row"><div class="permit-label">許可の条件：</div><div class="permit-value">許可証に記載の通り</div></div>
+            <div class="permit-row"><div class="permit-label">許可番号：</div><div class="permit-value">第 06511002617 号</div></div>
+        </div>
+        
+        <div class="permit-info">
+            <div class="permit-row"><div class="permit-label">許可都道府県・政令市：</div><div class="permit-value">兵庫県</div></div>
+            <div class="permit-row"><div class="permit-label">許可の有効期限：</div><div class="permit-value">許可証に記載の通り</div></div>
+            <div class="permit-row"><div class="permit-label">事業の範囲：</div><div class="permit-value">許可証に記載の通り</div></div>
+            <div class="permit-row"><div class="permit-label">許可の条件：</div><div class="permit-value">許可証に記載の通り</div></div>
+            <div class="permit-row"><div class="permit-label">許可番号：</div><div class="permit-value">第 02803002617 号</div></div>
+        </div>
+
+        2（委託する産業廃棄物の種類、数量及び単価）<br>
+        甲が、乙に収集・運搬を委託する産業廃棄物の種類、数量及び単価は、次のとおりとする。<br>
+        <table>
+            <thead>
+                <tr>
+                    <th>種類</th>
+                    <th>数量</th>
+                    <th>単価</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% if pricing_list %}
+                    {% for p in pricing_list %}
+                    <tr>
+                        <td>{{ p.item }}</td>
+                        <td>{{ p.qty | default('-') }} {{ p.unit }} / 年</td>
+                        <td>{{ p.price }} 円 / {{ p.unit }}</td>
+                    </tr>
+                    {% endfor %}
+                {% else %}
+                    <tr>
+                        <td colspan="3" style="color:#999;">（登録されている単価リストがありません。手書きで追記してください）</td>
+                    </tr>
+                {% endif %}
+            </tbody>
+        </table>
+
+        3（搬入先）<br>
+        乙は、甲から委託された前項の産業廃棄物を、乙の指定する次の処分業者の事業場に搬入する。<br>
+        <div style="margin-left:20px; margin-top:10px; border-bottom:1px solid #000; width:80%; text-align:center;">
+            {{ disposalCompany | default('（処分業者未設定）') }}
+        </div>
+    </div>
+
+    <div class="page-break"></div>
+
+    <h2>第7条（契約期間）</h2>
+    <div class="clause-content">
+        この契約は、有効期限を令和 {{ startYear }} 年 {{ startMonth }} 月 {{ startDay }} 日から令和 {{ endYear }} 年 {{ endMonth }} 月 {{ endDay }} 日までの１年間とし、期間満了の１ヶ月前までに甲、乙の一方から相手方に対する書面による解約の申し入れがないかぎり、同一条件で更新されたものとする。その後も同様とする。<br>
+        この契約の成立を証するために本書２通を作成し、甲、乙は各々記名押印のうえ各１通を保有する。<br>
+        また、以前に締結した委託契約は合意解約とする。
+    </div>
+
+    <div class="signature-section">
+        <div class="signature-block">
+            <div class="signature-date">令和 &nbsp;&nbsp;&nbsp;&nbsp; 年 &nbsp;&nbsp;&nbsp;&nbsp; 月 &nbsp;&nbsp;&nbsp;&nbsp; 日</div>
+            
+            <div class="signature-label">甲</div>
+            <div class="signature-field">{{ cAddress }}</div>
+            <div class="signature-field">{{ cName }}</div>
+            <div class="signature-field">{{ cContactPerson }} <span style="float:right; border:1px solid #ccc; border-radius:50%; width:50px; height:50px; text-align:center; line-height:50px; color:#ccc;">印</span></div>
+        </div>
+        
+        <div class="signature-block">
+            <div class="signature-date">&nbsp;</div>
+            
+            <div class="signature-label">乙</div>
+            <div class="signature-field">〒612-0029</div>
+            <div class="signature-field">京都市伏見区深草西浦町 2 丁目 61 番地</div>
+            <div class="signature-field">株式会社　山　文</div>
+            <div class="signature-field">代表取締役　山本　和広 <span style="float:right; border:1px solid #ccc; border-radius:50%; width:50px; height:50px; text-align:center; line-height:50px; color:#ccc;">印</span></div>
+        </div>
+    </div>
+</body>
+</html>

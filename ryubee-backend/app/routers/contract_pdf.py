@@ -10,7 +10,7 @@ from jinja2 import Environment, FileSystemLoader
 from app.database import get_db
 from app.auth import get_current_user
 from app.models import User, CustomerContract, Customer, CompanySettings
-from datetime import datetime
+from datetime import datetime, timedelta
 
 router = APIRouter(prefix="/v1/customers", tags=["Contract PDF"])
 
@@ -73,14 +73,22 @@ def generate_contract_pdf(
     cPaymentOffset = offsets.get(customer.payment_due_month_offset, "翌月")
 
     start_date_raw = form_data.get("collection_start_date") or contract.contract_date
+    startYear, startMonth, startDay = "  ", "  ", "  "
+    endYear, endMonth, endDay = "  ", "  ", "  "
+    
     if start_date_raw:
         try:
             dt = datetime.strptime(start_date_raw, "%Y-%m-%d")
             cStartDate = f"{dt.year}年{dt.month}月{dt.day}日"
+            startYear, startMonth, startDay = dt.year, dt.month, dt.day
+            end_dt = dt + timedelta(days=364)
+            endYear, endMonth, endDay = end_dt.year, end_dt.month, end_dt.day
         except:
             cStartDate = start_date_raw
     else:
         cStartDate = "契約締結日"
+
+    disposalCompany = contract.disposal_company or "（処分業者未設定）"
 
     context = {
         "cName": customer.name,
@@ -95,11 +103,28 @@ def generate_contract_pdf(
         "cAddress": form_data.get("billing_address") or customer.address or " ",
         "cContactPerson": customer.contact_person or "                     ",
         "cPhone": customer.phone or "                     ",
-        "pricing_list": pricing_list
+        "pricing_list": pricing_list,
+        "startYear": startYear,
+        "startMonth": startMonth,
+        "startDay": startDay,
+        "endYear": endYear,
+        "endMonth": endMonth,
+        "endDay": endDay,
+        "disposalCompany": disposalCompany
     }
 
-    template = env.get_template("contract_template.html")
-    html_content = template.render(**context)
+    disposal_company_str = contract.disposal_company or ""
+    
+    if "旭興" in disposal_company_str:
+        html1 = env.get_template("template_yamabun_collection.html").render(**context)
+        html2 = env.get_template("template_kyokko_disposal.html").render(**context)
+        html_content = html1 + '<div style="page-break-before: always;"></div>' + html2
+    elif "HIRAYAMA" in disposal_company_str:
+        template = env.get_template("template_hirayama.html")
+        html_content = template.render(**context)
+    else:
+        template = env.get_template("template_yamabun_collection.html")
+        html_content = template.render(**context)
 
     # WeasyPrint needs a base URL to resolve local files like fonts
     base_url = f"file://{os.path.abspath(TEMPLATE_DIR)}/"
