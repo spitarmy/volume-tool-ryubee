@@ -23,6 +23,14 @@
             .no-print { display: none !important; }
             .a4-sheet { margin: 0 !important; box-shadow: none !important; }
             .page-break { page-break-before: always; }
+            .editable-field { border: none !important; background: transparent !important; }
+        }
+        .editable-field {
+            border-bottom: 1px dashed #2196F3;
+            background-color: #e3f2fd;
+            min-width: 100px;
+            display: inline-block;
+            cursor: text;
         }
         .a4-sheet {
             background: #fff;
@@ -184,9 +192,9 @@
                 <div class="signature-date">令和 <span id="sigYear"></span> 年 <span id="sigMonth"></span> 月 <span id="sigDay"></span> 日</div>
                 
                 <div class="signature-label">甲</div>
-                <div class="signature-field" id="sigAddress"></div>
-                <div class="signature-field" id="sigName"></div>
-                <div class="signature-field"><span id="sigContact"></span> <span style="float:right; border:1px solid #ccc; border-radius:50%; width:50px; height:50px; text-align:center; line-height:50px; color:#ccc;">印</span></div>
+                <div class="signature-field" id="sigAddress" contenteditable="true" class="editable-field"></div>
+                <div class="signature-field" id="sigName" contenteditable="true" class="editable-field"></div>
+                <div class="signature-field"><span id="sigContact" contenteditable="true" class="editable-field" style="padding:0 5px;"></span> <span style="float:right; border:1px solid #ccc; border-radius:50%; width:50px; height:50px; text-align:center; line-height:50px; color:#ccc;">印</span></div>
             </div>
             
             <div class="signature-block">
@@ -259,9 +267,9 @@
                 document.getElementById('sigMonth').textContent = currentMonth;
                 document.getElementById('sigDay').textContent = currentDay;
 
-                document.getElementById('sigAddress').textContent = fd.billing_address || cust.address || 'ー';
+                document.getElementById('sigAddress').textContent = fd.contract_address || fd.billing_address || cust.address || 'ー';
                 document.getElementById('sigName').textContent = cust.name;
-                document.getElementById('sigContact').textContent = cust.contact_person || '';
+                document.getElementById('sigContact').textContent = fd.contract_contact || cust.contact_person || '（担当者名を入力）';
 
                 // Prices
                 const tbody = document.getElementById('priceListBody');
