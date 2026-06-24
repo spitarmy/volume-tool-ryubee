@@ -1436,6 +1436,25 @@
                         notesHtml = `<div style="font-size:0.75rem; color:var(--text-tertiary); margin-top:4px; border-top:1px dashed #eee; padding-top:4px; white-space:pre-wrap;">📝 ${utils.escapeHtml(c.notes)}</div>`;
                     }
 
+                    let pdfHtml = '';
+                    if (c.contract_pdf_url) {
+                        pdfHtml = `
+                            <div style="margin-top:8px; display:flex; gap:6px;">
+                                <button type="button" class="btn btn-sm" style="background:#e3f2fd; color:#1976d2; border:none; padding:4px 8px; font-size:0.75rem;" onclick="event.stopPropagation(); handleDownloadPDF('${c.customer_id}', '${c.id}')">📄 PDFダウンロード</button>
+                                <button type="button" class="btn btn-sm" style="background:#f5f5f5; color:#666; border:none; padding:4px 8px; font-size:0.75rem;" onclick="event.stopPropagation(); document.getElementById('uploadPdfInput_${c.id}').click()">📎 再アップロード</button>
+                            </div>
+                        `;
+                    } else {
+                        pdfHtml = `
+                            <div style="margin-top:8px; display:flex; gap:6px;">
+                                <button type="button" class="btn btn-sm" style="background:#e8f5e9; color:#2e7d32; border:none; padding:4px 8px; font-size:0.75rem;" onclick="event.stopPropagation(); handleGeneratePDF('${c.customer_id}', '${c.id}')">📄 契約書を生成</button>
+                                <button type="button" class="btn btn-sm" style="background:#f5f5f5; color:#666; border:none; padding:4px 8px; font-size:0.75rem;" onclick="event.stopPropagation(); document.getElementById('uploadPdfInput_${c.id}').click()">📎 PDFをアップロード</button>
+                            </div>
+                        `;
+                    }
+                    
+                    let uploadInputHtml = `<input type="file" id="uploadPdfInput_${c.id}" accept=".pdf,image/*" style="display:none;" onchange="handleUploadPDF('${c.customer_id}', '${c.id}', this)">`;
+
                     return `
                         <div class="contract-card" onclick="openCustContractModal('${c.id}')" style="display:block; padding:12px; height:auto;">
                             <div style="display:flex; justify-content:space-between; align-items:flex-start;">
@@ -1448,6 +1467,8 @@
                             </div>
                             ${tracking ? `<div class="cc-tracking" style="margin-top:6px; margin-bottom:4px;">${tracking}</div>` : ''}
                             ${notesHtml}
+                            ${pdfHtml}
+                            ${uploadInputHtml}
                         </div>
                     `;
                 }).join('');
@@ -1735,6 +1756,52 @@
                 showToast('🗑️ 契約を削除しました');
                 document.getElementById('contractModalOverlay').classList.remove('show');
                 loadCustContracts(editingId);
+            } catch (e) {
+                alert('エラー: ' + e.message);
+            }
+        }
+
+        async function handleGeneratePDF(customerId, contractId) {
+            try {
+                showToast('生成中...');
+                const res = await RyubeeAPI.generateContractPDF(customerId, contractId);
+                showToast('✅ PDFを生成しました');
+                loadCustContracts(customerId);
+                if (res && res.pdf_url) {
+                    window.open(RyubeeAPI.resolvePhotoUrl(res.pdf_url), '_blank');
+                }
+            } catch (e) {
+                alert('エラー: ' + e.message);
+            }
+        }
+
+        async function handleUploadPDF(customerId, contractId, inputEl) {
+            if (!inputEl.files || inputEl.files.length === 0) return;
+            const file = inputEl.files[0];
+            try {
+                showToast('アップロード中...');
+                await RyubeeAPI.uploadContractPDF(customerId, contractId, file);
+                showToast('✅ アップロード完了');
+                loadCustContracts(customerId);
+            } catch (e) {
+                alert('エラー: ' + e.message);
+            } finally {
+                inputEl.value = '';
+            }
+        }
+
+        async function handleDownloadPDF(customerId, contractId) {
+            try {
+                showToast('ダウンロード中...');
+                const blob = await RyubeeAPI.downloadContractPDF(customerId, contractId);
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `contract_${contractId}.pdf`;
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+                window.URL.revokeObjectURL(url);
             } catch (e) {
                 alert('エラー: ' + e.message);
             }

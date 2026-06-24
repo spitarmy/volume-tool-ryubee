@@ -29,6 +29,8 @@ class CustomerContractIn(BaseModel):
     completion_date: str | None = None
     status: str = "pending"
     notes: str = ""
+    contract_pdf_url: str = ""
+    pricing_data: str = "[]"
 
 
 # ── helpers ──────────────────────────────────────────────
@@ -38,7 +40,7 @@ CUSTOMER_CONTRACT_FIELDS = [
     "unit_price", "unit", "contract_date", "expiry_date",
     "delivery_method", "sent_date", "returned_date",
     "accepted", "manifest_registered", "completion_date",
-    "status", "notes",
+    "status", "notes", "contract_pdf_url", "pricing_data",
 ]
 
 

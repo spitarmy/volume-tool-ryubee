@@ -825,6 +825,33 @@ const RyubeeAPI = {
     return apiFetch(`/v1/customers/${customerId}/contracts/${contractId}`, { method: "DELETE" });
   },
 
+  async generateContractPDF(customerId, contractId) {
+    return apiFetch(`/v1/customers/${customerId}/contracts/${contractId}/generate-pdf`, { method: "POST" });
+  },
+
+  async uploadContractPDF(customerId, contractId, file) {
+    const formData = new FormData();
+    formData.append("file", file);
+    const token = localStorage.getItem("ryubee_token");
+    const res = await fetch(`${API_BASE}/v1/customers/${customerId}/contracts/${contractId}/upload-pdf`, {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${token}` },
+      body: formData,
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  },
+
+  async downloadContractPDF(customerId, contractId) {
+    // Returns blob
+    const token = localStorage.getItem("ryubee_token");
+    const res = await fetch(`${API_BASE}/v1/customers/${customerId}/contracts/${contractId}/pdf`, {
+      headers: { "Authorization": `Bearer ${token}` },
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.blob();
+  },
+
   // ── Photo URL Helper ──────────────────────────────────────
   /**
    * 写真URLを解決する。

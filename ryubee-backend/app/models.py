@@ -535,6 +535,8 @@ class CustomerContract(Base):
     unit: Mapped[str] = mapped_column(String(20), default="kg")              # 単位 (kg, m³)
     contract_date: Mapped[str | None] = mapped_column(String(20), nullable=True)  # 契約日
     expiry_date: Mapped[str | None] = mapped_column(String(20), nullable=True)    # 契約期限
+    contract_pdf_url: Mapped[str] = mapped_column(Text, default="")          # 生成・アップロードされたPDF
+    pricing_data: Mapped[str] = mapped_column(Text, default="[]")            # 品目ごとの単価テーブル (JSON)
     # ── 3社間契約の追跡フィールド ──
     delivery_method: Mapped[str] = mapped_column(String(20), default="")     # 郵送 / 持参
     sent_date: Mapped[str | None] = mapped_column(String(20), nullable=True)       # 送付日

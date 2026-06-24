@@ -44,6 +44,8 @@ try:
             ("customer_contracts", "accepted", "BOOLEAN DEFAULT FALSE"),
             ("customer_contracts", "manifest_registered", "BOOLEAN DEFAULT FALSE"),
             ("customer_contracts", "completion_date", "VARCHAR(20) DEFAULT NULL"),
+            ("customer_contracts", "contract_pdf_url", "TEXT DEFAULT ''"),
+            ("customer_contracts", "pricing_data", "TEXT DEFAULT '[]'"),
         ]
         for _table, _col, _coltype in _migrations:
             try:
@@ -116,6 +118,11 @@ try:
     app.include_router(customer_contracts.router)
 except ImportError as _e:
     print(f"customer_contracts router not loaded: {_e}")
+try:
+    from app.routers import contract_pdf
+    app.include_router(contract_pdf.router)
+except ImportError as _e:
+    print(f"contract_pdf router not loaded: {_e}")
 
 
 @app.get("/")
