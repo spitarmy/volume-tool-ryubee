@@ -744,19 +744,20 @@
                         <div class="cc-meta">📞 ${utils.escapeHtml(c.phone || '未設定')}</div>
                         ${c.email ? `<div class="cc-meta">✉️ ${utils.escapeHtml(c.email)}</div>` : ''}
                         ${(() => {
-                            const b = (c.parsed_form?.branches && c.parsed_form.branches[0]) || c.parsed_form || {};
-                            if (!b.collection_general && !b.collection_recycle) return '';
-                            let genPrice = '';
-                            if (c.parsed_form?.pricing_list) {
-                                const p = c.parsed_form.pricing_list.find(x => x.item && (x.item.includes('一般') || x.item.includes('基本') || x.item.includes('定額')));
-                                if (p && p.price) genPrice = ` ${p.price}円`;
-                            }
-                            return `
-                                <div style="margin-top:8px; padding-top:8px; border-top:1px dashed var(--border); font-size:12px; color:var(--text-secondary);">
-                                    ${b.collection_general ? `<div><strong>回収:</strong> 一般 ${utils.escapeHtml(b.collection_general)} ${b.vehicle_number ? utils.escapeHtml(b.vehicle_number)+'号車' : ''}${genPrice}</div>` : ''}
-                                    ${b.collection_recycle ? `<div><strong>資源:</strong> ${utils.escapeHtml(b.collection_recycle)} ${b.vehicle_number ? utils.escapeHtml(b.vehicle_number)+'号車' : ''}</div>` : ''}
-                                </div>
-                            `;
+                            const branches = c.parsed_form?.branches || [];
+                            const branchList = branches.length > 0 ? branches : (c.parsed_form?.collection_general || c.parsed_form?.collection_recycle) ? [c.parsed_form] : [];
+                            if (branchList.length === 0) return '';
+                            return `<div style="margin-top:8px; padding-top:8px; border-top:1px dashed var(--border); font-size:12px; color:var(--text-secondary);">
+                                ${branchList.map(b => {
+                                    const bName = b.branch_name ? `<div style="font-weight:700;color:var(--text-primary);margin-bottom:2px;">📍 ${utils.escapeHtml(b.branch_name)}</div>` : '';
+                                    const genVehicle = b.vehicle_general || b.vehicle_number || '';
+                                    const recVehicle = b.vehicle_recycle || '';
+                                    const genLine = b.collection_general ? `<div>🟢 一般 ${utils.escapeHtml(b.collection_general)}${genVehicle ? ' <strong>'+utils.escapeHtml(genVehicle)+'号車</strong>' : ''}${b.price_general ? ' <span style="color:#1e40af;font-weight:700;">'+utils.escapeHtml(b.price_general)+'</span>' : ''}</div>` : '';
+                                    const recLine = b.collection_recycle ? `<div>🔵 資源 ${utils.escapeHtml(b.collection_recycle)}${recVehicle ? ' <strong>'+utils.escapeHtml(recVehicle)+'号車</strong>' : ''}${b.price_recycle ? ' <span style="color:#166534;font-weight:700;">'+utils.escapeHtml(b.price_recycle)+'</span>' : ''}</div>` : '';
+                                    const indLine = b.collection_industrial ? `<div>🟣 産廃 ${utils.escapeHtml(b.collection_industrial)}${b.vehicle_industrial ? ' <strong>'+utils.escapeHtml(b.vehicle_industrial)+'号車</strong>' : ''}${b.price_industrial ? ' <span style="color:#7e22ce;font-weight:700;">'+utils.escapeHtml(b.price_industrial)+'</span>' : ''}</div>` : '';
+                                    return bName + genLine + recLine + indLine;
+                                }).join('<div style="margin:4px 0;border-top:1px dotted #ddd;"></div>')}
+                            </div>`;
                         })()}
                         ${expiry}
                     </div>
@@ -986,15 +987,36 @@
                         </div>
                         <div class="form-group"><label>平均回収量</label><input type="text" class="br-volume" value="${utils.escapeHtml(data.average_volume || '')}" placeholder="例: 2m3/回"></div>
                     </div>
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-                        <div class="form-group"><label>🚛 号車</label><input type="text" class="br-vehicle" value="${utils.escapeHtml(data.vehicle_number || '')}" placeholder="例: 2号車"></div>
+                    <div style="display:grid;grid-template-columns:1fr;gap:8px;">
                         <div class="form-group"><label>👥 下請け業者</label><input type="text" class="br-subcontractor" value="${utils.escapeHtml(data.subcontractor || '')}" placeholder="業者名"></div>
                     </div>
+                    <div style="background:#EFF6FF;padding:12px;border-radius:8px;margin:8px 0;border:1px solid #BFDBFE;">
+                        <label style="font-size:0.82rem;font-weight:700;color:#1e40af;">🟢 一般ごみ</label>
+                        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:6px;">
+                            <div class="form-group" style="margin:0;"><label style="font-size:0.72rem;">回収頻度</label><input type="text" class="br-freq-general" value="${utils.escapeHtml(data.collection_general || '')}" placeholder="週2回"></div>
+                            <div class="form-group" style="margin:0;"><label style="font-size:0.72rem;">🚛 号車</label><input type="text" class="br-vehicle-general" value="${utils.escapeHtml(data.vehicle_general || data.vehicle_number || '')}" placeholder="A"></div>
+                            <div class="form-group" style="margin:0;"><label style="font-size:0.72rem;">💰 金額</label><input type="text" class="br-price-general" value="${utils.escapeHtml(data.price_general || '')}" placeholder="5,000円"></div>
+                        </div>
+                    </div>
+                    <div style="background:#F0FDF4;padding:12px;border-radius:8px;margin:8px 0;border:1px solid #BBF7D0;">
+                        <label style="font-size:0.82rem;font-weight:700;color:#166534;">🔵 資源</label>
+                        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:6px;">
+                            <div class="form-group" style="margin:0;"><label style="font-size:0.72rem;">回収頻度</label><input type="text" class="br-freq-recycle" value="${utils.escapeHtml(data.collection_recycle || '')}" placeholder="週1回"></div>
+                            <div class="form-group" style="margin:0;"><label style="font-size:0.72rem;">🚛 号車</label><input type="text" class="br-vehicle-recycle" value="${utils.escapeHtml(data.vehicle_recycle || '')}" placeholder="B"></div>
+                            <div class="form-group" style="margin:0;"><label style="font-size:0.72rem;">💰 金額</label><input type="text" class="br-price-recycle" value="${utils.escapeHtml(data.price_recycle || '')}" placeholder="3,000円"></div>
+                        </div>
+                    </div>
+                    <div style="background:#FDF4FF;padding:12px;border-radius:8px;margin:8px 0;border:1px solid #E9D5FF;">
+                        <label style="font-size:0.82rem;font-weight:700;color:#7e22ce;">🟣 産廃</label>
+                        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:6px;">
+                            <div class="form-group" style="margin:0;"><label style="font-size:0.72rem;">回収頻度</label><input type="text" class="br-freq-industrial" value="${utils.escapeHtml(data.collection_industrial || '')}" placeholder="月2回"></div>
+                            <div class="form-group" style="margin:0;"><label style="font-size:0.72rem;">🚛 号車</label><input type="text" class="br-vehicle-industrial" value="${utils.escapeHtml(data.vehicle_industrial || '')}" placeholder="C"></div>
+                            <div class="form-group" style="margin:0;"><label style="font-size:0.72rem;">💰 金額</label><input type="text" class="br-price-industrial" value="${utils.escapeHtml(data.price_industrial || '')}" placeholder="10,000円"></div>
+                        </div>
+                    </div>
                     <div style="background:#f8f9fa;padding:10px;border-radius:8px;margin:8px 0;">
-                        <label style="font-size:0.8rem;font-weight:700;">回収頻度</label>
+                        <label style="font-size:0.8rem;font-weight:700;">その他回収</label>
                         <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px;">
-                            <div class="form-group" style="margin:0;"><label style="font-size:0.72rem;">一般ごみ</label><input type="text" class="br-freq-general" value="${utils.escapeHtml(data.collection_general || '')}" placeholder="毎日"></div>
-                            <div class="form-group" style="margin:0;"><label style="font-size:0.72rem;">資源</label><input type="text" class="br-freq-recycle" value="${utils.escapeHtml(data.collection_recycle || '')}" placeholder="週2回"></div>
                             <div class="form-group" style="margin:0;"><label style="font-size:0.72rem;">プラ</label><input type="text" class="br-freq-plastic" value="${utils.escapeHtml(data.collection_plastic || '')}" placeholder="月1回"></div>
                             <div class="form-group" style="margin:0;"><label style="font-size:0.72rem;">段ボール</label><input type="text" class="br-freq-paper" value="${utils.escapeHtml(data.collection_paper || '')}" placeholder="週1回"></div>
                         </div>
@@ -1045,10 +1067,17 @@
                     branch_address: card.querySelector('.br-address')?.value?.trim() || '',
                     industry_type: card.querySelector('.br-industry')?.value || '',
                     average_volume: card.querySelector('.br-volume')?.value?.trim() || '',
-                    vehicle_number: card.querySelector('.br-vehicle')?.value?.trim() || '',
+                    vehicle_number: card.querySelector('.br-vehicle-general')?.value?.trim() || '',
+                    vehicle_general: card.querySelector('.br-vehicle-general')?.value?.trim() || '',
+                    vehicle_recycle: card.querySelector('.br-vehicle-recycle')?.value?.trim() || '',
+                    vehicle_industrial: card.querySelector('.br-vehicle-industrial')?.value?.trim() || '',
+                    price_general: card.querySelector('.br-price-general')?.value?.trim() || '',
+                    price_recycle: card.querySelector('.br-price-recycle')?.value?.trim() || '',
+                    price_industrial: card.querySelector('.br-price-industrial')?.value?.trim() || '',
                     subcontractor: card.querySelector('.br-subcontractor')?.value?.trim() || '',
                     collection_general: card.querySelector('.br-freq-general')?.value?.trim() || '',
                     collection_recycle: card.querySelector('.br-freq-recycle')?.value?.trim() || '',
+                    collection_industrial: card.querySelector('.br-freq-industrial')?.value?.trim() || '',
                     collection_plastic: card.querySelector('.br-freq-plastic')?.value?.trim() || '',
                     collection_paper: card.querySelector('.br-freq-paper')?.value?.trim() || '',
                     business_hours: card.querySelector('.br-hours')?.value?.trim() || '',
@@ -1240,18 +1269,22 @@
                     <span style="display:inline-block;width:60px;color:var(--text-tertiary);font-size:0.85rem;">担当:</span> ${utils.escapeHtml(c.contact_person || '-')}<br>
                     <span style="display:inline-block;width:60px;color:var(--text-tertiary);font-size:0.85rem;">Email:</span> ${utils.escapeHtml(c.email || '-')}
                     
+                    
                     ${(() => {
-                        const b = (fd.branches && fd.branches[0]) || fd || {};
-                        if (!b.collection_general && !b.collection_recycle) return '';
-                        let genPrice = '';
-                        if (fd.pricing_list) {
-                            const p = fd.pricing_list.find(x => x.item && (x.item.includes('一般') || x.item.includes('基本') || x.item.includes('定額')));
-                            if (p && p.price) genPrice = ` ${p.price}円`;
-                        }
+                        const branches = fd.branches || [];
+                        const branchList = branches.length > 0 ? branches : (fd.collection_general || fd.collection_recycle) ? [fd] : [];
+                        if (branchList.length === 0) return '';
+                        // 基本情報エリアには全拠点のサマリを表示
                         return `
                             <div style="margin-top:12px; padding-top:12px; border-top:1px dashed var(--border); font-size:0.9rem;">
-                                ${b.collection_general ? `<div><span style="display:inline-block;width:60px;color:var(--text-tertiary);font-size:0.85rem;">回収:</span> 一般 ${utils.escapeHtml(b.collection_general)} ${b.vehicle_number ? utils.escapeHtml(b.vehicle_number)+'号車' : ''}${genPrice}</div>` : ''}
-                                ${b.collection_recycle ? `<div style="margin-top:4px;"><span style="display:inline-block;width:60px;color:var(--text-tertiary);font-size:0.85rem;">資源:</span> ${utils.escapeHtml(b.collection_recycle)} ${b.vehicle_number ? utils.escapeHtml(b.vehicle_number)+'号車' : ''}</div>` : ''}
+                                ${branchList.map(b => {
+                                    const bName = b.branch_name ? `<div style="font-weight:700;color:var(--text-primary);margin-bottom:2px;">📍 ${utils.escapeHtml(b.branch_name)}</div>` : '';
+                                    const genV = b.vehicle_general || b.vehicle_number || '';
+                                    const genLine = b.collection_general ? `<div>🟢 <span style="display:inline-block;width:40px;font-weight:600;">一般</span> ${utils.escapeHtml(b.collection_general)}${genV ? ' <strong>'+utils.escapeHtml(genV)+'号車</strong>' : ''}${b.price_general ? ' <span style="color:#1e40af;font-weight:700;">'+utils.escapeHtml(b.price_general)+'</span>' : ''}</div>` : '';
+                                    const recLine = b.collection_recycle ? `<div style="margin-top:2px;">🔵 <span style="display:inline-block;width:40px;font-weight:600;">資源</span> ${utils.escapeHtml(b.collection_recycle)}${b.vehicle_recycle ? ' <strong>'+utils.escapeHtml(b.vehicle_recycle)+'号車</strong>' : ''}${b.price_recycle ? ' <span style="color:#166534;font-weight:700;">'+utils.escapeHtml(b.price_recycle)+'</span>' : ''}</div>` : '';
+                                    const indLine = b.collection_industrial ? `<div style="margin-top:2px;">🟣 <span style="display:inline-block;width:40px;font-weight:600;">産廃</span> ${utils.escapeHtml(b.collection_industrial)}${b.vehicle_industrial ? ' <strong>'+utils.escapeHtml(b.vehicle_industrial)+'号車</strong>' : ''}${b.price_industrial ? ' <span style="color:#7e22ce;font-weight:700;">'+utils.escapeHtml(b.price_industrial)+'</span>' : ''}</div>` : '';
+                                    return bName + genLine + recLine + indLine;
+                                }).join('<div style="margin:6px 0;border-top:1px dotted #ddd;"></div>')}
                             </div>
                         `;
                     })()}
@@ -1275,9 +1308,15 @@
                         <div style="background:var(--bg-secondary); padding:14px; border-radius:12px; margin-bottom:10px; font-size:0.9rem; line-height:1.6;">
                             📍 <strong style="margin-left:4px;">${utils.escapeHtml(b.branch_name || `事業所 #${i+1}`)}</strong>
                             ${b.branch_address ? `<br><span style="color:var(--text-tertiary);font-size:0.82rem;">住所:</span> ${utils.escapeHtml(b.branch_address)} ${b.branch_address ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(b.branch_address)}" target="_blank" style="font-size:0.75rem;text-decoration:none;background:#E2E8F0;padding:1px 6px;border-radius:4px;">🗺</a>` : ''}` : ''}
-                            ${b.vehicle_number ? `<br><span style="color:var(--text-tertiary);font-size:0.82rem;">🚛 号車:</span> ${utils.escapeHtml(b.vehicle_number)}` : ''}
-                            ${b.subcontractor ? ` <span style="color:var(--text-tertiary);font-size:0.82rem;">👥 下請:</span> ${utils.escapeHtml(b.subcontractor)}` : ''}
-                            ${b.collection_general || b.collection_recycle ? `<br><span style="color:var(--text-tertiary);font-size:0.82rem;">回収:</span> ${[b.collection_general ? '一般:'+b.collection_general : '', b.collection_recycle ? '資源:'+b.collection_recycle : ''].filter(x=>x).join(' / ')}` : ''}
+                            ${b.subcontractor ? `<br><span style="color:var(--text-tertiary);font-size:0.82rem;">👥 下請:</span> ${utils.escapeHtml(b.subcontractor)}` : ''}
+                            ${(() => {
+                                const genV = b.vehicle_general || b.vehicle_number || '';
+                                let lines = '';
+                                if (b.collection_general) lines += `<div style="margin-top:6px;padding:4px 8px;background:#EFF6FF;border-radius:6px;font-size:0.85rem;">🟢 <strong>一般</strong> ${utils.escapeHtml(b.collection_general)}${genV ? ' — <strong>'+utils.escapeHtml(genV)+'号車</strong>' : ''}${b.price_general ? ' — <span style="color:#1e40af;font-weight:700;">'+utils.escapeHtml(b.price_general)+'</span>' : ''}</div>`;
+                                if (b.collection_recycle) lines += `<div style="margin-top:4px;padding:4px 8px;background:#F0FDF4;border-radius:6px;font-size:0.85rem;">🔵 <strong>資源</strong> ${utils.escapeHtml(b.collection_recycle)}${b.vehicle_recycle ? ' — <strong>'+utils.escapeHtml(b.vehicle_recycle)+'号車</strong>' : ''}${b.price_recycle ? ' — <span style="color:#166534;font-weight:700;">'+utils.escapeHtml(b.price_recycle)+'</span>' : ''}</div>`;
+                                if (b.collection_industrial) lines += `<div style="margin-top:4px;padding:4px 8px;background:#FDF4FF;border-radius:6px;font-size:0.85rem;">🟣 <strong>産廃</strong> ${utils.escapeHtml(b.collection_industrial)}${b.vehicle_industrial ? ' — <strong>'+utils.escapeHtml(b.vehicle_industrial)+'号車</strong>' : ''}${b.price_industrial ? ' — <span style="color:#7e22ce;font-weight:700;">'+utils.escapeHtml(b.price_industrial)+'</span>' : ''}</div>`;
+                                return lines;
+                            })()}
                             ${b.collection_start_date ? `<br><span style="color:var(--text-tertiary);font-size:0.82rem;">開始:</span> ${b.collection_start_date}` : ''} ${b.collection_end_date ? `<span style="margin-left:8px;color:var(--danger);font-size:0.82rem;">解約: ${b.collection_end_date}</span>` : ''}
                         </div>
                     `).join('');
