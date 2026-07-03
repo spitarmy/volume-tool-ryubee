@@ -132,6 +132,10 @@ def generate_contract_pdf(
         html1 = env.get_template("template_yamabun_collection.html").render(**context)
         html2 = env.get_template("template_homekern_disposal.html").render(**context)
         html_content = html1 + '<div style="page-break-before: always;"></div>' + html2
+    elif "巖本" in disposal_company_str or "厳本" in disposal_company_str or "いわもと" in disposal_company_str:
+        html1 = env.get_template("template_yamabun_collection.html").render(**context)
+        html2 = env.get_template("template_iwamoto_disposal.html").render(**context)
+        html_content = html1 + '<div style="page-break-before: always;"></div>' + html2
     elif "HIRAYAMA" in disposal_company_str:
         template = env.get_template("template_hirayama.html")
         html_content = template.render(**context)
