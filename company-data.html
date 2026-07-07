@@ -927,24 +927,66 @@
                 list.innerHTML = '<p class="empty-msg">📄 顧客登録の契約がありません</p>';
                 return;
             }
-            list.innerHTML = filtered.map(c => {
-                const wasteTypes = Array.isArray(c.waste_types) ? c.waste_types.join(', ') : (c.waste_type || '–');
-                return `
-                    <div class="data-card" style="cursor:default;">
-                        <div class="dc-top">
-                            <span class="dc-title">🏢 ${utils.escapeHtml(c.customer_name || '–')}</span>
-                            <span class="dc-badge ok" style="background:#EDE9FE;color:#7C3AED;">顧客契約</span>
+            
+            // Group by customer_id
+            const grouped = {};
+            filtered.forEach(c => {
+                const key = c.customer_id || 'unknown';
+                if (!grouped[key]) {
+                    grouped[key] = {
+                        customer_name: c.customer_name || '–',
+                        contracts: []
+                    };
+                }
+                grouped[key].contracts.push(c);
+            });
+
+            let html = '';
+            for (const [custId, group] of Object.entries(grouped)) {
+                html += `
+                    <div class="data-card" style="cursor:pointer;" onclick="toggleCustomerContracts('${custId}')">
+                        <div class="dc-top" style="pointer-events:none;">
+                            <span class="dc-title" style="font-size:1.05rem;">🏢 ${utils.escapeHtml(group.customer_name)}</span>
+                            <span class="dc-badge ok" style="background:#EDE9FE;color:#7C3AED; font-weight:700;">${group.contracts.length}件の契約 ▾</span>
                         </div>
-                        <div class="dc-meta">🏢 排出: ${utils.escapeHtml(c.customer_name || '–')}</div>
-                        <div class="dc-meta">🏗️ 処分: ${utils.escapeHtml(c.disposal_company || '–')}</div>
-                        <div class="dc-meta">🚛 運搬: ${utils.escapeHtml(c.contractor_name || '–')}</div>
-                        <div class="dc-meta">♻️ ${utils.escapeHtml(wasteTypes)}</div>
-                        ${c.unit_price ? `<div class="dc-meta">💰 単価: ¥${Number(c.unit_price).toLocaleString()}</div>` : ''}
-                        ${c.contract_date ? `<div class="dc-meta">📅 契約日: ${c.contract_date}</div>` : ''}
+                        <div id="cust-contracts-${custId}" style="display:none; margin-top:12px; border-top:1px dashed #ccc; padding-top:12px; cursor:default;" onclick="event.stopPropagation()">
+                `;
+                
+                group.contracts.forEach((c, idx) => {
+                    const wasteTypes = Array.isArray(c.waste_types) ? c.waste_types.join(', ') : (c.waste_type || '–');
+                    html += `
+                            <div style="margin-bottom: ${idx === group.contracts.length - 1 ? '0' : '12px'}; background:#f8f9fa; padding:12px; border-radius:8px; border:1px solid #e5e7eb;">
+                                <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+                                    <div class="dc-meta" style="font-weight:600; color:var(--text-primary); font-size:0.9rem;">♻️ ${utils.escapeHtml(wasteTypes)}</div>
+                                    ${c.unit_price ? `<div class="dc-meta" style="font-weight:700; color:var(--primary); font-size:0.85rem;">¥${Number(c.unit_price).toLocaleString()}</div>` : ''}
+                                </div>
+                                <div class="dc-meta" style="font-size:0.8rem; color:var(--text-secondary); margin-bottom:4px;">🏗️ 処分: ${utils.escapeHtml(c.disposal_company || '–')}</div>
+                                <div class="dc-meta" style="font-size:0.8rem; color:var(--text-secondary);">🚛 運搬: ${utils.escapeHtml(c.contractor_name || '–')}</div>
+                                ${c.contract_date ? `<div class="dc-meta" style="font-size:0.75rem; color:#888; margin-top:8px;">📅 契約日: ${c.contract_date}</div>` : ''}
+                            </div>
+                    `;
+                });
+                
+                html += `
+                        </div>
                     </div>
                 `;
-            }).join('');
+            }
+            list.innerHTML = html;
         }
+
+        window.toggleCustomerContracts = function(custId) {
+            const el = document.getElementById('cust-contracts-' + custId);
+            if (el) {
+                if (el.style.display === 'none') {
+                    el.style.display = 'block';
+                    el.previousElementSibling.querySelector('.dc-badge').textContent = el.previousElementSibling.querySelector('.dc-badge').textContent.replace('▾', '▴');
+                } else {
+                    el.style.display = 'none';
+                    el.previousElementSibling.querySelector('.dc-badge').textContent = el.previousElementSibling.querySelector('.dc-badge').textContent.replace('▴', '▾');
+                }
+            }
+        };
 
         function filterAllContracts() {
             const q = (document.getElementById('contractSearchInput')?.value || '').toLowerCase();
