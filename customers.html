@@ -1009,20 +1009,6 @@
             
             const headerLabel = data.branch_name ? utils.escapeHtml(data.branch_name) : `事業所 #${container.children.length + 1}`;
 
-            // 産廃データ復元
-            let industrialList = data.industrial_list || [];
-            if (industrialList.length === 0 && (data.collection_industrial || data.vehicle_industrial || data.price_industrial)) {
-                industrialList = [{ freq: data.collection_industrial || '', vehicle: data.vehicle_industrial || '', price: data.price_industrial || '' }];
-            }
-            const industrialRowsHtml = industrialList.map((item, i) => `
-                <div class="collect-row industrial-row" style="background:#FEF2F2;">
-                    <span class="cr-label" style="color:#991b1b;">🟣 産廃${industrialList.length > 1 ? (i+1) : ''}</span>
-                    <input type="text" class="br-ind-freq" value="${utils.escapeHtml(item.freq || '')}" placeholder="月2回">
-                    <input type="text" class="br-ind-vehicle" value="${utils.escapeHtml(item.vehicle || '')}" placeholder="G">
-                    <input type="text" class="br-ind-price" value="${utils.escapeHtml(item.price || '')}" placeholder="10,000円">
-                </div>
-            `).join('');
-
             card.innerHTML = `
                 <div class="branch-header" onclick="toggleBranch(this)" style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--bg-secondary);cursor:pointer;font-weight:700;font-size:0.88rem;">
                     <span class="branch-label">📍 ${headerLabel}</span>
@@ -1075,10 +1061,6 @@
                             <input type="text" class="br-vehicle-plastic" value="${utils.escapeHtml(data.vehicle_plastic || '')}" placeholder="D">
                             <input type="text" class="br-price-plastic" value="${utils.escapeHtml(data.price_plastic || '')}" placeholder="2,000円">
                         </div>
-                        <div class="industrial-container">
-                            ${industrialRowsHtml}
-                        </div>
-                        <button type="button" onclick="addIndustrialRow(this.closest('.branch-card'))" style="width:100%;margin-top:4px;padding:4px;font-size:0.72rem;font-weight:700;color:#991b1b;background:#FEF2F2;border:1px dashed #FCA5A5;border-radius:6px;cursor:pointer;">＋ 産廃を追加</button>
                     </div>
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
                         <div class="form-group"><label>営業時間</label><input type="text" class="br-hours" value="${utils.escapeHtml(data.business_hours || '')}" placeholder="9:00-18:00"></div>
@@ -1094,20 +1076,6 @@
             updateBranchCount();
         }
 
-        function addIndustrialRow(branchCard) {
-            const container = branchCard.querySelector('.industrial-container');
-            const count = container.querySelectorAll('.industrial-row').length + 1;
-            const row = document.createElement('div');
-            row.className = 'collect-row industrial-row';
-            row.style.background = '#FEF2F2';
-            row.innerHTML = `
-                <span class="cr-label" style="color:#991b1b;">🟣 産廃${count}</span>
-                <input type="text" class="br-ind-freq" placeholder="月2回">
-                <input type="text" class="br-ind-vehicle" placeholder="G">
-                <input type="text" class="br-ind-price" placeholder="10,000円">
-            `;
-            container.appendChild(row);
-        }
 
         function toggleBranch(header) {
             const body = header.nextElementSibling;
@@ -1137,15 +1105,6 @@
             const branches = [];
             document.querySelectorAll('.branch-card').forEach(card => {
                 const v = (sel) => card.querySelector(sel)?.value?.trim() || '';
-                // 産廃リスト収集
-                const indRows = card.querySelectorAll('.industrial-row');
-                const industrialList = [];
-                indRows.forEach(row => {
-                    const freq = row.querySelector('.br-ind-freq')?.value?.trim() || '';
-                    const vehicle = row.querySelector('.br-ind-vehicle')?.value?.trim() || '';
-                    const price = row.querySelector('.br-ind-price')?.value?.trim() || '';
-                    if (freq || vehicle || price) industrialList.push({ freq, vehicle, price });
-                });
                 const b = {
                     branch_name: v('.br-name'),
                     branch_address: v('.br-address'),
@@ -1165,11 +1124,6 @@
                     collection_recycle: v('.br-freq-recycle'),
                     collection_plastic: v('.br-freq-plastic'),
                     collection_paper: v('.br-freq-paper'),
-                    // 産廃: 後方互換用に1件目を旧フィールドにも保存
-                    collection_industrial: industrialList[0]?.freq || '',
-                    vehicle_industrial: industrialList[0]?.vehicle || '',
-                    price_industrial: industrialList[0]?.price || '',
-                    industrial_list: industrialList,
                     business_hours: v('.br-hours'),
                     regular_holiday: v('.br-holiday'),
                     collection_start_date: card.querySelector('.br-start')?.value || '',
