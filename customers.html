@@ -95,12 +95,42 @@
             background: #fff;
             border-radius: var(--r-xl) var(--r-xl) 0 0;
             width: 100%;
-            max-width: 600px;
+            max-width: 900px;
             padding: 16px 20px 40px;
             max-height: 98vh;
             height: 98vh;
             overflow-y: auto;
             animation: sheetUp 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+        /* 回収カテゴリのコンパクトな行 */
+        .collect-row {
+            display: grid;
+            grid-template-columns: 80px 1fr 70px 90px;
+            gap: 4px;
+            align-items: center;
+            padding: 5px 8px;
+            border-radius: 6px;
+            margin-bottom: 3px;
+        }
+        .collect-row .cr-label {
+            font-size: 0.78rem;
+            font-weight: 700;
+            white-space: nowrap;
+        }
+        .collect-row input {
+            padding: 6px 8px !important;
+            font-size: 0.82rem !important;
+            border-radius: 6px !important;
+            min-width: 0;
+        }
+        .collect-header {
+            display: grid;
+            grid-template-columns: 80px 1fr 70px 90px;
+            gap: 4px;
+            padding: 0 8px 2px;
+            font-size: 0.65rem;
+            font-weight: 700;
+            color: var(--text-tertiary);
         }
 
         /* ── Customer Contract Styles ── */
@@ -991,35 +1021,50 @@
                     <div style="display:grid;grid-template-columns:1fr;gap:8px;">
                         <div class="form-group"><label>👥 下請け業者</label><input type="text" class="br-subcontractor" value="${utils.escapeHtml(data.subcontractor || '')}" placeholder="業者名"></div>
                     </div>
-                    <div style="background:#EFF6FF;padding:12px;border-radius:8px;margin:8px 0;border:1px solid #BFDBFE;">
-                        <label style="font-size:0.82rem;font-weight:700;color:#1e40af;">🟢 一般ごみ</label>
-                        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:6px;">
-                            <div class="form-group" style="margin:0;"><label style="font-size:0.72rem;">回収頻度</label><input type="text" class="br-freq-general" value="${utils.escapeHtml(data.collection_general || '')}" placeholder="週2回"></div>
-                            <div class="form-group" style="margin:0;"><label style="font-size:0.72rem;">🚛 号車</label><input type="text" class="br-vehicle-general" value="${utils.escapeHtml(data.vehicle_general || data.vehicle_number || '')}" placeholder="A"></div>
-                            <div class="form-group" style="margin:0;"><label style="font-size:0.72rem;">💰 金額</label><input type="text" class="br-price-general" value="${utils.escapeHtml(data.price_general || '')}" placeholder="5,000円"></div>
+                    <div style="background:#f0f4ff;padding:8px;border-radius:8px;margin:8px 0;border:1px solid #d0d8f0;">
+                        <div style="font-size:0.78rem;font-weight:800;color:#1e3a5f;margin-bottom:4px;">📋 回収情報</div>
+                        <div class="collect-header"><span></span><span>回収頻度</span><span>号車</span><span>金額</span></div>
+                        <div class="collect-row" style="background:#EFF6FF;">
+                            <span class="cr-label" style="color:#1e40af;">🟢 燃えるゴミ</span>
+                            <input type="text" class="br-freq-general" value="${utils.escapeHtml(data.collection_general || '')}" placeholder="週2回">
+                            <input type="text" class="br-vehicle-general" value="${utils.escapeHtml(data.vehicle_general || data.vehicle_number || '')}" placeholder="A">
+                            <input type="text" class="br-price-general" value="${utils.escapeHtml(data.price_general || '')}" placeholder="5,000円">
                         </div>
-                    </div>
-                    <div style="background:#F0FDF4;padding:12px;border-radius:8px;margin:8px 0;border:1px solid #BBF7D0;">
-                        <label style="font-size:0.82rem;font-weight:700;color:#166534;">🔵 資源</label>
-                        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:6px;">
-                            <div class="form-group" style="margin:0;"><label style="font-size:0.72rem;">回収頻度</label><input type="text" class="br-freq-recycle" value="${utils.escapeHtml(data.collection_recycle || '')}" placeholder="週1回"></div>
-                            <div class="form-group" style="margin:0;"><label style="font-size:0.72rem;">🚛 号車</label><input type="text" class="br-vehicle-recycle" value="${utils.escapeHtml(data.vehicle_recycle || '')}" placeholder="B"></div>
-                            <div class="form-group" style="margin:0;"><label style="font-size:0.72rem;">💰 金額</label><input type="text" class="br-price-recycle" value="${utils.escapeHtml(data.price_recycle || '')}" placeholder="3,000円"></div>
+                        <div class="collect-row" style="background:#F0FDF4;">
+                            <span class="cr-label" style="color:#166534;">🔵 資源</span>
+                            <input type="text" class="br-freq-recycle" value="${utils.escapeHtml(data.collection_recycle || '')}" placeholder="週1回">
+                            <input type="text" class="br-vehicle-recycle" value="${utils.escapeHtml(data.vehicle_recycle || '')}" placeholder="B">
+                            <input type="text" class="br-price-recycle" value="${utils.escapeHtml(data.price_recycle || '')}" placeholder="3,000円">
                         </div>
-                    </div>
-                    <div style="background:#FDF4FF;padding:12px;border-radius:8px;margin:8px 0;border:1px solid #E9D5FF;">
-                        <label style="font-size:0.82rem;font-weight:700;color:#7e22ce;">🟣 産廃</label>
-                        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px;margin-top:6px;">
-                            <div class="form-group" style="margin:0;"><label style="font-size:0.72rem;">回収頻度</label><input type="text" class="br-freq-industrial" value="${utils.escapeHtml(data.collection_industrial || '')}" placeholder="月2回"></div>
-                            <div class="form-group" style="margin:0;"><label style="font-size:0.72rem;">🚛 号車</label><input type="text" class="br-vehicle-industrial" value="${utils.escapeHtml(data.vehicle_industrial || '')}" placeholder="C"></div>
-                            <div class="form-group" style="margin:0;"><label style="font-size:0.72rem;">💰 金額</label><input type="text" class="br-price-industrial" value="${utils.escapeHtml(data.price_industrial || '')}" placeholder="10,000円"></div>
+                        <div class="collect-row" style="background:#FFFBEB;">
+                            <span class="cr-label" style="color:#92400e;">📰 雑紙</span>
+                            <input type="text" class="br-freq-paper" value="${utils.escapeHtml(data.collection_paper || '')}" placeholder="週1回">
+                            <input type="text" class="br-vehicle-paper" value="${utils.escapeHtml(data.vehicle_paper || '')}" placeholder="C">
+                            <input type="text" class="br-price-paper" value="${utils.escapeHtml(data.price_paper || '')}" placeholder="2,000円">
                         </div>
-                    </div>
-                    <div style="background:#f8f9fa;padding:10px;border-radius:8px;margin:8px 0;">
-                        <label style="font-size:0.8rem;font-weight:700;">その他回収</label>
-                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px;">
-                            <div class="form-group" style="margin:0;"><label style="font-size:0.72rem;">プラ</label><input type="text" class="br-freq-plastic" value="${utils.escapeHtml(data.collection_plastic || '')}" placeholder="月1回"></div>
-                            <div class="form-group" style="margin:0;"><label style="font-size:0.72rem;">段ボール</label><input type="text" class="br-freq-paper" value="${utils.escapeHtml(data.collection_paper || '')}" placeholder="週1回"></div>
+                        <div class="collect-row" style="background:#FEF3C7;">
+                            <span class="cr-label" style="color:#78350f;">📦 段ボール</span>
+                            <input type="text" class="br-freq-cardboard" value="${utils.escapeHtml(data.collection_cardboard || '')}" placeholder="週1回">
+                            <input type="text" class="br-vehicle-cardboard" value="${utils.escapeHtml(data.vehicle_cardboard || '')}" placeholder="D">
+                            <input type="text" class="br-price-cardboard" value="${utils.escapeHtml(data.price_cardboard || '')}" placeholder="1,000円">
+                        </div>
+                        <div class="collect-row" style="background:#FDF4FF;">
+                            <span class="cr-label" style="color:#7e22ce;">♻️ プラ</span>
+                            <input type="text" class="br-freq-plastic" value="${utils.escapeHtml(data.collection_plastic || '')}" placeholder="週1回">
+                            <input type="text" class="br-vehicle-plastic" value="${utils.escapeHtml(data.vehicle_plastic || '')}" placeholder="E">
+                            <input type="text" class="br-price-plastic" value="${utils.escapeHtml(data.price_plastic || '')}" placeholder="2,000円">
+                        </div>
+                        <div class="collect-row" style="background:#F5F3FF;">
+                            <span class="cr-label" style="color:#5b21b6;">🎁 包装</span>
+                            <input type="text" class="br-freq-packaging" value="${utils.escapeHtml(data.collection_packaging || '')}" placeholder="週1回">
+                            <input type="text" class="br-vehicle-packaging" value="${utils.escapeHtml(data.vehicle_packaging || '')}" placeholder="F">
+                            <input type="text" class="br-price-packaging" value="${utils.escapeHtml(data.price_packaging || '')}" placeholder="1,500円">
+                        </div>
+                        <div class="collect-row" style="background:#FEF2F2;">
+                            <span class="cr-label" style="color:#991b1b;">🟣 産廃</span>
+                            <input type="text" class="br-freq-industrial" value="${utils.escapeHtml(data.collection_industrial || '')}" placeholder="月2回">
+                            <input type="text" class="br-vehicle-industrial" value="${utils.escapeHtml(data.vehicle_industrial || '')}" placeholder="G">
+                            <input type="text" class="br-price-industrial" value="${utils.escapeHtml(data.price_industrial || '')}" placeholder="10,000円">
                         </div>
                     </div>
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
@@ -1063,30 +1108,40 @@
         function collectBranches() {
             const branches = [];
             document.querySelectorAll('.branch-card').forEach(card => {
+                const v = (sel) => card.querySelector(sel)?.value?.trim() || '';
                 const b = {
-                    branch_name: card.querySelector('.br-name')?.value?.trim() || '',
-                    branch_address: card.querySelector('.br-address')?.value?.trim() || '',
+                    branch_name: v('.br-name'),
+                    branch_address: v('.br-address'),
                     industry_type: card.querySelector('.br-industry')?.value || '',
-                    average_volume: card.querySelector('.br-volume')?.value?.trim() || '',
-                    vehicle_number: card.querySelector('.br-vehicle-general')?.value?.trim() || '',
-                    vehicle_general: card.querySelector('.br-vehicle-general')?.value?.trim() || '',
-                    vehicle_recycle: card.querySelector('.br-vehicle-recycle')?.value?.trim() || '',
-                    vehicle_industrial: card.querySelector('.br-vehicle-industrial')?.value?.trim() || '',
-                    price_general: card.querySelector('.br-price-general')?.value?.trim() || '',
-                    price_recycle: card.querySelector('.br-price-recycle')?.value?.trim() || '',
-                    price_industrial: card.querySelector('.br-price-industrial')?.value?.trim() || '',
-                    subcontractor: card.querySelector('.br-subcontractor')?.value?.trim() || '',
-                    collection_general: card.querySelector('.br-freq-general')?.value?.trim() || '',
-                    collection_recycle: card.querySelector('.br-freq-recycle')?.value?.trim() || '',
-                    collection_industrial: card.querySelector('.br-freq-industrial')?.value?.trim() || '',
-                    collection_plastic: card.querySelector('.br-freq-plastic')?.value?.trim() || '',
-                    collection_paper: card.querySelector('.br-freq-paper')?.value?.trim() || '',
-                    business_hours: card.querySelector('.br-hours')?.value?.trim() || '',
-                    regular_holiday: card.querySelector('.br-holiday')?.value?.trim() || '',
+                    average_volume: v('.br-volume'),
+                    vehicle_number: v('.br-vehicle-general'),
+                    vehicle_general: v('.br-vehicle-general'),
+                    vehicle_recycle: v('.br-vehicle-recycle'),
+                    vehicle_industrial: v('.br-vehicle-industrial'),
+                    vehicle_paper: v('.br-vehicle-paper'),
+                    vehicle_cardboard: v('.br-vehicle-cardboard'),
+                    vehicle_plastic: v('.br-vehicle-plastic'),
+                    vehicle_packaging: v('.br-vehicle-packaging'),
+                    price_general: v('.br-price-general'),
+                    price_recycle: v('.br-price-recycle'),
+                    price_industrial: v('.br-price-industrial'),
+                    price_paper: v('.br-price-paper'),
+                    price_cardboard: v('.br-price-cardboard'),
+                    price_plastic: v('.br-price-plastic'),
+                    price_packaging: v('.br-price-packaging'),
+                    subcontractor: v('.br-subcontractor'),
+                    collection_general: v('.br-freq-general'),
+                    collection_recycle: v('.br-freq-recycle'),
+                    collection_industrial: v('.br-freq-industrial'),
+                    collection_plastic: v('.br-freq-plastic'),
+                    collection_paper: v('.br-freq-paper'),
+                    collection_cardboard: v('.br-freq-cardboard'),
+                    collection_packaging: v('.br-freq-packaging'),
+                    business_hours: v('.br-hours'),
+                    regular_holiday: v('.br-holiday'),
                     collection_start_date: card.querySelector('.br-start')?.value || '',
                     collection_end_date: card.querySelector('.br-end')?.value || '',
                 };
-                // 何か入力があるカードだけ保存
                 if (Object.values(b).some(v => v)) branches.push(b);
             });
             return branches;
