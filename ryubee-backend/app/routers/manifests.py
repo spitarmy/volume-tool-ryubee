@@ -128,7 +128,34 @@ def create_manifest(
     ).first()
     if not cust:
         raise HTTPException(404, "Customer not found")
-    new_m = models.Manifest(**body.model_dump())
+
+    data = body.model_dump()
+
+    # 顧客の単価リストから該当品目の単価を自動取得
+    # ユーザーがデフォルト(30.0)のままの場合のみ適用
+    if data.get("unit_price_per_kg", 30.0) == 30.0 and cust.form_data:
+        import json
+        try:
+            fd = json.loads(cust.form_data) if isinstance(cust.form_data, str) else cust.form_data
+            pricing_list = fd.get("pricing_list", [])
+            waste_type = data.get("waste_type", "")
+            for p in pricing_list:
+                item_name = p.get("item", "")
+                # 品目名が部分一致すれば単価を適用
+                if item_name and waste_type and (
+                    item_name in waste_type or waste_type in item_name
+                ):
+                    try:
+                        customer_price = float(p.get("price", 0))
+                        if customer_price > 0:
+                            data["unit_price_per_kg"] = customer_price
+                            break
+                    except (ValueError, TypeError):
+                        pass
+        except (json.JSONDecodeError, TypeError):
+            pass
+
+    new_m = models.Manifest(**data)
     db.add(new_m)
     db.commit()
     db.refresh(new_m)

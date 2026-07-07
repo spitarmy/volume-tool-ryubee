@@ -317,8 +317,35 @@ async def create_ocr_invoice(
     unit = ai_result.get("unit", "式")
     notes = ai_result.get("notes", "写真からAI自動読み取り")
 
-    # 単価は一旦0で設定し、ユーザーが編集できるようにする
+    # 顧客の単価リストから自動取得（見つからない場合は0）
     unit_price = 0
+    if cust.form_data:
+        try:
+            fd = json.loads(cust.form_data) if isinstance(cust.form_data, str) else cust.form_data
+            pricing_list = fd.get("pricing_list", [])
+            # 最初に見つかった単価を使用（kgベースの品目を優先）
+            for p in pricing_list:
+                p_unit = p.get("unit", "")
+                try:
+                    p_price = float(p.get("price", 0))
+                    if p_price > 0 and p_unit == "kg":
+                        unit_price = p_price
+                        break
+                except (ValueError, TypeError):
+                    pass
+            # kg単位が無い場合は最初の品目の単価を使用
+            if unit_price == 0:
+                for p in pricing_list:
+                    try:
+                        p_price = float(p.get("price", 0))
+                        if p_price > 0:
+                            unit_price = p_price
+                            break
+                    except (ValueError, TypeError):
+                        pass
+        except (json.JSONDecodeError, TypeError):
+            pass
+
     now = date.today()
     month = f"{now.year}-{now.month:02d}"
     due_date_str = _auto_due_date(cust, month)
@@ -334,7 +361,7 @@ async def create_ocr_invoice(
         tax_amount=tax,
         status="draft",
         due_date=due_date_str,
-        notes=f"【AI OCR自動作成】\n抽出結果: {total_qty}{unit}\nAIメモ: {notes}",
+        notes=f"【AI OCR自動作成】\n抽出結果: {total_qty}{unit}\n適用単価: ¥{unit_price:,.0f}/{unit} {'(顧客単価)' if unit_price > 0 else '(未設定)'}\nAIメモ: {notes}",
     )
     db.add(inv)
     db.flush()
@@ -699,12 +726,34 @@ def generate_monthly_invoices(
         # スポット集計
         spot_items = []
         spot_sales = 0
+
+        # 顧客のpricing_listを事前取得（マニフェスト単価のフォールバック用）
+        cust_fd = {}
+        try: cust_fd = json.loads(c.form_data) if c.form_data else {}
+        except: pass
+        cust_pricing = cust_fd.get("pricing_list", [])
+
         for m in cust_manifests.get(cust_id, []):
-            amt = int((m.weight_kg or 0) * (m.unit_price_per_kg or 0))
+            # マニフェストの単価がデフォルト(30.0)の場合、顧客の単価リストを参照
+            effective_price = m.unit_price_per_kg or 0
+            if effective_price == 30.0 and cust_pricing:
+                waste_type = m.waste_type or ""
+                for cp in cust_pricing:
+                    cp_item = cp.get("item", "")
+                    if cp_item and waste_type and (cp_item in waste_type or waste_type in cp_item):
+                        try:
+                            cp_price = float(cp.get("price", 0))
+                            if cp_price > 0:
+                                effective_price = cp_price
+                                break
+                        except (ValueError, TypeError):
+                            pass
+
+            amt = int((m.weight_kg or 0) * effective_price)
             if amt > 0:
                 spot_items.append(models.InvoiceItem(
                     description=f"産廃: {m.waste_type or '廃棄物'} ({m.weight_kg or 0}kg) [No.{m.manifest_number}]",
-                    quantity=m.weight_kg or 0, unit="kg", unit_price=m.unit_price_per_kg or 0,
+                    quantity=m.weight_kg or 0, unit="kg", unit_price=effective_price,
                     amount=amt, manifest_id=m.id,
                 ))
                 spot_sales += amt
