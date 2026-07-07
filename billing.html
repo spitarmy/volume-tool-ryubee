@@ -828,6 +828,39 @@
         </div>
     </div>
 
+
+    <!-- Email Modal -->
+    <div id="emailModal" class="inv-detail-overlay" style="z-index: 3000;">
+        <div class="inv-detail-modal" style="max-width:500px; max-height: 90vh;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                <h3 style="margin:0;">✉️ メール送信 (PDF添付)</h3>
+                <button class="btn btn-secondary" style="padding:4px 8px; max-width:40px;" onclick="closeEmailModal()">×</button>
+            </div>
+            <div>
+                <div style="margin-bottom:12px;">
+                    <label style="display:block; font-size:0.85rem; font-weight:600; margin-bottom:4px;">宛先</label>
+                    <input type="text" id="emailTo" readonly style="background:#eee; width:100%; padding:8px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;">
+                </div>
+                <div style="margin-bottom:12px;">
+                    <label style="display:block; font-size:0.85rem; font-weight:600; margin-bottom:4px;">件名</label>
+                    <input type="text" id="emailSubject" value="【ご請求書】送付のご案内" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box;">
+                </div>
+                <div style="margin-bottom:12px;">
+                    <label style="display:block; font-size:0.85rem; font-weight:600; margin-bottom:4px;">本文 (テンプレート編集可能)</label>
+                    <textarea id="emailBody" rows="8" style="width:100%; padding:8px; border:1px solid #ccc; border-radius:4px; box-sizing:border-box; resize:vertical; font-family:inherit;">いつも大変お世話になっております。
+添付の通り、ご請求書を送付いたします。
+
+ご確認のほどよろしくお願い申し上げます。</textarea>
+                </div>
+                <p style="font-size:0.8rem; color:#666;">※ 現在の請求書のPDFが自動生成され、添付されます。</p>
+            </div>
+            <div style="display:flex; justify-content:flex-end; gap:8px; padding-top:16px;">
+                <button class="btn btn-secondary" onclick="closeEmailModal()">キャンセル</button>
+                <button class="btn btn-primary" id="sendEmailBtn" onclick="confirmSendEmail()">送信する</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Bottom Nav -->
     <nav class="bottom-nav">
         <a href="index.html" class="nav-item"><span class="nav-icon">🏠</span><span>ホーム</span></a>
@@ -1172,22 +1205,61 @@
             }
         }
 
-        async function sendEmail(invoiceId) {
+        let currentEmailInvoiceId = null;
+        
+        function sendEmail(invoiceId) {
             const inv = allInvoices.find(i => i.id === invoiceId);
             if (!inv) return;
-            if (!confirm(`⚠️ 「${inv.customer_name}」に請求書PDFをメール送信しますか？\n\n※実際に送信されます。取り消しできません。`)) return;
-            // 二重確認: 顧客名を入力させる
-            const typed = prompt(`確認: 送信先のお客様名「${inv.customer_name}」を入力してください:`);
-            if (!typed || typed.trim() !== inv.customer_name.trim()) {
-                alert('お客様名が一致しません。送信を中止しました。');
+            const customer = allCustomers.find(c => c.id === inv.customer_id) || {};
+            
+            if (!customer.email) {
+                alert("顧客のメールアドレスが登録されていません。顧客情報を編集してください。");
                 return;
             }
+            currentEmailInvoiceId = invoiceId;
+            document.getElementById('emailTo').value = customer.email;
+            document.getElementById('emailSubject').value = "【ご請求書】送付のご案内";
+            document.getElementById('emailModal').style.display = 'flex';
+        }
+
+        function closeEmailModal() {
+            document.getElementById('emailModal').style.display = 'none';
+            currentEmailInvoiceId = null;
+        }
+
+        async function confirmSendEmail() {
+            if (!currentEmailInvoiceId) return;
+            const btn = document.getElementById('sendEmailBtn');
+            const subject = document.getElementById('emailSubject').value;
+            const body = document.getElementById('emailBody').value;
+            
+            btn.disabled = true;
+            btn.textContent = "送信中...";
+
             try {
-                await RyubeeAPI.sendInvoiceEmail(invoiceId);
+                const res = await fetch(`https://ryubee-backend.onrender.com/v1/invoices/${currentEmailInvoiceId}/send`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('ryubee_token')}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ subject: subject, body: body })
+                });
+
+                if (!res.ok) {
+                    const data = await res.json();
+                    throw new Error(data.detail || "メール送信エラー");
+                }
+                
                 alert("✅ メールを送信しました！");
-                loadInvoices();
-            } catch (e) {
-                alert("メール送信エラー: " + e.message);
+                closeEmailModal();
+                loadInvoices(); // 状態更新
+            } catch (err) {
+                alert("送信失敗: " + err.message);
+                console.error(err);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = "送信する";
             }
         }
 

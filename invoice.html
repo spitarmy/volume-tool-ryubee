@@ -161,8 +161,9 @@
 
         .items-table td {
             border: 1px solid #000;
-            padding: 6px;
+            padding: 12px 10px; /* パディングを増やして行の高さを出す */
             font-size: 11pt;
+            height: 40px; /* 明示的な高さも設定 */
         }
 
         .items-table .num {
@@ -205,7 +206,7 @@
         /* Editable row controls */
         .items-table input {
             border: 1px solid transparent;
-            padding: 4px 6px;
+            padding: 8px 6px; /* 入力欄も高さを合わせる */
             font-size: 11pt;
             background: transparent;
             width: 100%;
@@ -334,20 +335,26 @@
         <div style="width: 60px; flex-shrink:0;"></div>
     </div>
 
-    <div class="action-buttons mt-3">
-        <label class="btn btn-secondary" style="flex:1; margin-right:8px; cursor:pointer; text-align:center; display:flex; align-items:center; justify-content:center;">
+        <div class="action-buttons mt-3" style="flex-wrap: wrap;">
+        <label class="btn btn-secondary" style="flex:1; margin-right:4px; margin-bottom:4px; cursor:pointer; text-align:center; display:flex; align-items:center; justify-content:center; padding:8px 4px; font-size:12px;">
             📤 Excel取込
             <input type="file" id="excelUpload" accept=".xlsx, .xls" style="display:none;" onchange="handleExcelUpload(event)">
         </label>
-        <button class="btn btn-secondary" onclick="saveEstimateItems()" style="flex:1; margin-right:8px;" id="saveEstBtn">
-            💾 内容を保存
+        <button class="btn btn-secondary" onclick="saveEstimateItems()" style="flex:1; margin-right:4px; margin-bottom:4px; padding:8px 4px; font-size:12px;" id="saveEstBtn">
+            💾 保存
         </button>
-        <button class="btn btn-primary" onclick="generatePDF()" style="flex:2;">
-            📄 PDFを生成 / 共有
+        <button class="btn btn-primary" onclick="window.print()" style="flex:1; margin-right:4px; margin-bottom:4px; padding:8px 4px; font-size:12px;">
+            🖨️ 印刷
+        </button>
+        <button class="btn btn-primary" onclick="openEmailModal()" style="flex:1; margin-right:4px; margin-bottom:4px; padding:8px 4px; font-size:12px;">
+            ✉️ メール送信
+        </button>
+        <button class="btn btn-success" onclick="generatePDF()" style="flex:1; margin-bottom:4px; padding:8px 4px; font-size:12px;">
+            📄 PDF出力
         </button>
     </div>
 
-            <!-- PDF化される領域 -->
+    <!-- PDF化される領域 -->
     <div class="invoice-container" id="invoice-doc">
 
         <div class="title">御見積書</div>
@@ -590,8 +597,10 @@
                         if (cust && cust.form_data) {
                             const cfd = JSON.parse(cust.form_data);
                             if (cfd.honorific) {
+                                                            if (cfd.honorific) {
                                 document.getElementById('out-honorific').value = cfd.honorific;
                             }
+                            customerEmail = cust.email || "";
                         }
                     } catch (e) { console.error(e); }
                 }
@@ -824,6 +833,80 @@
             reader.readAsArrayBuffer(file);
         }
 
+        
+        let customerEmail = "";
+
+        function openEmailModal() {
+            document.getElementById('emailModal').classList.add('show');
+            document.getElementById('emailTo').value = customerEmail || "※顧客にメールアドレスが登録されていません";
+        }
+        function closeEmailModal() {
+            document.getElementById('emailModal').classList.remove('show');
+        }
+
+        async function sendEstimateEmail() {
+            if (!customerEmail) {
+                alert("顧客のメールアドレスが登録されていません。顧客情報を編集してください。");
+                return;
+            }
+            const btn = document.getElementById('sendEmailBtn');
+            const subject = document.getElementById('emailSubject').value;
+            const body = document.getElementById('emailBody').value;
+            
+            btn.disabled = true;
+            btn.textContent = "送信中...";
+
+            try {
+                // まずPDFのBlobを生成する
+                const element = document.getElementById('invoice-doc');
+                const opt = {
+                    margin: [15, 15, 15, 15],
+                    filename: 'Estimate.pdf',
+                    image: { type: 'jpeg', quality: 0.98 },
+                    html2canvas: { scale: 2, useCORS: true },
+                    jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+                };
+
+                const pdfBlob = await html2pdf().set(opt).from(element).output('blob');
+                
+                // FormDataを使って送信
+                const formData = new FormData();
+                formData.append('subject', subject);
+                formData.append('body', body);
+                formData.append('file', pdfBlob, 'Estimate.pdf');
+
+                const res = await fetch(`https://ryubee-backend.onrender.com/v1/jobs/${jobId}/send-estimate`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('ryubee_token')}`
+                    },
+                    body: formData
+                });
+
+                if (!res.ok) {
+                    const data = await res.json();
+                    throw new Error(data.detail || "メール送信エラー");
+                }
+                
+                // 履歴記録
+                if (jobId) {
+                    const job = await RyubeeAPI.fetchJob(jobId);
+                    if (job && job.customer_id) {
+                        await RyubeeAPI.addCustomerHistory(job.customer_id, `見積書をメール送信: ${subject}`, 'note');
+                    }
+                }
+
+                alert("メールを送信しました！");
+                closeEmailModal();
+            } catch (err) {
+                alert("送信失敗: " + err.message);
+                console.error(err);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = "送信する";
+            }
+        }
+
         // html2pdf によるPDF生成機能
         function generatePDF() {
             const element = document.getElementById('invoice-doc');
@@ -912,6 +995,39 @@
             navigator.serviceWorker.register('sw.js').catch(e => console.log('SW registration failed:', e));
         }
     </script>
+
+    <!-- Email Modal -->
+    <div id="emailModal" class="modal-overlay">
+        <div class="modal-content" style="max-width:500px;">
+            <div class="modal-header">
+                <h3>✉️ メール送信 (PDF添付)</h3>
+                <button class="btn btn-secondary" onclick="closeEmailModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label>宛先</label>
+                    <input type="text" id="emailTo" readonly style="background:#eee;">
+                </div>
+                <div class="form-group">
+                    <label>件名</label>
+                    <input type="text" id="emailSubject" value="【御見積書】送付のご案内">
+                </div>
+                <div class="form-group">
+                    <label>本文 (テンプレート編集可能)</label>
+                    <textarea id="emailBody" rows="8" style="resize:vertical;">いつも大変お世話になっております。
+添付の通り、御見積書を送付いたします。
+
+ご確認のほどよろしくお願い申し上げます。</textarea>
+                </div>
+                <p style="font-size:0.8rem; color:#666;">※ 現在表示されている内容でPDFが自動生成され、添付されます。</p>
+            </div>
+            <div class="modal-footer" style="display:flex; justify-content:flex-end; gap:8px; padding-top:16px;">
+                <button class="btn btn-secondary" onclick="closeEmailModal()">キャンセル</button>
+                <button class="btn btn-primary" id="sendEmailBtn" onclick="sendEstimateEmail()">送信する</button>
+            </div>
+        </div>
+    </div>
+
 </body>
 
 </html>

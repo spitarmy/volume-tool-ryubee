@@ -439,3 +439,100 @@ def _get_own_job(job_id: str, user: models.User, db: Session) -> models.Job:
     if not job:
         raise HTTPException(404, "案件が見つかりません")
     return job
+
+
+
+from fastapi import File, UploadFile, Form
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.mime.base import MIMEBase
+from email.utils import formataddr
+from email import encoders
+from email.header import Header
+import smtplib
+import os
+
+@router.post("/{job_id}/send-estimate")
+async def send_estimate_email(
+    job_id: str,
+    subject: str = Form(...),
+    body: str = Form(...),
+    file: UploadFile = File(...),
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(get_db)
+):
+    job = db.query(models.Job).filter_by(id=job_id, company_id=current_user.company_id).first()
+    if not job:
+        raise HTTPException(404, "案件が見つかりません")
+        
+    customer = db.query(models.Customer).filter_by(id=job.customer_id).first()
+    if not customer or not customer.email:
+        raise HTTPException(400, "顧客のメールアドレスが登録されていません")
+        
+    company = db.query(models.Company).filter_by(id=current_user.company_id).first()
+    settings = db.query(models.CompanySettings).filter_by(company_id=current_user.company_id).first()
+
+    smtp_host = settings.smtp_host if settings and settings.smtp_host else os.getenv("SMTP_HOST", "smtp.resend.com")
+    smtp_port = settings.smtp_port if settings and settings.smtp_port else int(os.getenv("SMTP_PORT", "465"))
+    smtp_user = settings.smtp_user if settings and settings.smtp_user else os.getenv("SMTP_USER", "")
+    smtp_pass = settings.smtp_password if settings and settings.smtp_password else os.getenv("SMTP_PASS", "")
+
+    if not smtp_pass:
+        raise HTTPException(400, "SMTP設定が未設定です。")
+
+    from_email = settings.smtp_from_email if settings and settings.smtp_from_email else smtp_user
+
+    auth_user = smtp_user
+    reply_to = os.getenv("REPLY_TO_EMAIL", None)
+    if 'resend.com' in smtp_host:
+        auth_user = 'resend'
+        if '@' in (smtp_user or '') and smtp_user != from_email:
+            reply_to = smtp_user
+    else:
+        if not reply_to and '@' in (smtp_user or '') and settings and settings.smtp_from_email and smtp_user != settings.smtp_from_email:
+            reply_to = smtp_user
+
+    msg = MIMEMultipart()
+    msg['From'] = formataddr((str(Header(company.name, 'utf-8')), from_email))
+    msg['To'] = customer.email
+    msg['Subject'] = subject
+    if reply_to:
+        msg['Reply-To'] = reply_to
+        
+    body_text = body.replace('\\n', '\n')
+    msg.attach(MIMEText(body_text, 'plain'))
+
+    pdf_bytes = await file.read()
+    part = MIMEBase('application', 'pdf')
+    part.set_payload(pdf_bytes)
+    encoders.encode_base64(part)
+    filename = f"Estimate_{customer.name}.pdf".replace(" ", "_")
+    part.add_header('Content-Disposition', 'attachment', filename=filename)
+    msg.attach(part)
+
+    try:
+        if smtp_port == 465:
+            server = smtplib.SMTP_SSL(smtp_host, smtp_port, timeout=15)
+        else:
+            server = smtplib.SMTP(smtp_host, smtp_port, timeout=15)
+            server.starttls()
+        server.login(auth_user, smtp_pass)
+        server.send_message(msg)
+        server.quit()
+    except Exception as e:
+        raise HTTPException(500, f"メール送信に失敗しました: {e}")
+
+    # 監査ログ
+    audit = models.AuditLog(
+        company_id=current_user.company_id,
+        user_id=current_user.id,
+        user_name=current_user.username,
+        action="email_sent",
+        target_type="job_estimate",
+        target_id=job.id,
+        details=f"見積書メール送信: {customer.name} → {customer.email}",
+    )
+    db.add(audit)
+    db.commit()
+
+    return {"status": "ok"}
