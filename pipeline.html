@@ -1052,8 +1052,30 @@
                 onclick="document.getElementById('newJobModal').classList.remove('show')">✕</button>
             <h3 style="margin-bottom:20px; font-size:1.3rem;">✨ 新規案件 手動追加</h3>
             <div class="form-group">
-                <label>案件・お客様名</label>
+                <label>案件名</label>
                 <input type="text" id="njName" placeholder="例: 山田様邸 片付け">
+            </div>
+            <div class="form-group">
+                <label>会社名 / お客様名</label>
+                <input type="text" id="njCompanyName" placeholder="例: 株式会社○○ / 山田太郎 様">
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                <div class="form-group">
+                    <label>担当者名</label>
+                    <input type="text" id="njContactName" placeholder="山田太郎">
+                </div>
+                <div class="form-group">
+                    <label>電話番号</label>
+                    <input type="tel" id="njPhone" inputmode="tel" placeholder="075-XXX-XXXX">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>📍 住所</label>
+                <div style="display:flex;gap:6px;">
+                    <input type="text" id="njAddress" placeholder="例: 京都市中京区○○町123" style="flex:1;">
+                    <button type="button" class="gps-btn" onclick="fillCurrentLocationNew()">📍 現在地</button>
+                </div>
+                <div id="njGpsAccuracy" class="gps-accuracy"></div>
             </div>
             <div class="form-group">
                 <label>種別</label>
@@ -1074,19 +1096,11 @@
                     <option value="waiting_manifest">マニフェスト待ち</option>
                 </select>
             </div>
-            <div class="form-group" id="njAddressGroup" style="display:none; margin-bottom:24px;">
-                <label>📍 住所（現場の場所）</label>
-                <div style="display:flex;gap:6px;">
-                    <input type="text" id="njAddress" placeholder="例: 京都市中京区○○町123" style="flex:1;">
-                    <button type="button" class="gps-btn" onclick="fillCurrentLocationNew()">📍 現在地</button>
-                </div>
-                <div id="njGpsAccuracy" class="gps-accuracy"></div>
-            </div>
-            <div class="form-group" id="njAmountGroup" style="margin-bottom:24px;">
+            <div class="form-group" id="njAmountGroup" style="margin-bottom:16px;">
                 <label>見込金額</label>
                 <input type="number" id="njAmount" placeholder="未定の場合は空欄" style="width:100%;">
             </div>
-            <div class="form-group" style="margin-bottom:24px;">
+            <div class="form-group" style="margin-bottom:20px;">
                 <label>担当営業</label>
                 <select id="njAssignedTo">
                     <option value="">未設定</option>
@@ -1389,6 +1403,9 @@
 
         async function submitNewJob() {
             const name = document.getElementById('njName').value.trim();
+            const companyName = document.getElementById('njCompanyName').value.trim();
+            const contactName = document.getElementById('njContactName').value.trim();
+            const phone = document.getElementById('njPhone').value.trim();
             const type = document.getElementById('njType').value;
             const stage = document.getElementById('njStage').value;
             const amount = document.getElementById('njAmount').value;
@@ -1400,19 +1417,26 @@
             try {
                 const payload = {
                     job_name: name,
-                    customer_name: name,
+                    customer_name: companyName || name,
                     job_type: type,
                     pipeline_stage: stage,
                     estimated_price: amount ? parseInt(amount, 10) : 0,
-                    source: 'manual'
+                    source: 'manual',
+                    address: address,
                 };
                 if (assigned_to) {
                     payload.assigned_to = assigned_to;
                 }
-                // 潜在顧客の場合: 住所を設定、初期サブステータスを格納
+
+                // form_dataに担当者・電話番号を格納
+                const formData = {};
+                if (contactName) formData.contact_name = contactName;
+                if (phone) formData.phone = phone;
                 if (stage === 'prospect') {
-                    payload.address = address;
-                    payload.form_data = JSON.stringify({ prospect_status: 'discovered' });
+                    formData.prospect_status = 'discovered';
+                }
+                if (Object.keys(formData).length > 0) {
+                    payload.form_data = JSON.stringify(formData);
                 }
 
                 await RyubeeAPI.createJob(payload);
@@ -1421,6 +1445,9 @@
                 loadPipeline();
                 // フォームリセット
                 document.getElementById('njName').value = '';
+                document.getElementById('njCompanyName').value = '';
+                document.getElementById('njContactName').value = '';
+                document.getElementById('njPhone').value = '';
                 document.getElementById('njAmount').value = '';
                 document.getElementById('njAddress').value = '';
                 document.getElementById('njAssignedTo').value = '';
