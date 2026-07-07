@@ -372,7 +372,7 @@
                         </div>
                     </div>
                 </div>
-                <div style="font-size: 10pt; margin-bottom: 16px;">&nbsp;</div>
+                <div id="out-customer-address" style="font-size: 10pt; margin-bottom: 16px;"></div>
                 <div style="font-size: 10pt;">下記の通り御見積り申し上げます。</div>
                 
                 <div class="meta-inputs" style="margin-top:20px;">
@@ -567,7 +567,7 @@
                 let fd = {};
                 try { fd = JSON.parse(job.form_data || "{}"); } catch(e) {}
 
-                if (fd.pic_name) document.getElementById('out-pic').value = fd.pic_name;
+                if (fd.pic_name || fd.contact_name) document.getElementById('out-pic').value = fd.pic_name || fd.contact_name;
                 if (fd.period) document.getElementById('out-period').value = fd.period;
                 if (fd.validity) document.getElementById('out-validity').value = fd.validity;
 
@@ -594,11 +594,15 @@
                 if (job.customer_id) {
                     try {
                         const cust = await RyubeeAPI.fetchCustomer(job.customer_id);
-                        if (cust && cust.form_data) {
-                            const cfd = JSON.parse(cust.form_data);
-                            if (cfd.honorific) {
-                                                            if (cfd.honorific) {
-                                document.getElementById('out-honorific').value = cfd.honorific;
+                        if (cust) {
+                            if (cust.address) {
+                                document.getElementById('out-customer-address').textContent = cust.address;
+                            }
+                            if (cust.form_data) {
+                                const cfd = JSON.parse(cust.form_data);
+                                if (cfd.honorific) {
+                                    document.getElementById('out-honorific').value = cfd.honorific;
+                                }
                             }
                             customerEmail = cust.email || "";
                         }
