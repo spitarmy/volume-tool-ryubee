@@ -95,12 +95,41 @@
             background: #fff;
             border-radius: var(--r-xl) var(--r-xl) 0 0;
             width: 100%;
-            max-width: 900px;
+            max-width: 1200px;
             padding: 16px 20px 40px;
             max-height: 98vh;
             height: 98vh;
             overflow-y: auto;
             animation: sheetUp 0.3s cubic-bezier(0.25, 1, 0.5, 1);
+        }
+        /* 2カラム編集レイアウト */
+        .edit-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 0;
+        }
+        @media (min-width: 800px) {
+            .edit-grid {
+                grid-template-columns: 1fr 1fr;
+                gap: 24px;
+                align-items: start;
+            }
+            .edit-grid .edit-col {
+                max-height: 80vh;
+                overflow-y: auto;
+                padding-right: 8px;
+            }
+            .edit-grid .edit-col::-webkit-scrollbar {
+                width: 4px;
+            }
+            .edit-grid .edit-col::-webkit-scrollbar-thumb {
+                background: #ccc;
+                border-radius: 4px;
+            }
+        }
+        .edit-col .section-title {
+            font-size: 0.95rem;
+            margin: 16px 0 8px;
         }
         /* 回収カテゴリのコンパクトな行 */
         .collect-row {
@@ -453,149 +482,146 @@
             <h3 class="card-title" id="modalTitle">顧客を登録</h3>
             <input type="hidden" id="editId">
 
-            <h4 class="section-title">🏢 基本情報</h4>
-            <div style="display:grid;grid-template-columns:1fr 2fr;gap:8px;">
-                <div class="form-group"><label>山文管理番号 *</label><input type="text" id="custYamabunNumber"
-                        placeholder="例: Y-101"></div>
-                <div class="form-group"><label>法人名 / 会社名 *</label><input type="text" id="custName" placeholder="株式会社○○">
+            <div class="edit-grid">
+                <!-- ===== 左カラム: 基本情報 + 事業所 ===== -->
+                <div class="edit-col">
+                    <h4 class="section-title">🏢 基本情報</h4>
+                    <div style="display:grid;grid-template-columns:1fr 2fr;gap:8px;">
+                        <div class="form-group"><label>山文管理番号 *</label><input type="text" id="custYamabunNumber" placeholder="例: Y-101"></div>
+                        <div class="form-group"><label>法人名 / 会社名 *</label><input type="text" id="custName" placeholder="株式会社○○"></div>
+                    </div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                        <div class="form-group"><label>担当営業</label>
+                            <select id="custAssignedUser"><option value="">未設定</option></select>
+                        </div>
+                        <div class="form-group"><label>廃棄物カテゴリ</label>
+                            <select id="custWasteCategory">
+                                <option value="general">一般ゴミ</option>
+                                <option value="industrial">産業廃棄物</option>
+                                <option value="large">大型ゴミ等</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group"><label>ご住所</label><input type="text" id="custAddress" placeholder="京都市..."></div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                        <div class="form-group"><label>担当者名</label><input type="text" id="custContact" placeholder="山田太郎"></div>
+                        <div class="form-group"><label>メールアドレス</label><input type="email" id="custEmail" inputmode="email" placeholder="info@example.com"></div>
+                    </div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                        <div class="form-group"><label>電話番号</label><input type="tel" id="custPhone" inputmode="tel" placeholder="075-XXX-XXXX"></div>
+                        <div class="form-group"><label>携帯番号</label><input type="tel" id="custMobile" inputmode="tel" placeholder="090-XXXX-XXXX"></div>
+                    </div>
+
+                    <h4 class="section-title">📍 事業所・回収情報 <span id="branchCount" style="font-size:0.75rem;font-weight:400;color:var(--text-tertiary);"></span></h4>
+                    <p style="font-size:0.72rem;color:var(--text-secondary);margin-bottom:6px;">回収場所ごとに情報を登録（複数可）</p>
+                    <div id="branchesContainer"></div>
+                    <button class="btn btn-secondary btn-sm mt-1" style="width:100%;" onclick="addBranchCard()">＋ 事業所を追加</button>
+                </div>
+
+                <!-- ===== 右カラム: 請求・契約・単価 ===== -->
+                <div class="edit-col">
+                    <h4 class="section-title">💰 請求・契約情報</h4>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                        <div class="form-group"><label>契約タイプ</label>
+                            <select id="custType">
+                                <option value="spot">スポット</option>
+                                <option value="subscription">定期契約</option>
+                            </select>
+                        </div>
+                        <div class="form-group"><label>委託契約書 期限</label><input type="date" id="custExpiry"></div>
+                    </div>
+
+                    <div style="background:var(--bg-secondary);padding:10px;border-radius:var(--r-md);margin:6px 0;">
+                        <label style="font-weight:700;font-size:0.8rem;">📅 締め・支払サイクル</label>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px;">
+                            <div class="form-group" style="margin:0;"><label style="font-size:0.72rem;">支払方法</label>
+                                <select id="custPaymentMethod">
+                                    <option value="振込">振込</option>
+                                    <option value="自動引落し">自動引落し</option>
+                                </select>
+                            </div>
+                            <div class="form-group" style="margin:0;"><label style="font-size:0.72rem;">締め日</label>
+                                <select id="custClosingDay">
+                                    <option value="31">月末</option>
+                                    <option value="25">25日</option>
+                                    <option value="20">20日</option>
+                                    <option value="15">15日</option>
+                                    <option value="10">10日</option>
+                                </select>
+                            </div>
+                            <div class="form-group" style="margin:0;"><label style="font-size:0.72rem;">支払月</label>
+                                <select id="custPayMonthOffset">
+                                    <option value="0">当月</option>
+                                    <option value="1" selected>翌月</option>
+                                    <option value="2">翌々月</option>
+                                </select>
+                            </div>
+                            <div class="form-group" style="margin:0;"><label style="font-size:0.72rem;">支払日</label>
+                                <select id="custPayDay">
+                                    <option value="31">月末</option>
+                                    <option value="27">27日</option>
+                                    <option value="25">25日</option>
+                                    <option value="20">20日</option>
+                                    <option value="15">15日</option>
+                                    <option value="10">10日</option>
+                                </select>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="margin-top:6px;"><label>ご請求先 宛名 / 住所 <button type="button" onclick="document.getElementById('custBillingAddress').value=document.getElementById('custAddress').value" style="font-size:0.65rem;padding:2px 6px;border-radius:4px;border:1px solid var(--border);background:#EBF5FF;color:var(--blue);cursor:pointer;margin-left:4px;">📋 住所と同じ</button></label><input type="text" id="custBillingAddress" placeholder="○○株式会社 京都市..."></div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                        <div class="form-group"><label>請求先 メール</label><input type="email" id="custBillingEmail" placeholder="billing@example.com"></div>
+                        <div class="form-group"><label>請求先 ご担当者</label><input type="text" id="custBillingContact" placeholder="経理担当者名"></div>
+                    </div>
+                    <div class="form-group" style="margin:4px 0;">
+                        <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:600;font-size:0.78rem;color:var(--text-primary);background:#FEF2F2;padding:6px 10px;border:1px solid #FCA5A5;border-radius:6px;">
+                            <input type="checkbox" id="custExcludeMailing">
+                            郵送代行CSV・メール一括送信から除外
+                        </label>
+                    </div>
+
+                    <div style="background:var(--bg-secondary);padding:10px;border-radius:var(--r-md);margin:6px 0;">
+                        <label style="font-weight:700;font-size:0.8rem;">📄 契約書送付先（請求先と異なる場合）</label>
+                        <button type="button" onclick="copyBillingToContract()" style="font-size:0.65rem;padding:2px 6px;border-radius:4px;border:1px solid var(--border);background:#EBF5FF;color:var(--blue);cursor:pointer;margin-left:4px;">📋 請求先と同じ</button>
+                        <div style="margin-top:6px;display:grid;grid-template-columns:1fr;gap:4px;">
+                            <div class="form-group" style="margin:0;"><input type="text" id="custContractAddress" placeholder="契約書送付先 宛名 / 住所"></div>
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:4px;">
+                                <div class="form-group" style="margin:0;"><input type="email" id="custContractEmail" placeholder="メール"></div>
+                                <div class="form-group" style="margin:0;"><input type="text" id="custContractContact" placeholder="ご担当者"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <h4 class="section-title">📄 単価・契約リスト</h4>
+                    <p style="font-size:0.72rem;color:var(--text-secondary);margin-bottom:8px;">顧客固有の品目別単価</p>
+                    <div id="pricingListContainer"></div>
+                    <button class="btn btn-secondary btn-sm mt-1" style="width:100%;" onclick="addPricingRow()">＋ 品目を追加</button>
+
+                    <h4 class="section-title mt-2">🏢 関連手配先・処分先</h4>
+                    <p style="font-size:0.72rem;color:var(--text-secondary);margin-bottom:6px;">手配する処分先にチェック</p>
+                    <div id="custContractorsList" style="display:flex; flex-wrap:wrap; gap:6px; border:1px solid var(--border); padding:8px; border-radius:var(--r-md); background:var(--bg-secondary);">
+                    </div>
+
+                    <div id="custContractsSection" style="display:none; border-top: 1px dashed var(--border); margin-top: 12px; padding-top: 8px;">
+                        <h4 class="section-title">📄 3社間契約</h4>
+                        <div id="custContractsList" style="margin-bottom:8px;"></div>
+                        <button type="button" class="contract-add-btn" id="custContractAddBtn" onclick="openCustContractModal()">➕ 新規3社契約を登録</button>
+                    </div>
+
+                    <div class="form-group mt-1"><label>社内用メモ</label><textarea id="custNotes" placeholder="特記事項など..." style="min-height:60px;"></textarea></div>
                 </div>
             </div>
-            <div class="form-group">
-                <label>担当営業 (自社)</label>
-                <select id="custAssignedUser">
-                    <option value="">未設定</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label>廃棄物カテゴリ (管理用)</label>
-                <select id="custWasteCategory">
-                    <option value="general">一般ゴミ</option>
-                    <option value="industrial">産業廃棄物</option>
-                    <option value="large">大型ゴミ等</option>
-                </select>
-            </div>
-            <div class="form-group"><label>ご住所</label><input type="text" id="custAddress" placeholder="京都市..."></div>
-            <div class="form-group"><label>担当者名</label><input type="text" id="custContact" placeholder="山田太郎"></div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-                <div class="form-group"><label>電話番号</label><input type="tel" id="custPhone" inputmode="tel" placeholder="075-XXX-XXXX">
-                </div>
-                <div class="form-group"><label>携帯番号</label><input type="tel" id="custMobile" inputmode="tel"
-                        placeholder="090-XXXX-XXXX"></div>
-            </div>
-            <div class="form-group"><label>メールアドレス</label><input type="email" id="custEmail" inputmode="email"
-                    placeholder="info@example.com"></div>
 
-            <h4 class="section-title">📍 事業所・回収情報 <span id="branchCount" style="font-size:0.75rem;font-weight:400;color:var(--text-tertiary);"></span></h4>
-            <p style="font-size:0.78rem;color:var(--text-secondary);margin-bottom:8px;">回収場所ごとに情報を登録できます（複数可）</p>
-            <div id="branchesContainer"></div>
-            <button class="btn btn-secondary btn-sm mt-1" style="width:100%;" onclick="addBranchCard()">＋ 事業所（回収場所）を追加</button>
-
-            <h4 class="section-title">💰 請求・契約情報</h4>
-            <div class="form-group">
-                <label>契約タイプ</label>
-                <select id="custType">
-                    <option value="spot">スポット</option>
-                    <option value="subscription">定期契約</option>
-                </select>
-            </div>
-            <div class="form-group"><label>委託契約書 期限</label><input type="date" id="custExpiry"></div>
-
-            <div style="background:var(--bg-secondary);padding:14px;border-radius:var(--r-md);margin:8px 0;">
-                <label style="font-weight:700;font-size:0.85rem;">📅 締め・支払サイクル</label>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:8px;">
-                    <div class="form-group" style="margin:0;">
-                        <label style="font-size:0.78rem;">支払方法</label>
-                        <select id="custPaymentMethod">
-                            <option value="振込">振込</option>
-                            <option value="自動引落し">自動引落し</option>
-                        </select>
-                    </div>
-                    <div class="form-group" style="margin:0;">
-                        <label style="font-size:0.78rem;">締め日</label>
-                        <select id="custClosingDay">
-                            <option value="31">月末</option>
-                            <option value="25">25日</option>
-                            <option value="20">20日</option>
-                            <option value="15">15日</option>
-                            <option value="10">10日</option>
-                        </select>
-                    </div>
-                    <div class="form-group" style="margin:0;">
-                        <label style="font-size:0.78rem;">支払月</label>
-                        <select id="custPayMonthOffset">
-                            <option value="0">当月</option>
-                            <option value="1" selected>翌月</option>
-                            <option value="2">翌々月</option>
-                        </select>
-                    </div>
-                    <div class="form-group" style="margin:0;">
-                        <label style="font-size:0.78rem;">支払日</label>
-                        <select id="custPayDay">
-                            <option value="31">月末</option>
-                            <option value="27">27日</option>
-                            <option value="25">25日</option>
-                            <option value="20">20日</option>
-                            <option value="15">15日</option>
-                            <option value="10">10日</option>
-                        </select>
-                    </div>
-                </div>
-            </div>
-
-            <div class="form-group"><label>ご請求先 宛名 / 住所 <button type="button" onclick="document.getElementById('custBillingAddress').value=document.getElementById('custAddress').value" style="font-size:0.7rem;padding:2px 8px;border-radius:4px;border:1px solid var(--border);background:#EBF5FF;color:var(--blue);cursor:pointer;margin-left:4px;">📋 住所と同じ</button></label><input type="text" id="custBillingAddress"
-                    placeholder="○○株式会社 京都市..."></div>
-            <div class="form-group"><label>ご請求先 メールアドレス</label><input type="email" id="custBillingEmail"
-                    placeholder="billing@example.com"></div>
-            <div class="form-group"><label>ご請求先 ご担当者名</label><input type="text" id="custBillingContact"
-                    placeholder="経理担当者名"></div>
-            <div class="form-group" style="margin-top:12px;">
-                <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-weight:600;color:var(--text-primary);background:#FEF2F2;padding:8px 12px;border:1px solid #FCA5A5;border-radius:6px;">
-                    <input type="checkbox" id="custExcludeMailing">
-                    システムからの郵送代行CSV・メール一括送信の対象から除外する<br>(BtoBプラットフォームや専用用紙などを使用する場合)
-                </label>
-            </div>
-
-            <div style="background:var(--bg-secondary);padding:14px;border-radius:var(--r-md);margin:12px 0;">
-                <label style="font-weight:700;font-size:0.85rem;">📄 契約書送付先（請求先と異なる場合）</label>
-                <button type="button" onclick="copyBillingToContract()" style="font-size:0.7rem;padding:2px 8px;border-radius:4px;border:1px solid var(--border);background:#EBF5FF;color:var(--blue);cursor:pointer;margin-left:4px;">📋 請求先と同じ</button>
-                <div style="margin-top:8px;">
-                    <div class="form-group" style="margin-bottom:6px;"><input type="text" id="custContractAddress" placeholder="契約書送付先 宛名 / 住所"></div>
-                    <div class="form-group" style="margin-bottom:6px;"><input type="email" id="custContractEmail" placeholder="契約書送付先 メールアドレス"></div>
-                    <div class="form-group" style="margin-bottom:0;"><input type="text" id="custContractContact" placeholder="契約書送付先 ご担当者名"></div>
-                </div>
-            </div>
-
-            <h4 class="section-title">📄 単価・契約リスト</h4>
-            <p style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:12px;">顧客固有の品目別単価（例: 一般ごみ / 40 / kg）
-            </p>
-            <div id="pricingListContainer"></div>
-            <button class="btn btn-secondary btn-sm mt-1" style="width:100%;" onclick="addPricingRow()">＋ 品目を追加</button>
-
-            <h4 class="section-title mt-4">🏢 関連手配先・処分先</h4>
-            <p style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:8px;">
-                ご契約中、または今後手配する可能性のある処分先にチェックを入れてください</p>
-            <div id="custContractorsList"
-                style="display:flex; flex-wrap:wrap; gap:8px; border:1px solid var(--border); padding:10px; border-radius:var(--r-md); background:var(--bg-secondary);">
-                <!-- JSで動的にチェックボックスを生成 -->
-            </div>
-
-            <div id="custContractsSection" style="display:none; border-top: 1px dashed var(--border); margin-top: 20px; padding-top: 10px;">
-                <h4 class="section-title">📄 3社間契約 状況・履歴</h4>
-                <div id="custContractsList" style="margin-bottom:12px;"></div>
-                <button type="button" class="contract-add-btn" id="custContractAddBtn" onclick="openCustContractModal()">➕ 新規3社契約を登録</button>
-            </div>
-
-            <div class="form-group mt-2"><label>社内用メモ</label><textarea id="custNotes"
-                    placeholder="特記事項など..."></textarea></div>
-
-            <div style="margin-top:24px;">
+            <div style="margin-top:16px;display:grid;grid-template-columns:1fr 1fr;gap:8px;">
                 <button class="btn btn-primary" id="saveBtn" onclick="saveCustomer()">登録する</button>
-                <a class="btn btn-primary mt-1" id="printContractBtn"
+                <button class="btn btn-secondary" onclick="closeModal()">キャンセル</button>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px;">
+                <a class="btn btn-primary" id="printContractBtn"
                     style="display:none; text-align:center; text-decoration:none; background:#34C759; color:#fff;"
                     target="_blank">📄 産廃契約書を作成</a>
-                <button class="btn btn-secondary mt-1" onclick="closeModal()">キャンセル</button>
-                <button class="btn btn-danger mt-1" id="deleteBtn" onclick="deleteCustomer()" style="display:none;">🗑
-                    削除</button>
+                <button class="btn btn-danger" id="deleteBtn" onclick="deleteCustomer()" style="display:none;">🗑 削除</button>
             </div>
         </div>
     </div>

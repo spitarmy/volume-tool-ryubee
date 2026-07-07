@@ -942,7 +942,7 @@ textarea {
 
   .cust-modal {
     border-radius: var(--r-xl);
-    max-width: 900px;
+    max-width: 1200px;
     max-height: 92vh;
   }
 
