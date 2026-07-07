@@ -386,8 +386,17 @@
 
     <!-- ━━ Contracts Panel ━━ -->
     <div class="tab-panel" id="panel-contracts">
-        <div class="data-list" id="contractList">
-            <p class="empty-msg">読み込み中...</p>
+        <div class="data-list">
+            <!-- 検索バー -->
+            <div style="margin-bottom:16px;">
+                <input type="text" id="contractSearchInput" placeholder="🔍 業者名・顧客名・廃棄物で検索..." oninput="filterAllContracts()" style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid var(--border);font-size:0.9rem;box-sizing:border-box;">
+            </div>
+            <!-- 手動登録の3社契約 -->
+            <h3 style="font-size:0.95rem;color:var(--text-secondary);margin:0 0 8px;">📝 手動登録契約</h3>
+            <div id="contractList"><p class="empty-msg">読み込み中...</p></div>
+            <!-- 顧客情報からの3社契約 -->
+            <h3 style="font-size:0.95rem;color:var(--text-secondary);margin:20px 0 8px;border-top:2px solid var(--border);padding-top:16px;">🏢 顧客登録の処分先契約（自動反映）</h3>
+            <div id="customerContractList"><p class="empty-msg">読み込み中...</p></div>
         </div>
     </div>
 
@@ -874,6 +883,80 @@
             } catch (e) {
                 document.getElementById('contractList').innerHTML = `<div class="alert alert-danger">${e.message}</div>`;
             }
+            // 顧客情報からの契約も読み込み
+            await loadCustomerContracts();
+        }
+
+        let allCustomerContracts = []; // { ...contract, customer_name, customer_id }
+
+        async function loadCustomerContracts() {
+            try {
+                const customers = await RyubeeAPI.fetchCustomers();
+                allCustomerContracts = [];
+                // 全顧客の契約を並行取得
+                const results = await Promise.allSettled(
+                    customers.map(c => RyubeeAPI.fetchCustomerContracts(c.id).then(contracts =>
+                        contracts.map(ct => ({ ...ct, customer_name: c.name, customer_id: c.id }))
+                    ))
+                );
+                for (const r of results) {
+                    if (r.status === 'fulfilled' && r.value.length) {
+                        allCustomerContracts.push(...r.value);
+                    }
+                }
+                renderCustomerContracts();
+            } catch (e) {
+                console.error('Customer contracts load error:', e);
+                document.getElementById('customerContractList').innerHTML = `<p class="empty-msg">取得エラー</p>`;
+            }
+        }
+
+        function renderCustomerContracts(filterQuery = '') {
+            const list = document.getElementById('customerContractList');
+            let filtered = allCustomerContracts;
+            if (filterQuery) {
+                const q = filterQuery.toLowerCase();
+                filtered = filtered.filter(c =>
+                    (c.customer_name || '').toLowerCase().includes(q) ||
+                    (c.disposal_company || '').toLowerCase().includes(q) ||
+                    (c.waste_types || []).join(' ').toLowerCase().includes(q) ||
+                    (c.contractor_name || '').toLowerCase().includes(q)
+                );
+            }
+            if (!filtered.length) {
+                list.innerHTML = '<p class="empty-msg">📄 顧客登録の契約がありません</p>';
+                return;
+            }
+            list.innerHTML = filtered.map(c => {
+                const wasteTypes = Array.isArray(c.waste_types) ? c.waste_types.join(', ') : (c.waste_type || '–');
+                return `
+                    <div class="data-card" style="cursor:default;">
+                        <div class="dc-top">
+                            <span class="dc-title">🏢 ${utils.escapeHtml(c.customer_name || '–')}</span>
+                            <span class="dc-badge ok" style="background:#EDE9FE;color:#7C3AED;">顧客契約</span>
+                        </div>
+                        <div class="dc-meta">🏢 排出: ${utils.escapeHtml(c.customer_name || '–')}</div>
+                        <div class="dc-meta">🏗️ 処分: ${utils.escapeHtml(c.disposal_company || '–')}</div>
+                        <div class="dc-meta">🚛 運搬: ${utils.escapeHtml(c.contractor_name || '–')}</div>
+                        <div class="dc-meta">♻️ ${utils.escapeHtml(wasteTypes)}</div>
+                        ${c.unit_price ? `<div class="dc-meta">💰 単価: ¥${Number(c.unit_price).toLocaleString()}</div>` : ''}
+                        ${c.contract_date ? `<div class="dc-meta">📅 契約日: ${c.contract_date}</div>` : ''}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function filterAllContracts() {
+            const q = (document.getElementById('contractSearchInput')?.value || '').toLowerCase();
+            // 手動登録契約をフィルター
+            const manualCards = document.getElementById('contractList');
+            if (manualCards) {
+                manualCards.querySelectorAll('.data-card').forEach(card => {
+                    card.style.display = card.textContent.toLowerCase().includes(q) ? '' : 'none';
+                });
+            }
+            // 顧客契約をフィルター
+            renderCustomerContracts(q);
         }
 
         function renderContracts() {
