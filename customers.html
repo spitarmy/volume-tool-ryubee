@@ -523,9 +523,10 @@
                         <label style="font-weight:700;font-size:0.8rem;">📅 締め・支払サイクル</label>
                         <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px;">
                             <div class="form-group" style="margin:0;"><label style="font-size:0.72rem;">支払方法</label>
-                                <select id="custPaymentMethod">
+                                <select id="custPaymentMethod" onchange="toggleAutoDebitFields()">
                                     <option value="振込">振込</option>
                                     <option value="自動引落し">自動引落し</option>
+                                    <option value="集金">集金</option>
                                 </select>
                             </div>
                             <div class="form-group" style="margin:0;"><label style="font-size:0.72rem;">締め日</label>
@@ -554,6 +555,40 @@
                                     <option value="10">10日</option>
                                 </select>
                             </div>
+                        </div>
+                        <!-- 自動振替関連 -->
+                        <div id="autoDebitFields" style="display:none;margin-top:8px;padding:8px;background:#FFF7ED;border:1px solid #FDBA74;border-radius:8px;">
+                            <label style="font-weight:700;font-size:0.75rem;color:#9A3412;">🏦 自動振替 設定</label>
+                            <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px;">
+                                <div class="form-group" style="margin:0;"><label style="font-size:0.72rem;">引落開始までの請求</label>
+                                    <select id="custPreDebitBilling">
+                                        <option value="振込">振込</option>
+                                        <option value="まとめて引落">まとめて引落</option>
+                                        <option value="集金">集金</option>
+                                    </select>
+                                </div>
+                                <div class="form-group" style="margin:0;display:flex;align-items:flex-end;">
+                                    <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:0.78rem;font-weight:600;background:#fff;padding:6px 10px;border:1px solid var(--border);border-radius:6px;width:100%;">
+                                        <input type="checkbox" id="custAutoDebitFormSent">
+                                        📄 用紙送付済
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <!-- 請求書送付方法 -->
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin:6px 0;">
+                        <div class="form-group" style="margin:0;"><label style="font-size:0.72rem;">📄 請求書送付方法</label>
+                            <select id="custInvoiceDelivery">
+                                <option value="郵送">郵送（送付）</option>
+                                <option value="メール">メール</option>
+                                <option value="FAX">FAX</option>
+                                <option value="手渡し">手渡し</option>
+                                <option value="不要">不要</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="margin:0;"><label style="font-size:0.72rem;">📮 請求書 送付先</label>
+                            <input type="text" id="custInvoiceSendTo" placeholder="送付先名・住所">
                         </div>
                     </div>
 
@@ -883,6 +918,12 @@
             document.getElementById('custBillingEmail').value = fd.billing_email || '';
             document.getElementById('custBillingContact').value = fd.billing_contact || '';
             document.getElementById('custExcludeMailing').checked = !!fd.exclude_from_mailing;
+            // 自動振替関連フィールド
+            document.getElementById('custPreDebitBilling').value = fd.pre_debit_billing || '振込';
+            document.getElementById('custAutoDebitFormSent').checked = !!fd.auto_debit_form_sent;
+            document.getElementById('custInvoiceDelivery').value = fd.invoice_delivery || '郵送';
+            document.getElementById('custInvoiceSendTo').value = fd.invoice_send_to || '';
+            toggleAutoDebitFields();
 
             document.getElementById('custContractAddress').value = fd.contract_address || '';
             document.getElementById('custContractEmail').value = fd.contract_email || '';
@@ -1220,6 +1261,14 @@
 
         function closeModal() { document.getElementById('custOverlay').classList.remove('show'); editingId = null; }
 
+        function toggleAutoDebitFields() {
+            const method = document.getElementById('custPaymentMethod').value;
+            const fields = document.getElementById('autoDebitFields');
+            if (fields) {
+                fields.style.display = method === '自動引落し' ? 'block' : 'none';
+            }
+        }
+
         let previewingId = null;
         async function openPreview(id) {
             const c = allCustomers.find(x => x.id === id);
@@ -1492,6 +1541,11 @@
                 billing_email: document.getElementById('custBillingEmail').value.trim(),
                 billing_contact: document.getElementById('custBillingContact').value.trim(),
                 exclude_from_mailing: document.getElementById('custExcludeMailing').checked,
+                // 自動振替関連
+                pre_debit_billing: document.getElementById('custPreDebitBilling').value,
+                auto_debit_form_sent: document.getElementById('custAutoDebitFormSent').checked,
+                invoice_delivery: document.getElementById('custInvoiceDelivery').value,
+                invoice_send_to: document.getElementById('custInvoiceSendTo').value.trim(),
                 // 契約書送付先（2-4）
                 contract_address: document.getElementById('custContractAddress').value.trim(),
                 contract_email: document.getElementById('custContractEmail').value.trim(),

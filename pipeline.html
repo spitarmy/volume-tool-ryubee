@@ -1094,6 +1094,46 @@
                     <option value="waiting_manifest">マニフェスト待ち</option>
                 </select>
             </div>
+            <div style="background:var(--bg-secondary);padding:10px;border-radius:12px;margin-bottom:12px;">
+                <label style="font-weight:700;font-size:0.82rem;display:block;margin-bottom:6px;">💰 支払方法</label>
+                <select id="njPaymentMethod" onchange="toggleNjAutoDebit()" style="width:100%;margin-bottom:8px;">
+                    <option value="振込">振込</option>
+                    <option value="自動引落し">自動引落し</option>
+                    <option value="集金">集金</option>
+                </select>
+                <div id="njAutoDebitFields" style="display:none;padding:8px;background:#FFF7ED;border:1px solid #FDBA74;border-radius:8px;">
+                    <label style="font-weight:700;font-size:0.72rem;color:#9A3412;">🏦 自動振替設定</label>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px;">
+                        <div class="form-group" style="margin:0;"><label style="font-size:0.72rem;">引落開始までの請求</label>
+                            <select id="njPreDebitBilling">
+                                <option value="振込">振込</option>
+                                <option value="まとめて引落">まとめて引落</option>
+                                <option value="集金">集金</option>
+                            </select>
+                        </div>
+                        <div class="form-group" style="margin:0;display:flex;align-items:flex-end;">
+                            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:0.78rem;font-weight:600;background:#fff;padding:6px 10px;border:1px solid var(--border);border-radius:6px;width:100%;">
+                                <input type="checkbox" id="njAutoDebitFormSent">
+                                📄 用紙送付済
+                            </label>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
+                <div class="form-group" style="margin:0;"><label style="font-size:0.72rem;">📄 請求書送付方法</label>
+                    <select id="njInvoiceDelivery">
+                        <option value="郵送">郵送（送付）</option>
+                        <option value="メール">メール</option>
+                        <option value="FAX">FAX</option>
+                        <option value="手渡し">手渡し</option>
+                        <option value="不要">不要</option>
+                    </select>
+                </div>
+                <div class="form-group" style="margin:0;"><label style="font-size:0.72rem;">📮 送付先</label>
+                    <input type="text" id="njInvoiceSendTo" placeholder="送付先名・住所">
+                </div>
+            </div>
             <div class="form-group" id="njAmountGroup" style="margin-bottom:16px;">
                 <label>見込金額</label>
                 <input type="number" id="njAmount" placeholder="未定の場合は空欄" style="width:100%;">
@@ -1426,16 +1466,25 @@
                     payload.assigned_to = assigned_to;
                 }
 
-                // form_dataに担当者・電話番号を格納
+                // form_dataに担当者・電話番号・支払情報を格納
                 const formData = {};
                 if (contactName) formData.contact_name = contactName;
                 if (phone) formData.phone = phone;
                 if (stage === 'prospect') {
                     formData.prospect_status = 'discovered';
                 }
-                if (Object.keys(formData).length > 0) {
-                    payload.form_data = JSON.stringify(formData);
+                // 支払方法関連
+                const paymentMethod = document.getElementById('njPaymentMethod').value;
+                formData.payment_method = paymentMethod;
+                if (paymentMethod === '自動引落し') {
+                    formData.pre_debit_billing = document.getElementById('njPreDebitBilling').value;
+                    formData.auto_debit_form_sent = document.getElementById('njAutoDebitFormSent').checked;
                 }
+                formData.invoice_delivery = document.getElementById('njInvoiceDelivery').value;
+                const invoiceSendTo = document.getElementById('njInvoiceSendTo').value.trim();
+                if (invoiceSendTo) formData.invoice_send_to = invoiceSendTo;
+
+                payload.form_data = JSON.stringify(formData);
 
                 await RyubeeAPI.createJob(payload);
                 document.getElementById('newJobModal').classList.remove('show');
@@ -1450,6 +1499,12 @@
                 document.getElementById('njAddress').value = '';
                 document.getElementById('njAssignedTo').value = '';
                 document.getElementById('njGpsAccuracy').innerHTML = '';
+                document.getElementById('njPaymentMethod').value = '振込';
+                document.getElementById('njPreDebitBilling').value = '振込';
+                document.getElementById('njAutoDebitFormSent').checked = false;
+                document.getElementById('njInvoiceDelivery').value = '郵送';
+                document.getElementById('njInvoiceSendTo').value = '';
+                document.getElementById('njAutoDebitFields').style.display = 'none';
             } catch (e) {
                 alert("追加エラー: " + e.message);
             }
@@ -1464,6 +1519,11 @@
                 console.error("Failed to fetch users", e);
             }
             document.getElementById('newJobModal').classList.add('show');
+        }
+
+        function toggleNjAutoDebit() {
+            const method = document.getElementById('njPaymentMethod').value;
+            document.getElementById('njAutoDebitFields').style.display = method === '自動引落し' ? 'block' : 'none';
         }
 
         // ── Detail Drawer (Comments + Deal Amounts) ───
