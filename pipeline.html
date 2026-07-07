@@ -1703,8 +1703,9 @@
                     </a>
                 </div>
 
-                <!-- ⑤ 請求書発行 / 現金を回収 -->
+                <!-- ⑤ 見積書 / 請求書発行 / 現金を回収 -->
                 <div class="drawer-actions">
+                    <button class="btn btn-secondary" onclick="window.location.href='invoice.html?id=${jobId}'">📝 見積書を作成</button>
                     <button class="btn btn-success" onclick="convertToInvoice('${jobId}')">🧾 請求書を発行</button>
                     <button class="btn btn-warning" onclick="collectCash('${jobId}')">💴 現金を回収</button>
                 </div>

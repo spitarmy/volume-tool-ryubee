@@ -474,9 +474,15 @@
                 <!-- ===== 左カラム: 基本情報 + 事業所 ===== -->
                 <div class="edit-col">
                     <h4 class="section-title">🏢 基本情報</h4>
-                    <div style="display:grid;grid-template-columns:1fr 2fr;gap:8px;">
+                    <div style="display:grid;grid-template-columns:1fr 2fr 80px;gap:8px;">
                         <div class="form-group"><label>山文管理番号 *</label><input type="text" id="custYamabunNumber" placeholder="例: Y-101"></div>
                         <div class="form-group"><label>法人名 / 会社名 *</label><input type="text" id="custName" placeholder="株式会社○○"></div>
+                        <div class="form-group"><label>敬称</label>
+                            <select id="custHonorific">
+                                <option value="御中">御中</option>
+                                <option value="様">様</option>
+                            </select>
+                        </div>
                     </div>
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
                         <div class="form-group"><label>担当営業</label>
@@ -910,6 +916,7 @@
             if (cust && cust.form_data) {
                 try { fd = JSON.parse(cust.form_data); } catch (e) { }
             }
+            document.getElementById('custHonorific').value = fd.honorific || '御中';
             document.getElementById('custYamabunNumber').value = fd.yamabun_management_number || '';
             document.getElementById('custWasteCategory').value = fd.waste_category || 'general';
             document.getElementById('custMobile').value = fd.mobile || '';
@@ -1530,6 +1537,7 @@
             });
 
             const formData = {
+                honorific: document.getElementById('custHonorific').value,
                 yamabun_management_number: document.getElementById('custYamabunNumber').value.trim(),
                 waste_category: document.getElementById('custWasteCategory').value,
                 mobile: document.getElementById('custMobile').value.trim(),

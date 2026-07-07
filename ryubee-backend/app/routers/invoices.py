@@ -1279,6 +1279,13 @@ def create_invoice_from_estimate(
             amount=job.surcharge_amount,
         ))
 
+    # 顧客履歴の自動記録
+    db.add(models.CustomerHistory(
+        customer_id=job.customer_id,
+        event_type="invoice",
+        description=f"請求書を作成 (¥{inv.total_amount:,})"
+    ))
+
     db.commit()
     db.refresh(inv)
     inv = db.query(models.Invoice).options(
@@ -1423,6 +1430,13 @@ def record_cash_collection(
     job.pipeline_stage = "completed"
     job.status = "completed"
 
+    # 顧客履歴の自動記録
+    db.add(models.CustomerHistory(
+        customer_id=job.customer_id,
+        event_type="collection",
+        description=f"現金を回収 (¥{total_with_tax:,})"
+    ))
+
     db.commit()
     db.refresh(inv)
     inv = db.query(models.Invoice).options(
@@ -1441,10 +1455,12 @@ class SendInvoiceRequest(BaseModel):
 def _get_pdf_context(db: Session, inv: models.Invoice, company: models.Company, settings: models.CompanySettings) -> dict:
     """PDF（WeasyPrint）描画に必要なコンテキスト変数をまとめて返す"""
     yamabun_no = "未設定"
+    honorific = "御中"
     if inv.customer and inv.customer.form_data:
         try:
             cfd = json.loads(inv.customer.form_data)
             yamabun_no = cfd.get("yamabun_management_number", "未設定")
+            honorific = cfd.get("honorific", "御中")
         except:
             pass
 
@@ -1481,6 +1497,7 @@ def _get_pdf_context(db: Session, inv: models.Invoice, company: models.Company, 
         "settings": settings,
         "today": datetime.now().strftime("%Y年%m月%d日"),
         "yamabun_no": yamabun_no,
+        "honorific": honorific,
         "prev_amount": prev_amount,
         "prev_paid": prev_paid,
         "carryover": carryover,
