@@ -1710,6 +1710,29 @@
                     <button class="btn btn-warning" onclick="collectCash('${jobId}')">💴 現金を回収</button>
                 </div>
 
+                <!-- 承認ステータス -->
+                <div class="drawer-section" style="padding:12px; background:var(--bg-secondary); border-radius:12px; margin-bottom:20px;">
+                    <div style="font-size:0.8rem; font-weight:700; margin-bottom:8px; color:var(--text-secondary);">✅ 承認ステータス（確認済）</div>
+                    <div style="display:flex; justify-content:space-between; gap:8px;">
+                        <label style="display:flex; flex-direction:column; align-items:center; font-size:0.75rem; cursor:pointer; background:#fff; padding:6px; border-radius:8px; flex:1; border:1px solid var(--border);">
+                            <input type="checkbox" onchange="toggleJobApproval('${jobId}', 'field', this.checked)" ${fd.appr_field ? 'checked' : ''}>
+                            <span style="margin-top:4px;">現場</span>
+                        </label>
+                        <label style="display:flex; flex-direction:column; align-items:center; font-size:0.75rem; cursor:pointer; background:#fff; padding:6px; border-radius:8px; flex:1; border:1px solid var(--border);">
+                            <input type="checkbox" onchange="toggleJobApproval('${jobId}', 'accounting', this.checked)" ${fd.appr_accounting ? 'checked' : ''}>
+                            <span style="margin-top:4px;">経理</span>
+                        </label>
+                        <label style="display:flex; flex-direction:column; align-items:center; font-size:0.75rem; cursor:pointer; background:#fff; padding:6px; border-radius:8px; flex:1; border:1px solid var(--border);">
+                            <input type="checkbox" onchange="toggleJobApproval('${jobId}', 'contract', this.checked)" ${fd.appr_contract ? 'checked' : ''}>
+                            <span style="margin-top:4px;">契約担当</span>
+                        </label>
+                        <label style="display:flex; flex-direction:column; align-items:center; font-size:0.75rem; cursor:pointer; background:#fff; padding:6px; border-radius:8px; flex:1; border:1px solid var(--border);">
+                            <input type="checkbox" onchange="toggleJobApproval('${jobId}', 'director', this.checked)" ${fd.appr_director ? 'checked' : ''}>
+                            <span style="margin-top:4px;">専務</span>
+                        </label>
+                    </div>
+                </div>
+
                 <!-- ⑥ コメント -->
                 <div class="comment-thread">
                     <h4 style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:8px;">💬 コメント (${comments.length})</h4>
@@ -1734,6 +1757,24 @@
             // 契約一覧をロード
             if (job.customer_id) {
                 loadCustomerContracts(job.customer_id);
+            }
+        }
+
+        async function toggleJobApproval(jobId, role, isChecked) {
+            const job = pipelineData.find(j => j.id === jobId);
+            if(!job) return;
+            let fd = {};
+            try { fd = JSON.parse(job.form_data || "{}"); } catch(e){}
+            
+            fd[`appr_${role}`] = isChecked;
+            job.form_data = JSON.stringify(fd);
+
+            try {
+                await RyubeeAPI.updateJob(jobId, { form_data: job.form_data });
+                // 成功時は静かに更新
+            } catch(e) {
+                alert("更新に失敗しました");
+                console.error(e);
             }
         }
 
