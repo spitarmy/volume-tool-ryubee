@@ -310,9 +310,9 @@
         <tr>
             <th>前回ご請求額</th>
             <th>入金額</th>
-            <th>値引</th>
+            <th>調整額</th>
             <th>繰越金額</th>
-            <th>今回ご請求額（合算）</th>
+            <th>今回ご請求額（税込）</th>
         </tr>
         <tr>
             <td>{{ ("¥" ~ "{:,}".format(prev_amount)) if prev_amount > 0 else "" }}</td>
@@ -375,7 +375,7 @@
         <tbody>
             {% for item in invoice.items %}
             <tr>
-                <td class="center"></td>
+                <td class="center">{% if invoice.invoice_type == 'subscription' and invoice.month and customer and customer.billing_closing_day %}{% set m = invoice.month.split('-') %}{% set y = m[0]|int %}{% set mo = m[1]|int %}{% set cd = customer.billing_closing_day %}{% if cd >= 28 %}{% set import_cal = true %}{% endif %}{{ "{:04d}/{:02d}/{:02d}".format(y, mo, [cd, 28]|min if mo == 2 else [cd, 30]|min if mo in [4,6,9,11] else cd) }}{% endif %}</td>
                 <td>{{ item.description }}</td>
                 <td class="center">{{ item.quantity }}{{ item.unit }}</td>
                 <td class="num">¥{{ "{:,}".format(item.unit_price|int) }}</td>
@@ -406,12 +406,12 @@
             <tr>
                 <td class="label">内訳</td>
                 <td style="font-size:10pt;">10%対象(税抜)</td>
-                <td class="num">{{ "{:,}".format((invoice.total_amount or 0) - (invoice.tax_amount or 0)) }}円</td>
+                <td class="num">¥{{ "{:,}".format((invoice.total_amount or 0) - (invoice.tax_amount or 0)) }}</td>
             </tr>
             <tr>
                 <td class="label"></td>
                 <td style="font-size:9pt;">10%消費税</td>
-                <td class="num">{{ "{:,}".format(invoice.tax_amount or 0) }}円</td>
+                <td class="num">¥{{ "{:,}".format(invoice.tax_amount or 0) }}</td>
             </tr>
         </table>
     </div>

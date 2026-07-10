@@ -659,7 +659,7 @@
                                     <option value="">なし</option>
                                     <option value="振込手数料">振込手数料</option>
                                     <option value="協力会費">協力会費</option>
-                                    <option value="値引き">値引き</option>
+                                    <option value="調整額">調整額</option>
                                     <option value="その他">その他</option>
                                 </select>
                             </div>
@@ -1340,11 +1340,11 @@
             if (inv.items && inv.items.length) {
                 itemsHtml = inv.items.map(it => `
                     <tr style="height:32px;">
-                        <td style="border:1px solid #000; padding:6px; font-size:13px; text-align:center;">${inv.month || ''}</td>
+                        <td style="border:1px solid #000; padding:6px; font-size:13px; text-align:center;">${inv.invoice_type === 'subscription' && inv.month && customer.billing_closing_day ? inv.month.replace('-', '/') + '/' + String(customer.billing_closing_day).padStart(2, '0') : (inv.month || '')}</td>
                         <td style="border:1px solid #000; padding:6px; font-size:13px;">${utils.escapeHtml(it.description)}</td>
                         <td style="border:1px solid #000; padding:6px; font-size:13px; text-align:center;">${it.quantity} ${it.unit || '式'}</td>
-                        <td style="border:1px solid #000; padding:6px; font-size:13px; text-align:right;">${Number(it.unit_price).toLocaleString()}</td>
-                        <td style="border:1px solid #000; padding:6px; font-size:13px; text-align:right;">${Number(it.amount).toLocaleString()}</td>
+                        <td style="border:1px solid #000; padding:6px; font-size:13px; text-align:right;">¥${Number(it.unit_price).toLocaleString()}</td>
+                        <td style="border:1px solid #000; padding:6px; font-size:13px; text-align:right;">¥${Number(it.amount).toLocaleString()}</td>
                     </tr>
                 `).join('');
                 
@@ -1468,7 +1468,7 @@
                 <div id="dynamic-summary-table" style="margin-bottom:20px;">
                     <table class="inv-top-table" style="width:100%; border-collapse:collapse;">
                         <tr>
-                            <th>前回ご請求額</th><th>入金額</th><th>値引</th><th>繰越金額</th><th>今回ご請求額（合算）</th>
+                            <th>前回ご請求額</th><th>入金額</th><th>調整額</th><th>繰越金額</th><th>今回ご請求額（税込）</th>
                         </tr>
                         <tr>
                             <td>計算中...</td><td>計算中...</td><td>計算中...</td><td>計算中...</td>
@@ -1551,13 +1551,13 @@
                 document.getElementById('dynamic-summary-table').innerHTML = `
                     <table class="inv-top-table" style="width:100%; border-collapse:collapse;">
                         <tr>
-                            <th>前回ご請求額</th><th>入金額</th><th>値引</th><th>繰越金額</th><th>今回ご請求額（合算）</th>
+                            <th>前回ご請求額</th><th>入金額</th><th>調整額</th><th>繰越金額</th><th>今回ご請求額（税込）</th>
                         </tr>
                         <tr>
-                            <td>${prevAmount > 0 ? Number(prevAmount).toLocaleString() : ''}</td>
-                            <td>${prevPaid > 0 ? Number(prevPaid).toLocaleString() : ''}</td>
-                            <td>${discount > 0 ? Number(discount).toLocaleString() : ''}</td>
-                            <td>${carryover > 0 ? Number(carryover).toLocaleString() : ''}</td>
+                            <td>${prevAmount > 0 ? '¥' + Number(prevAmount).toLocaleString() : ''}</td>
+                            <td>${prevPaid > 0 ? '¥' + Number(prevPaid).toLocaleString() : ''}</td>
+                            <td>${discount > 0 ? '¥' + Number(discount).toLocaleString() : ''}</td>
+                            <td>${carryover > 0 ? '¥' + Number(carryover).toLocaleString() : ''}</td>
                             <td style="font-size:20px; font-weight:bold;">¥${grandTotal.toLocaleString()}</td>
                         </tr>
                     </table>
@@ -1605,9 +1605,9 @@
 
         // M-2: 差額承認
         async function settleDifference(invoiceId, remaining) {
-            const reason = prompt(`差額 ¥${remaining.toLocaleString()} の理由を選択してください:\n\n1: 振込手数料\n2: 協力会費\n3: 値引き\n4: その他\n\n番号を入力:`, '1');
+            const reason = prompt(`差額 ¥${remaining.toLocaleString()} の理由を選択してください:\n\n1: 振込手数料\n2: 協力会費\n3: 調整額\n4: その他\n\n番号を入力:`, '1');
             if (!reason) return;
-            const reasons = {'1': '振込手数料', '2': '協力会費', '3': '値引き', '4': 'その他'};
+            const reasons = {'1': '振込手数料', '2': '協力会費', '3': '調整額', '4': 'その他'};
             const feeReason = reasons[reason] || reason;
             if (!confirm(`差額 ¥${remaining.toLocaleString()} を「${feeReason}」として承認し、完了にしますか？`)) return;
             try {

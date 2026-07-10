@@ -766,7 +766,7 @@ def generate_monthly_invoices(
                 ))
                 spot_sales += j_amt
                 if j.discount_amount and j.discount_amount > 0:
-                    spot_items.append(models.InvoiceItem(description="値引き", quantity=1, unit="式", unit_price=-j.discount_amount, amount=-j.discount_amount))
+                    spot_items.append(models.InvoiceItem(description="調整額", quantity=1, unit="式", unit_price=-j.discount_amount, amount=-j.discount_amount))
                     spot_sales -= j.discount_amount
                 if j.surcharge_amount and j.surcharge_amount > 0:
                     spot_items.append(models.InvoiceItem(description="追加料金", quantity=1, unit="式", unit_price=j.surcharge_amount, amount=j.surcharge_amount))
@@ -1180,7 +1180,7 @@ def create_invoice_from_estimate(
     if amount <= 0:
         raise HTTPException(400, "金額が0円です。見積金額を設定してください。")
 
-    # 値引き・追加料金を反映
+    # 調整額・追加料金を反映
     if job.discount_amount and job.discount_amount > 0:
         amount -= job.discount_amount
     if job.surcharge_amount and job.surcharge_amount > 0:
@@ -1262,7 +1262,7 @@ def create_invoice_from_estimate(
     if job.discount_amount and job.discount_amount > 0:
         db.add(models.InvoiceItem(
             invoice_id=inv.id,
-            description="値引き",
+            description="調整額",
             quantity=1,
             unit="式",
             unit_price=-job.discount_amount,
@@ -1314,7 +1314,7 @@ def record_cash_collection(
     if amount <= 0:
         raise HTTPException(400, "金額が0円です。見積金額を設定してください。")
 
-    # 値引き・追加料金を反映
+    # 調整額・追加料金を反映
     if job.discount_amount and job.discount_amount > 0:
         amount -= job.discount_amount
     if job.surcharge_amount and job.surcharge_amount > 0:
@@ -1397,7 +1397,7 @@ def record_cash_collection(
     if job.discount_amount and job.discount_amount > 0:
         db.add(models.InvoiceItem(
             invoice_id=inv.id,
-            description="値引き",
+            description="調整額",
             quantity=1,
             unit="式",
             unit_price=-job.discount_amount,

@@ -433,14 +433,44 @@
         </div>
 
         <datalist id="item-presets">
-            <option value="産業廃棄物処理費（４ｔ）"></option>
-            <option value="人件費"></option>
-            <option value="収集運搬費"></option>
-            <option value="マニフェスト"></option>
-            <option value="リサイクル運搬料（洗濯機・ＴＶ・衣類乾燥機）"></option>
-            <option value="不用品回収・運搬費一式"></option>
-            <option value="金額調整"></option>
+            <!-- 品目マスターからAPIで動的読み込み -->
         </datalist>
+        <script>
+        // ★ 品目マスターを動的にロード
+        (async function loadItemTemplates() {
+            try {
+                const token = localStorage.getItem('ryubee_token');
+                const res = await fetch('https://ryubee-backend.onrender.com/v1/templates', {
+                    headers: token ? { 'Authorization': `Bearer ${token}` } : {}
+                });
+                if (!res.ok) return;
+                const templates = await res.json();
+                window._itemTemplates = templates; // キャッシュ
+                const dl = document.getElementById('item-presets');
+                dl.innerHTML = '';
+                templates.forEach(t => {
+                    const opt = document.createElement('option');
+                    opt.value = t.name;
+                    opt.dataset.unitPrice = t.unit_price || '';
+                    opt.dataset.unit = t.unit || '式';
+                    dl.appendChild(opt);
+                });
+            } catch(e) { console.warn('品目マスター読込失敗:', e); }
+        })();
+        // 品目選択時に単価・単位を自動入力
+        document.addEventListener('input', function(e) {
+            if (!e.target.classList.contains('desc-input') || !window._itemTemplates) return;
+            const tmpl = window._itemTemplates.find(t => t.name === e.target.value);
+            if (!tmpl) return;
+            const row = e.target.closest('tr');
+            if (!row) return;
+            const priceInput = row.querySelector('input[type="number"][oninput*="recalc"], input.price-input');
+            const unitInput = row.querySelector('input.unit-input, select.unit-select');
+            if (priceInput && tmpl.unit_price) priceInput.value = tmpl.unit_price;
+            if (unitInput && tmpl.unit) unitInput.value = tmpl.unit;
+            if (typeof recalcAll === 'function') recalcAll();
+        });
+        </script>
         
         <datalist id="unit-presets">
             <option value="式"></option>

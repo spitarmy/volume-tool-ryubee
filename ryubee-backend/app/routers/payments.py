@@ -202,7 +202,7 @@ def bulk_allocate_payment(
 # ── M-2: 差額承認（手数料差引きで完了扱い）──
 class SettleDifferenceRequest(BaseModel):
     invoice_id: str
-    fee_amount: int          # 手数料・値引き等の差額
+    fee_amount: int          # 手数料・調整額等の差額
     fee_reason: str = "振込手数料"  # 理由
     notes: str = ""
 

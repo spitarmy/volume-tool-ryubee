@@ -1696,7 +1696,7 @@
                         <div>
                             <div class="amount-label">${fin ? '成約金額' : '見積金額'}</div>
                             <div class="amount-value">¥${displayPrice.toLocaleString()}</div>
-                            ${disc ? `<span style="font-size:0.72rem;color:var(--red);">値引き -¥${disc.toLocaleString()}</span>` : ''}
+                            ${disc ? `<span style="font-size:0.72rem;color:var(--red);">調整額 -¥${disc.toLocaleString()}</span>` : ''}
                             ${surcharge ? `<span style="font-size:0.72rem;color:var(--blue);margin-left:6px;">追加 +¥${surcharge.toLocaleString()}</span>` : ''}
                         </div>
                         <div class="amount-tap-hint">見積書 →</div>
