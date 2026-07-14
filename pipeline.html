@@ -1609,15 +1609,21 @@
                 <div style="background:var(--bg-secondary); border: 1px solid var(--border); border-radius: var(--r-md); padding: 10px 12px; margin: 10px 0; display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; font-size: 0.8rem;">
                     <div>
                         <div style="color:var(--text-tertiary); font-size: 0.72rem; margin-bottom: 2px;">業務種別</div>
-                        <div style="font-weight: 700; color: var(--text-primary);">${utils.escapeHtml(fd.yamabun_work_type || '未設定')}</div>
+                        <select id="drawerWorkType" onchange="updateDrawerField('${jobId}', 'yamabun_work_type', this.value)" style="width:100%;padding:4px 6px;border:1px solid var(--border);border-radius:6px;font-size:0.8rem;font-weight:700;background:#fff;">
+                            <option value="" ${!fd.yamabun_work_type ? 'selected' : ''}>未設定</option>
+                            <option value="引上げ" ${fd.yamabun_work_type === '引上げ' ? 'selected' : ''}>引上げ</option>
+                            <option value="交換" ${fd.yamabun_work_type === '交換' ? 'selected' : ''}>交換</option>
+                            <option value="積込み" ${fd.yamabun_work_type === '積込み' ? 'selected' : ''}>積込み</option>
+                            <option value="定期回収" ${fd.yamabun_work_type === '定期回収' ? 'selected' : ''}>定期回収</option>
+                        </select>
                     </div>
                     <div>
                         <div style="color:var(--text-tertiary); font-size: 0.72rem; margin-bottom: 2px;">回収日</div>
-                        <div style="font-weight: 700; color: var(--text-primary);">${job.work_date || '未定'}</div>
+                        <input type="date" id="drawerWorkDate" value="${job.work_date || ''}" onchange="updateDrawerDate('${jobId}', this.value)" style="width:100%;padding:4px 6px;border:1px solid var(--border);border-radius:6px;font-size:0.8rem;font-weight:700;background:#fff;">
                     </div>
                     <div>
                         <div style="color:var(--text-tertiary); font-size: 0.72rem; margin-bottom: 2px;">立米 (m³)</div>
-                        <div style="font-weight: 700; color: var(--text-primary);">${job.total_volume_m3 != null ? job.total_volume_m3 + ' ㎥' : '未計算'}</div>
+                        <input type="number" id="drawerVolume" value="${job.total_volume_m3 != null ? job.total_volume_m3 : ''}" placeholder="未計算" step="0.1" onchange="updateDrawerVolume('${jobId}', this.value)" style="width:100%;padding:4px 6px;border:1px solid var(--border);border-radius:6px;font-size:0.8rem;font-weight:700;background:#fff;">
                     </div>
                 </div>
 
@@ -1772,6 +1778,47 @@
             try {
                 await RyubeeAPI.updateJob(jobId, { form_data: job.form_data });
                 // 成功時は静かに更新
+            } catch(e) {
+                alert("更新に失敗しました");
+                console.error(e);
+            }
+        }
+
+        // ドロワー上部フィールドの即時保存
+        async function updateDrawerField(jobId, fieldName, value) {
+            const job = pipelineData.find(j => j.id === jobId);
+            if(!job) return;
+            let fd = {};
+            try { fd = JSON.parse(job.form_data || "{}"); } catch(e){}
+            fd[fieldName] = value;
+            job.form_data = JSON.stringify(fd);
+            try {
+                await RyubeeAPI.updateJob(jobId, { form_data: job.form_data });
+            } catch(e) {
+                alert("更新に失敗しました");
+                console.error(e);
+            }
+        }
+
+        async function updateDrawerDate(jobId, value) {
+            const job = pipelineData.find(j => j.id === jobId);
+            if(!job) return;
+            job.work_date = value;
+            try {
+                await RyubeeAPI.updateJob(jobId, { work_date: value });
+            } catch(e) {
+                alert("更新に失敗しました");
+                console.error(e);
+            }
+        }
+
+        async function updateDrawerVolume(jobId, value) {
+            const job = pipelineData.find(j => j.id === jobId);
+            if(!job) return;
+            const vol = value ? parseFloat(value) : null;
+            job.total_volume_m3 = vol;
+            try {
+                await RyubeeAPI.updateJob(jobId, { total_volume_m3: vol });
             } catch(e) {
                 alert("更新に失敗しました");
                 console.error(e);
