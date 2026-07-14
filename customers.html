@@ -91,6 +91,12 @@
             display: flex;
         }
 
+        body.modal-open {
+            overflow: hidden;
+            position: fixed;
+            width: 100%;
+        }
+
         .cust-modal {
             background: #fff;
             border-radius: var(--r-xl) var(--r-xl) 0 0;
@@ -100,6 +106,8 @@
             max-height: 98vh;
             height: 98vh;
             overflow-y: auto;
+            overscroll-behavior: contain;
+            -webkit-overflow-scrolling: touch;
             animation: sheetUp 0.3s cubic-bezier(0.25, 1, 0.5, 1);
         }
         /* 2カラム編集レイアウト */
@@ -238,6 +246,7 @@
             animation: sheetUp 0.25s ease-out;
             max-height: 85vh;
             overflow-y: auto;
+            overscroll-behavior: contain;
         }
 
         .contract-modal h3 {
@@ -415,15 +424,15 @@
     <button class="fab" onclick="openModal()">+</button>
 
     <!-- 顧客プレビューモーダル -->
-    <div class="cust-modal-overlay" id="previewOverlay" onclick="if(event.target===this) this.classList.remove('show')">
+    <div class="cust-modal-overlay" id="previewOverlay" onclick="if(event.target===this) { this.classList.remove('show'); unlockBodyScroll(); }">
         <div class="cust-modal" style="padding-top:16px;">
             <div class="modal-drag-handle"></div>
             <button class="modal-close"
-                onclick="document.getElementById('previewOverlay').classList.remove('show')">✕</button>
+                onclick="document.getElementById('previewOverlay').classList.remove('show'); unlockBodyScroll();">✕</button>
             <div id="previewContent"></div>
             <button class="btn btn-primary mt-2" onclick="openEditFromPreview()">✏️ 編集する</button>
             <button class="btn btn-secondary mt-1"
-                onclick="document.getElementById('previewOverlay').classList.remove('show')">閉じる</button>
+                onclick="document.getElementById('previewOverlay').classList.remove('show'); unlockBodyScroll();">閉じる</button>
         </div>
     </div>
 
@@ -702,6 +711,26 @@
         let _contractsMaster = null;
         let _editingContractId = null;
 
+        // ── モーダル背景スクロール防止 ──
+        let _savedScrollY = 0;
+        function lockBodyScroll() {
+            if (document.body.classList.contains('modal-open')) return;
+            _savedScrollY = window.scrollY;
+            document.body.classList.add('modal-open');
+            document.body.style.top = `-${_savedScrollY}px`;
+        }
+        function unlockBodyScroll() {
+            if (!document.body.classList.contains('modal-open')) return;
+            document.body.classList.remove('modal-open');
+            document.body.style.top = '';
+            window.scrollTo(0, _savedScrollY);
+        }
+        // 全オーバーレイを自動監視：.show付与→ロック、.show外れ→アンロック
+        new MutationObserver(() => {
+            const anyOpen = document.querySelector('.cust-modal-overlay.show, .contract-modal-overlay.show');
+            if (anyOpen) lockBodyScroll();
+            else unlockBodyScroll();
+        }).observe(document.body, { subtree: true, attributes: true, attributeFilter: ['class'], childList: true });
         document.addEventListener('DOMContentLoaded', loadCustomers);
 
         let allDisposalCompaniesMaster = [];
@@ -1040,6 +1069,7 @@
             }
 
             document.getElementById('custOverlay').classList.add('show');
+            lockBodyScroll();
         }
 
         // ── 事業所カード動的生成（2-1）──
@@ -1264,7 +1294,7 @@
             }
         }
 
-        function closeModal() { document.getElementById('custOverlay').classList.remove('show'); editingId = null; }
+        function closeModal() { document.getElementById('custOverlay').classList.remove('show'); editingId = null; unlockBodyScroll(); }
 
         function toggleAutoDebitFields() {
             const method = document.getElementById('custPaymentMethod').value;
@@ -1490,6 +1520,7 @@
                 </div>
             `;
             document.getElementById('previewOverlay').classList.add('show');
+            lockBodyScroll();
         }
 
         async function addHistoryNote(custId) {

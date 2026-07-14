@@ -271,6 +271,12 @@
             display: flex;
         }
 
+        body.modal-open {
+            overflow: hidden;
+            position: fixed;
+            width: 100%;
+        }
+
         .payment-modal {
             background: #fff;
             border-radius: var(--r-xl) var(--r-xl) 0 0;
@@ -279,6 +285,8 @@
             padding: 24px 20px 40px;
             max-height: 85vh;
             overflow-y: auto;
+            overscroll-behavior: contain;
+            -webkit-overflow-scrolling: touch;
             animation: sheetUp 0.3s cubic-bezier(0.25, 1, 0.5, 1);
         }
 
@@ -916,6 +924,21 @@
         let currentInvType = 'all';
         let currentStaffFilter = 'all';
         let companySettings = {};
+
+        // ── モーダル背景スクロール防止 ──
+        let _savedScrollY = 0;
+        new MutationObserver(() => {
+            const anyOpen = document.querySelector('.payment-modal-overlay.show');
+            if (anyOpen && !document.body.classList.contains('modal-open')) {
+                _savedScrollY = window.scrollY;
+                document.body.classList.add('modal-open');
+                document.body.style.top = `-${_savedScrollY}px`;
+            } else if (!anyOpen && document.body.classList.contains('modal-open')) {
+                document.body.classList.remove('modal-open');
+                document.body.style.top = '';
+                window.scrollTo(0, _savedScrollY);
+            }
+        }).observe(document.body, { subtree: true, attributes: true, attributeFilter: ['class'], childList: true });
 
         document.addEventListener('DOMContentLoaded', async () => {
             const now = new Date();

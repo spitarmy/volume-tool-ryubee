@@ -4,6 +4,13 @@
    Ryu兵衛 — Clean & Accessible Modernism v3
    ========================================================================= */
 
+/* ── モーダル背景スクロール防止（全ページ共通） ── */
+body.modal-open {
+  overflow: hidden !important;
+  position: fixed !important;
+  width: 100% !important;
+}
+
 :root {
   /* ── Brand Colors ───────────────────────────── */
   --blue: #0EA5E9;
