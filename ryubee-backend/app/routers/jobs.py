@@ -225,6 +225,59 @@ def create_job(
     db.refresh(job)
     return JobOut.from_orm_job(job)
 
+@router.post("/generate-recurring", status_code=200)
+def generate_recurring_jobs(
+    current_user: models.User = Depends(auth.get_current_user),
+    db: Session = Depends(get_db),
+):
+    from datetime import date, datetime
+    from dateutil.relativedelta import relativedelta
+    today_str = date.today().isoformat()
+    
+    # テンプレートを取得
+    templates = db.query(models.Job).filter(
+        models.Job.company_id == current_user.company_id,
+        models.Job.pipeline_stage == "regular_template",
+        models.Job.work_date != None,
+        models.Job.work_date <= today_str
+    ).all()
+    
+    generated_count = 0
+    for tmpl in templates:
+        # 新しい案件（作業予定）を作成
+        new_job = models.Job(
+            company_id=tmpl.company_id,
+            user_id=tmpl.user_id,
+            job_name=tmpl.job_name,
+            customer_name=tmpl.customer_name,
+            address=tmpl.address,
+            work_date=tmpl.work_date,
+            notes=tmpl.notes,
+            price_total=tmpl.price_total,
+            status="pending",
+            pipeline_stage="scheduled", # 作業予定に直接入れる
+            job_type=tmpl.job_type,
+            assigned_to=tmpl.assigned_to,
+            customer_id=tmpl.customer_id,
+            form_data=tmpl.form_data, # コンテナ交換等の区分も引き継ぐ
+        )
+        db.add(new_job)
+        
+        # テンプレートの次回予定日を1ヶ月後に更新
+        try:
+            curr_date = datetime.strptime(tmpl.work_date, "%Y-%m-%d").date()
+            next_date = curr_date + relativedelta(months=1)
+            tmpl.work_date = next_date.isoformat()
+        except:
+            tmpl.work_date = (date.today() + relativedelta(months=1)).isoformat()
+            
+        generated_count += 1
+        
+    if generated_count > 0:
+        db.commit()
+        
+    return {"generated_count": generated_count}
+
 
 @router.get("/{job_id}", response_model=JobOut)
 def get_job(

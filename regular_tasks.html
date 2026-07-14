@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport"
         content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
-    <title>営業パイプライン — Ryu兵衛 山文SaaS</title>
+    <title>定期案件管理 — Ryu兵衛</title>
     <meta name="apple-mobile-web-app-capable" content="yes">
     <link rel="stylesheet" href="assets/css/style.css">
     <style>
@@ -999,178 +999,148 @@
 </head>
 
 <body>
-
-    <header class="pipeline-header" style="display:flex; justify-content:space-between; align-items:center;">
-        <div>
-            <h1 style="margin-bottom:0;">📊 営業パイプライン</h1>
-            <p style="color: var(--text-secondary); font-size: 0.9rem; margin-top:4px; margin-bottom:0;">案件の進捗を可視化 —
-                ドラッグで移動</p>
-        </div>
-        <div style="display:flex; gap:8px; flex-direction:column; align-items:flex-end;">
-            <a href="regular_tasks.html" class="btn btn-sm btn-secondary"
-                style="width:auto; padding:6px 12px; font-size:0.8rem; text-decoration:none;">🔄 定期案件</a>
-            <button class="btn btn-sm btn-primary" style="width:auto; padding:8px 16px;" onclick="openNewJobModal()">➕
-                新規追加</button>
-        </div>
-    </header>
-
-    <div
-        style="padding: 10px 20px 0px 20px; background:var(--glass-bg); border-bottom: 0.5px solid rgba(0, 0, 0, 0.06);">
-        <input type="text" id="plSearch" placeholder="🔍 案件名・お客様名でスキャン..." oninput="filterPipeline()"
-            style="width:100%; padding:10px 14px; border-radius:10px; border:1px solid var(--border); font-size:0.95rem; background:#fff; margin-bottom: 12px;">
-
-        <!-- スタッフ絞り込みタブ -->
-        <div style="display:flex; justify-content:space-between; align-items:center;">
-            <div id="staffTabs"
-                style="display:flex; gap:8px; overflow-x:auto; padding-bottom:10px; flex: 1; -webkit-overflow-scrolling: touch; scrollbar-width: none;">
-                <button class="btn btn-xs btn-primary" style="flex-shrink:0;" onclick="filterByStaff('all')">全て</button>
+    <div class="pipeline-header">
+        <div class="header-actions">
+            <div>
+                <h1>🔄 定期案件管理</h1>
+                <p style="color:var(--text-secondary); font-size:0.9rem;">コンテナ交換などの定期発生する案件のテンプレートを管理します。</p>
             </div>
-            <label
-                style="display:flex; align-items:center; gap:6px; font-size:0.82rem; font-weight:600; cursor:pointer; color:var(--text-secondary); margin-left:16px; margin-bottom:10px; white-space:nowrap;"
-                title="完了・不成約を非表示">
-                <input type="checkbox" id="toggleHideDone" onchange="filterBoardVisibility()"> 完了/不成約を隠す
-            </label>
-        </div>
-    </div>
-    <div class="pipeline-container" id="pipelineContainer">
-        <p style="text-align:center; width:100%; color:var(--text-tertiary); margin-top:40px;">読み込み中...</p>
-    </div>
-
-    <!-- Detail Drawer -->
-    <div class="detail-drawer-overlay" id="drawerOverlay" onclick="closeDrawer(event)">
-        <div class="detail-drawer" id="drawerContent">
-            <div class="modal-drag-handle"></div>
-            <div id="drawerBody"></div>
+            <a href="pipeline.html" class="btn btn-sm btn-secondary" style="width:auto; padding:6px 12px; font-size:0.8rem; text-decoration:none;">⬅️ パイプラインへ</a>
         </div>
     </div>
 
-    <!-- New Job Modal -->
-    <div class="modal-overlay" id="newJobModal" onclick="if(event.target===this) this.classList.remove('show')">
-        <div class="modal-content" style="max-height: 85vh; max-width: 500px;">
+    <div style="padding:20px; max-width:800px; margin:0 auto; padding-bottom:100px;">
+        <div id="regularTasksList" style="display:flex; flex-direction:column; gap:12px;">
+            <div style="text-align:center; padding:40px; color:var(--text-secondary);">読み込み中...</div>
+        </div>
+    </div>
+
+    <!-- Edit Modal -->
+    <div class="modal-overlay" id="editRegularModal" onclick="if(event.target===this) this.classList.remove('show')">
+        <div class="modal-content" style="max-height: 85vh; max-width: 400px;">
             <div class="modal-drag-handle"></div>
-            <button class="modal-close"
-                onclick="document.getElementById('newJobModal').classList.remove('show')">✕</button>
-            <h3 style="margin-bottom:20px; font-size:1.3rem;">✨ 新規案件 手動追加</h3>
+            <button class="modal-close" onclick="document.getElementById('editRegularModal').classList.remove('show')">✕</button>
+            <h3 style="margin-bottom:20px; font-size:1.2rem;">定期案件の編集</h3>
             <div class="form-group">
                 <label>案件名</label>
-                <input type="text" id="njName" placeholder="例: 山田様邸 片付け">
+                <input type="text" id="erName" readonly style="background:var(--bg-secondary); color:var(--text-secondary);">
             </div>
             <div class="form-group">
-                <label>会社名 / お客様名</label>
-                <input type="text" id="njCompanyName" placeholder="例: 株式会社○○ / 山田太郎 様">
+                <label>次回予定日</label>
+                <input type="date" id="erNextDate" style="width:100%;">
             </div>
             <div class="form-group">
-                <label>担当者名</label>
-                <input type="text" id="njContactName" placeholder="山田太郎">
-            </div>
-            <div class="form-group">
-                <label>電話番号</label>
-                <input type="tel" id="njPhone" inputmode="tel" placeholder="075-XXX-XXXX" style="font-size:1rem;padding:10px 14px;">
-            </div>
-            <div class="form-group">
-                <label>📍 住所</label>
-                <div style="display:flex;gap:6px;">
-                    <input type="text" id="njAddress" placeholder="例: 京都市中京区○○町123" style="flex:1;">
-                    <button type="button" class="gps-btn" onclick="fillCurrentLocationNew()">📍 現在地</button>
-                </div>
-                <div id="njGpsAccuracy" class="gps-accuracy"></div>
-            </div>
-            <div class="form-group">
-                <label>種別</label>
-                <select id="njType">
-                    <option value="general_waste">一般ゴミ</option>
-                    <option value="industrial_waste">産業廃棄物</option>
-                    <option value="large_waste">大型ゴミ等</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label>ステージ</label>
-                <select id="njStage">
-                    <option value="prospect">🎯 潜在顧客</option>
-                    <option value="inquiry">問合せ</option>
-                    <option value="estimate">見積</option>
-                    <option value="negotiation">商談</option>
-                    <option value="contract">契約</option>
-                    <option value="waiting_manifest">マニフェスト待ち</option>
-                </select>
-            </div>
-            <div style="background:var(--bg-secondary);padding:10px;border-radius:12px;margin-bottom:12px;">
-                <label style="font-weight:700;font-size:0.82rem;display:block;margin-bottom:6px;">💰 支払方法</label>
-                <select id="njPaymentMethod" onchange="toggleNjAutoDebit()" style="width:100%;margin-bottom:8px;">
-                    <option value="振込">振込</option>
-                    <option value="自動引落し">自動引落し</option>
-                    <option value="集金">集金</option>
-                </select>
-                <div id="njAutoDebitFields" style="display:none;padding:8px;background:#FFF7ED;border:1px solid #FDBA74;border-radius:8px;">
-                    <label style="font-weight:700;font-size:0.72rem;color:#9A3412;">🏦 自動振替設定</label>
-                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-top:6px;">
-                        <div class="form-group" style="margin:0;"><label style="font-size:0.72rem;">引落開始までの請求</label>
-                            <select id="njPreDebitBilling">
-                                <option value="振込">振込</option>
-                                <option value="まとめて引落">まとめて引落</option>
-                                <option value="集金">集金</option>
-                            </select>
-                        </div>
-                        <div class="form-group" style="margin:0;display:flex;align-items:flex-end;">
-                            <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:0.78rem;font-weight:600;background:#fff;padding:6px 10px;border:1px solid var(--border);border-radius:6px;width:100%;">
-                                <input type="checkbox" id="njAutoDebitFormSent">
-                                📄 用紙送付済
-                            </label>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px;">
-                <div class="form-group" style="margin:0;"><label style="font-size:0.72rem;">📄 請求書送付方法</label>
-                    <select id="njInvoiceDelivery">
-                        <option value="郵送">郵送（送付）</option>
-                        <option value="メール">メール</option>
-                        <option value="FAX">FAX</option>
-                        <option value="手渡し">手渡し</option>
-                        <option value="不要">不要</option>
-                    </select>
-                </div>
-                <div class="form-group" style="margin:0;"><label style="font-size:0.72rem;">📮 送付先</label>
-                    <input type="text" id="njInvoiceSendTo" placeholder="送付先名・住所">
-                </div>
-            </div>
-            <div class="form-group" id="njAmountGroup" style="margin-bottom:16px;">
                 <label>見込金額</label>
-                <input type="number" id="njAmount" placeholder="未定の場合は空欄" style="width:100%;">
+                <input type="number" id="erAmount" style="width:100%;">
             </div>
-            <div class="form-group" style="margin-bottom:20px;">
-                <label>担当営業</label>
-                <select id="njAssignedTo">
-                    <option value="">未設定</option>
-                </select>
+            <div style="display:flex; gap:8px; margin-top:20px;">
+                <button class="btn btn-secondary" style="flex:1;" onclick="deleteRegularTask()">削除</button>
+                <button class="btn btn-primary" style="flex:2;" onclick="saveRegularTask()">保存する</button>
             </div>
-            
-            <div class="form-group" style="margin-bottom:20px; padding-top: 12px; border-top: 1px solid var(--border);">
-                <label style="display:flex; align-items:center; gap:8px; font-weight:600; cursor:pointer;">
-                    <input type="checkbox" id="njIsRegular" onchange="toggleNjRegularFields()" style="width:16px; height:16px;">
-                    🔄 定期案件として登録する（毎月自動作成）
-                </label>
-                <div id="njRegularFields" style="display:none; margin-top:12px; padding:12px; background:var(--bg-secondary); border-radius:8px;">
-                    <div class="form-group" style="margin-bottom:12px;">
-                        <label>回収区分</label>
-                        <select id="njRegularCategory">
-                            <option value="コンテナの交換">コンテナの交換</option>
-                            <option value="廃プラ定期">廃プラ定期</option>
-                        </select>
-                    </div>
-                    <div class="form-group" style="margin:0;">
-                        <label>初回・次回予定日 <span style="color:var(--danger);">*必須</span></label>
-                        <input type="date" id="njNextDate" style="width:100%;">
-                    </div>
-                </div>
-            </div>
-
-            <button class="btn btn-primary" onclick="submitNewJob()" id="njSubmitBtn">保存する</button>
         </div>
     </div>
 
-    <!-- Bottom Nav -->
-    <nav class="bottom-nav">
+    <script src="assets/js/utils.js"></script>
+    <script src="assets/js/api.js"></script>
+    <script>
+        let currentTasks = [];
+        let editingJobId = null;
+
+        document.addEventListener('DOMContentLoaded', async () => {
+            const token = localStorage.getItem('ryubee_token');
+            if (!token) {
+                window.location.href = 'login.html';
+                return;
+            }
+            await loadRegularTasks();
+        });
+
+        async function loadRegularTasks() {
+            try {
+                const allJobs = await RyubeeAPI.fetchJobs(); 
+                currentTasks = allJobs.filter(j => j.pipeline_stage === 'regular_template');
+                renderTasks();
+            } catch (e) {
+                document.getElementById('regularTasksList').innerHTML = `<div class="alert alert-danger">${e.message}</div>`;
+            }
+        }
+
+        function renderTasks() {
+            const container = document.getElementById('regularTasksList');
+            if (currentTasks.length === 0) {
+                container.innerHTML = '<div style="text-align:center; padding:40px; color:var(--text-secondary); background:#fff; border-radius:12px;">登録された定期案件はありません。</div>';
+                return;
+            }
+
+            currentTasks.sort((a,b) => (a.work_date || '9999-99-99').localeCompare(b.work_date || '9999-99-99'));
+
+            container.innerHTML = currentTasks.map(job => {
+                let cat = "不明";
+                try {
+                    const fd = JSON.parse(job.form_data || '{}');
+                    cat = fd.regular_category || "不明";
+                } catch(e){}
+                
+                return `
+                    <div style="background:#fff; border-radius:12px; padding:16px; border:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; cursor:pointer; transition:all 0.2s;" onclick="openEditModal('${job.job_id}')" onmouseover="this.style.borderColor='var(--blue)'" onmouseout="this.style.borderColor='var(--border)'">
+                        <div>
+                            <div style="display:flex; align-items:center; gap:8px; margin-bottom:4px;">
+                                <span style="background:var(--bg-blue); color:var(--blue); font-size:0.7rem; padding:2px 8px; border-radius:12px; font-weight:600;">毎月: ${cat}</span>
+                                <span style="font-size:0.8rem; color:var(--danger); font-weight:600;">次回: ${job.work_date || '未定'}</span>
+                            </div>
+                            <h4 style="margin:0; font-size:1rem; color:var(--text-primary); margin-bottom:2px;">${utils.escapeHtml(job.job_name)}</h4>
+                            <div style="font-size:0.8rem; color:var(--text-secondary);">
+                                🏢 ${utils.escapeHtml(job.customer_name || '')} / 💰 ${job.price_total ? job.price_total.toLocaleString()+'円' : '未定'}
+                            </div>
+                        </div>
+                        <div style="color:var(--text-tertiary);">›</div>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        function openEditModal(jobId) {
+            const job = currentTasks.find(j => j.job_id === jobId);
+            if (!job) return;
+            editingJobId = jobId;
+            document.getElementById('erName').value = job.job_name;
+            document.getElementById('erNextDate').value = job.work_date || '';
+            document.getElementById('erAmount').value = job.price_total || '';
+            document.getElementById('editRegularModal').classList.add('show');
+        }
+
+        async function saveRegularTask() {
+            if (!editingJobId) return;
+            const nextDate = document.getElementById('erNextDate').value;
+            const amount = document.getElementById('erAmount').value;
+
+            try {
+                const payload = {
+                    work_date: nextDate || null,
+                    price_total: amount ? parseInt(amount, 10) : 0
+                };
+                await RyubeeAPI.updateJob(editingJobId, payload);
+                document.getElementById('editRegularModal').classList.remove('show');
+                loadRegularTasks();
+            } catch (e) {
+                alert("保存に失敗しました: " + e.message);
+            }
+        }
+
+        async function deleteRegularTask() {
+            if (!editingJobId) return;
+            if (!confirm("この定期案件設定を削除しますか？")) return;
+
+            try {
+                await RyubeeAPI.deleteJob(editingJobId);
+                document.getElementById('editRegularModal').classList.remove('show');
+                loadRegularTasks();
+            } catch(e) {
+                alert("削除に失敗しました: " + e.message);
+            }
+        }
+    </script>
+<nav class="bottom-nav">
         <a href="index.html" class="nav-item"><span class="nav-icon">🏠</span><span>ホーム</span></a>
         <a href="pipeline.html" class="nav-item active"><span class="nav-icon">📊</span><span>パイプライン</span></a>
         <a href="billing.html" class="nav-item"><span class="nav-icon">💰</span><span>請求</span></a>

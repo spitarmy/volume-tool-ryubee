@@ -177,6 +177,10 @@ const RyubeeAPI = {
 
   // ── Jobs ────────────────────────────────────────────────────
 
+  async generateRecurringJobs() {
+    return await apiFetch('/v1/jobs/generate-recurring', { method: 'POST' });
+  },
+
   async fetchJobs({ status = null, q = null, customer_id = null } = {}) {
     const params = new URLSearchParams();
     if (status) params.set("status", status);
