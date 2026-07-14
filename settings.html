@@ -143,6 +143,7 @@
 
     <div class="tabs">
         <div class="tab active" onclick="switchTab('ai')">💴 AI立米</div>
+        <div class="tab" onclick="switchTab('billing-items')">🔢 請求品目</div>
         <div class="tab" onclick="switchTab('waste')">🗑 一般廃棄物</div>
         <div class="tab" onclick="switchTab('items')">📋 単価マスタ</div>
         <div class="tab" onclick="switchTab('contractors')">🏢 処分先</div>
@@ -421,6 +422,49 @@
                 💾 AI料金設定を保存する
             </button>
         </div> <!-- End of tab-ai -->
+
+        <!-- ── TAB: 請求品目番号マスタ ── -->
+        <div id="tab-billing-items" class="tab-content">
+            <div class="card">
+                <div class="card-title">🔢 請求品目番号マスタ</div>
+                <p class="small-text mb-2">
+                    番号を入力するだけで品目名が自動入力されます。<br>
+                    請求書・見積書の編集時に番号で品目を呼び出せます。
+                </p>
+                <div style="display:flex; gap:8px; margin-bottom:12px;">
+                    <div class="form-group" style="flex:0 0 60px; margin:0;">
+                        <label style="font-size:0.72rem;">番号</label>
+                        <input type="number" id="biNumber" placeholder="1" min="1" style="text-align:center;">
+                    </div>
+                    <div class="form-group" style="flex:2; margin:0;">
+                        <label style="font-size:0.72rem;">品目名</label>
+                        <input type="text" id="biName" placeholder="例: 一般廃棄物回収">
+                    </div>
+                    <div class="form-group" style="flex:1; margin:0;">
+                        <label style="font-size:0.72rem;">単価 (円)</label>
+                        <input type="number" id="biPrice" placeholder="0">
+                    </div>
+                    <div class="form-group" style="flex:0 0 60px; margin:0;">
+                        <label style="font-size:0.72rem;">単位</label>
+                        <select id="biUnit">
+                            <option value="式">式</option>
+                            <option value="回">回</option>
+                            <option value="kg">kg</option>
+                            <option value="L">L</option>
+                            <option value="個">個</option>
+                            <option value="台">台</option>
+                            <option value="m³">m³</option>
+                        </select>
+                    </div>
+                </div>
+                <button class="btn btn-success" onclick="addBillingItem()" style="width:100%;">➕ 品目を登録</button>
+            </div>
+
+            <h3 style="margin-top:20px; font-size:1rem;">登録済みの品目一覧</h3>
+            <div id="billingItemsList" style="margin-top:8px;">
+                <p class="text-center small-text">読み込み中...</p>
+            </div>
+        </div>
 
         <!-- ── TAB: 一般廃棄物単価マスタ ── -->
         <div id="tab-waste" class="tab-content">
@@ -894,6 +938,7 @@
                 wastePricingData = {};
             }
             renderWastePricing();
+            loadBillingItems();
 
             // 処分先マスタの反映
             contractorsMaster = Array.isArray(saved.contractors_master) ? saved.contractors_master : [];
@@ -984,6 +1029,66 @@
             } catch (e) {
                 list.innerHTML = `<p class="text-center small-text" style="color:var(--red);">取得エラー: ${e.message}</p>`;
             }
+        }
+
+        // ── 請求品目番号マスタ ──
+        function loadBillingItems() {
+            const items = settings.billing_item_presets || [];
+            const list = document.getElementById('billingItemsList');
+            if (!items.length) {
+                list.innerHTML = '<p class="text-center small-text" style="color:var(--text-tertiary);">まだ品目が登録されていません</p>';
+                return;
+            }
+            const sorted = [...items].sort((a, b) => a.number - b.number);
+            list.innerHTML = sorted.map((it, i) => `
+                <div class="card" style="padding:12px; margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
+                    <div>
+                        <span style="display:inline-block; background:#7C3AED; color:#fff; padding:2px 8px; border-radius:6px; font-weight:700; font-size:0.85rem; margin-right:8px;">${it.number}</span>
+                        <span style="font-weight:600;">${it.name}</span>
+                        <span style="color:var(--text-secondary); font-size:0.8rem; margin-left:8px;">¥${Number(it.price || 0).toLocaleString()} / ${it.unit || '式'}</span>
+                    </div>
+                    <button class="btn btn-xs" style="background:#FEE2E2; color:#DC2626; border:1px solid #FECACA; padding:4px 8px;" onclick="deleteBillingItem(${it.number})">✕</button>
+                </div>
+            `).join('');
+
+            // 次の番号を自動設定
+            const maxNum = Math.max(...items.map(i => i.number), 0);
+            document.getElementById('biNumber').value = maxNum + 1;
+        }
+
+        async function addBillingItem() {
+            const num = parseInt(document.getElementById('biNumber').value);
+            const name = document.getElementById('biName').value.trim();
+            const price = parseInt(document.getElementById('biPrice').value) || 0;
+            const unit = document.getElementById('biUnit').value || '式';
+
+            if (!num || !name) { alert('番号と品目名を入力してください'); return; }
+
+            const items = settings.billing_item_presets || [];
+            // 同じ番号があれば上書き
+            const existIdx = items.findIndex(i => i.number === num);
+            if (existIdx >= 0) {
+                if (!confirm(`番号 ${num} は既に「${items[existIdx].name}」として登録されています。上書きしますか？`)) return;
+                items[existIdx] = { number: num, name, price, unit };
+            } else {
+                items.push({ number: num, name, price, unit });
+            }
+            settings.billing_item_presets = items;
+            try {
+                await RyubeeAPI.saveSettings(settings);
+                document.getElementById('biName').value = '';
+                document.getElementById('biPrice').value = '';
+                loadBillingItems();
+            } catch (e) { alert('保存に失敗しました: ' + e.message); }
+        }
+
+        async function deleteBillingItem(num) {
+            if (!confirm(`品目番号 ${num} を削除しますか？`)) return;
+            settings.billing_item_presets = (settings.billing_item_presets || []).filter(i => i.number !== num);
+            try {
+                await RyubeeAPI.saveSettings(settings);
+                loadBillingItems();
+            } catch (e) { alert('削除に失敗しました: ' + e.message); }
         }
 
         async function addTemplate() {

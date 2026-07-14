@@ -1837,7 +1837,7 @@
             editRowCount = items.length;
             tbody.innerHTML = items.map((it, idx) => `
                 <tr id="editRow_${idx}">
-                    <td><input type="text" value="${utils.escapeHtml(it.description)}" id="edit_desc_${idx}" style="width:100%;padding:4px;border:1px solid var(--border);border-radius:4px;font-size:0.85rem;"></td>
+                    <td><input type="text" value="${utils.escapeHtml(it.description)}" id="edit_desc_${idx}" style="width:100%;padding:4px;border:1px solid var(--border);border-radius:4px;font-size:0.85rem;" placeholder="番号 or 品目名" onchange="autofillBillingItem(${idx})"></td>
                     <td><input type="number" value="${it.quantity}" id="edit_qty_${idx}" style="width:60px;padding:4px;border:1px solid var(--border);border-radius:4px;text-align:right;" oninput="recalcAllInv()"></td>
                     <td><input type="number" value="${it.unit_price}" id="edit_price_${idx}" style="width:80px;padding:4px;border:1px solid var(--border);border-radius:4px;text-align:right;" oninput="recalcAllInv()"></td>
                     <td class="num" id="edit_amt_${idx}" style="font-weight:700;">¥${Number(it.amount).toLocaleString()}</td>
@@ -1890,6 +1890,38 @@
 
         let editRowCount = 0;
 
+        function autofillBillingItem(idx) {
+            const descEl = document.getElementById(`edit_desc_${idx}`);
+            if (!descEl) return;
+            const val = descEl.value.trim();
+            // 番号のみが入力された場合に品目プリセットを検索
+            const num = parseInt(val);
+            if (isNaN(num) || val !== String(num)) return; // 数字以外が混ざってたらスキップ
+            
+            const presets = (companySettings && companySettings.billing_item_presets) || [];
+            const preset = presets.find(p => p.number === num);
+            if (!preset) {
+                // 見つからない場合は番号を表示
+                descEl.style.borderColor = '#FCA5A5';
+                setTimeout(() => { descEl.style.borderColor = ''; }, 1500);
+                return;
+            }
+            // 品目名・単価・単位を自動入力
+            descEl.value = preset.name;
+            descEl.style.borderColor = '#86EFAC';
+            setTimeout(() => { descEl.style.borderColor = ''; }, 1500);
+
+            const priceEl = document.getElementById(`edit_price_${idx}`);
+            const unitEl = document.getElementById(`edit_unit_${idx}`);
+            const qtyEl = document.getElementById(`edit_qty_${idx}`);
+            
+            if (priceEl && preset.price) priceEl.value = preset.price;
+            if (unitEl && preset.unit) unitEl.value = preset.unit;
+            if (qtyEl && (!qtyEl.value || qtyEl.value === '0')) qtyEl.value = 1;
+            
+            recalcAllInv();
+        }
+
         function recalcAllInv() {
             const tbody = document.getElementById('invItemsBody');
             const descInputs = tbody.querySelectorAll('[id^="edit_desc_"]');
@@ -1936,7 +1968,7 @@
             const newRow1 = document.createElement('tr');
             newRow1.id = `editRow_${idx}`;
             newRow1.innerHTML = `
-                <td><input type="text" value="" id="edit_desc_${idx}" style="width:100%;padding:4px;border:1px solid var(--border);border-radius:4px;font-size:0.85rem;" placeholder="品目名"></td>
+                <td><input type="text" value="" id="edit_desc_${idx}" style="width:100%;padding:4px;border:1px solid var(--border);border-radius:4px;font-size:0.85rem;" placeholder="番号 or 品目名" onchange="autofillBillingItem(${idx})"></td>
                 <td><input type="number" value="0" id="edit_qty_${idx}" style="width:60px;padding:4px;border:1px solid var(--border);border-radius:4px;text-align:right;" oninput="recalcAllInv()"></td>
                 <td><input type="number" value="0" id="edit_price_${idx}" style="width:80px;padding:4px;border:1px solid var(--border);border-radius:4px;text-align:right;" oninput="recalcAllInv()"></td>
                 <td class="num" id="edit_amt_${idx}" style="font-weight:700;">¥0</td>
