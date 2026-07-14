@@ -9,6 +9,7 @@
     <meta name="apple-mobile-web-app-capable" content="yes">
     <link rel="stylesheet" href="assets/css/style.css">
     <style>
+        @keyframes pulse { 0%,100%{opacity:1;} 50%{opacity:0.6;} }
         .billing-header {
             background: #FFFFFF;
             padding: 30px 24px 20px;
@@ -563,41 +564,31 @@
 
             <!-- 送付準備パネル -->
             <div id="deliveryPanel" style="display:none; padding:12px 20px;">
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px;">
-                    <!-- メール送信準備 -->
-                    <div style="background:linear-gradient(135deg,#EDE9FE,#DDD6FE); border:1px solid #C4B5FD; border-radius:12px; padding:14px; cursor:pointer;" onclick="toggleDeliveryBox('email')">
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <div style="font-weight:700; font-size:0.9rem; color:#5B21B6;">✉️ メール送信</div>
-                            <span id="emailQueueBadge" style="background:#7C3AED; color:#fff; padding:2px 8px; border-radius:10px; font-size:0.75rem; font-weight:700;">0</span>
+                <div style="background:linear-gradient(135deg,#F0F9FF,#E0F2FE); border:1px solid #7DD3FC; border-radius:12px; padding:14px; cursor:pointer;" onclick="toggleDeliveryBox('all')">
+                    <div style="display:flex; justify-content:space-between; align-items:center;">
+                        <div style="font-weight:700; font-size:0.95rem; color:#0369A1;">📬 送付準備</div>
+                        <div style="display:flex; gap:6px;">
+                            <span style="background:#7C3AED; color:#fff; padding:2px 8px; border-radius:10px; font-size:0.72rem; font-weight:700;">✉️ <span id="emailQueueBadge">0</span></span>
+                            <span style="background:#D97706; color:#fff; padding:2px 8px; border-radius:10px; font-size:0.72rem; font-weight:700;">📮 <span id="postalQueueBadge">0</span></span>
                         </div>
-                        <div style="font-size:0.72rem; color:#6D28D9; margin-top:4px;">確認済みの請求書を一斉送信</div>
                     </div>
-                    <!-- 郵送代行準備 -->
-                    <div style="background:linear-gradient(135deg,#FEF3C7,#FDE68A); border:1px solid #F59E0B; border-radius:12px; padding:14px; cursor:pointer;" onclick="toggleDeliveryBox('postal')">
-                        <div style="display:flex; justify-content:space-between; align-items:center;">
-                            <div style="font-weight:700; font-size:0.9rem; color:#92400E;">📮 郵送代行</div>
-                            <span id="postalQueueBadge" style="background:#D97706; color:#fff; padding:2px 8px; border-radius:10px; font-size:0.75rem; font-weight:700;">0</span>
-                        </div>
-                        <div style="font-size:0.72rem; color:#92400E; margin-top:4px;">郵送代行用ファイルをまとめる</div>
-                    </div>
+                    <div style="font-size:0.72rem; color:#0284C7; margin-top:4px;">メール送信・郵送代行の一覧（タップで開閉）</div>
                 </div>
 
-                <!-- メール送信準備ボックス -->
-                <div id="emailQueueBox" style="display:none; margin-top:12px; background:#F5F3FF; border:1px solid #C4B5FD; border-radius:10px; padding:14px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                        <div style="font-weight:700; font-size:0.9rem; color:#5B21B6;">✉️ メール送信準備 <span id="emailQueueCount" style="font-size:0.8rem; color:var(--text-secondary);"></span></div>
-                        <button class="btn btn-xs btn-primary" onclick="sendAllEmailQueue()" id="sendAllEmailBtn" style="background:#7C3AED; border-color:#7C3AED;">📨 一斉メール送信</button>
+                <div id="deliveryQueueBox" style="display:none; margin-top:12px; background:#fff; border:1px solid #E5E7EB; border-radius:10px; padding:14px;">
+                    <!-- ソート＆アクションバー -->
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px; flex-wrap:wrap; gap:8px;">
+                        <div style="display:flex; gap:6px;">
+                            <button class="btn btn-xs" id="delivSortUnsent" onclick="setDeliverySort('unsent')" style="background:#FEF3C7; color:#92400E; border:1px solid #FDE68A; font-size:0.75rem;">🔴 送付前</button>
+                            <button class="btn btn-xs" id="delivSortSent" onclick="setDeliverySort('sent')" style="background:#D1FAE5; color:#065F46; border:1px solid #A7F3D0; font-size:0.75rem;">✅ 送付済</button>
+                            <button class="btn btn-xs" id="delivSortAll" onclick="setDeliverySort('all')" style="background:#F1F5F9; color:#475569; border:1px solid #CBD5E1; font-size:0.75rem;">全て</button>
+                        </div>
+                        <div style="display:flex; gap:6px;">
+                            <button class="btn btn-xs" onclick="sendAllEmailQueue()" id="sendAllEmailBtn" style="background:#7C3AED; color:#fff; border:none; font-size:0.75rem; padding:4px 10px;">📨 一斉メール送信</button>
+                            <button class="btn btn-xs" onclick="downloadPostalBundle()" id="postalDlBtn" style="background:#D97706; color:#fff; border:none; font-size:0.75rem; padding:4px 10px;">📥 郵送ZIP</button>
+                        </div>
                     </div>
-                    <div id="emailQueueList" style="max-height:300px; overflow-y:auto;"></div>
-                </div>
-
-                <!-- 郵送代行準備ボックス -->
-                <div id="postalQueueBox" style="display:none; margin-top:12px; background:#FFFBEB; border:1px solid #FDE68A; border-radius:10px; padding:14px;">
-                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
-                        <div style="font-weight:700; font-size:0.9rem; color:#92400E;">📮 郵送代行準備 <span id="postalQueueCount" style="font-size:0.8rem; color:var(--text-secondary);"></span></div>
-                        <button class="btn btn-xs btn-primary" onclick="downloadPostalBundle()" style="background:#D97706; border-color:#D97706;">📥 一括ダウンロード</button>
-                    </div>
-                    <div id="postalQueueList" style="max-height:300px; overflow-y:auto;"></div>
+                    <div id="deliveryQueueList" style="max-height:400px; overflow-y:auto;"></div>
                 </div>
             </div>
 
@@ -1155,191 +1146,137 @@
             return fd.invoice_delivery || '郵送代行';
         }
 
+        let deliverySortMode = 'unsent';
+        let allDeliveryItems = [];
+
+        function isNewCustomer(customerId) {
+            const custInvs = allInvoices.filter(i => i.customer_id === customerId);
+            return custInvs.length <= 1;
+        }
+
         function updateDeliveryPanel() {
-            const emailQueue = [];
-            const postalQueue = [];
-            
+            allDeliveryItems = [];
             allInvoices.forEach(inv => {
                 if (inv.status === 'paid') return;
                 const method = getCustomerDeliveryMethod(inv.customer_id);
-                if (method === 'メール' || method === 'その他電子メール') {
-                    emailQueue.push(inv);
-                } else if (method === '郵送代行' || method === '郵送') {
-                    postalQueue.push(inv);
-                }
+                let type = 'other';
+                if (method === 'メール' || method === 'その他電子メール') type = 'email';
+                else if (method === '郵送代行' || method === '郵送') type = 'postal';
+                if (type === 'other') return;
+                allDeliveryItems.push({ inv, type, method });
             });
-
             const panel = document.getElementById('deliveryPanel');
-            if (emailQueue.length > 0 || postalQueue.length > 0) {
-                panel.style.display = 'block';
-            } else {
-                panel.style.display = 'none';
-            }
-
-            document.getElementById('emailQueueBadge').textContent = emailQueue.length;
-            document.getElementById('postalQueueBadge').textContent = postalQueue.length;
-
-            // メール送信リスト
-            const emailList = document.getElementById('emailQueueList');
-            if (emailQueue.length === 0) {
-                emailList.innerHTML = '<p style="text-align:center; color:var(--text-tertiary); font-size:0.85rem; margin:8px 0;">メール送信対象の請求書はありません</p>';
-            } else {
-                emailList.innerHTML = emailQueue.map(inv => {
-                    const cust = allCustomers.find(c => c.id === inv.customer_id) || {};
-                    const statusBg = inv.status === 'sent' ? '#D1FAE5' : inv.status === 'draft' ? '#FEF3C7' : '#E5E7EB';
-                    const statusColor = inv.status === 'sent' ? '#065F46' : inv.status === 'draft' ? '#92400E' : '#374151';
-                    const statusLabel = { draft: '下書き', sent: '送付済', paid: '入金済', partial: '一部入金', overdue: '期限超過' };
-                    return `
-                        <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 10px; background:#fff; border:1px solid #E5E7EB; border-radius:8px; margin-bottom:6px;">
-                            <div>
-                                <div style="font-weight:600; font-size:0.85rem;">${utils.escapeHtml(inv.customer_name)}</div>
-                                <div style="font-size:0.75rem; color:var(--text-secondary);">¥${Number(inv.total_amount).toLocaleString()} ・ ${cust.email || 'メール未登録'}</div>
-                            </div>
-                            <div style="display:flex; gap:6px; align-items:center;">
-                                <span style="font-size:0.7rem; padding:2px 6px; border-radius:6px; background:${statusBg}; color:${statusColor};">${statusLabel[inv.status] || inv.status}</span>
-                                <button class="btn btn-xs" style="padding:2px 8px; font-size:0.75rem; background:#7C3AED; color:#fff; border:none; border-radius:6px;" onclick="event.stopPropagation(); sendEmail('${inv.id}')">送信</button>
-                            </div>
-                        </div>
-                    `;
-                }).join('');
-            }
-            document.getElementById('emailQueueCount').textContent = emailQueue.length > 0 ? `(${emailQueue.length}件)` : '';
-
-            // 郵送代行リスト
-            const postalList = document.getElementById('postalQueueList');
-            if (postalQueue.length === 0) {
-                postalList.innerHTML = '<p style="text-align:center; color:var(--text-tertiary); font-size:0.85rem; margin:8px 0;">郵送代行対象の請求書はありません</p>';
-            } else {
-                postalList.innerHTML = postalQueue.map(inv => {
-                    const cust = allCustomers.find(c => c.id === inv.customer_id) || {};
-                    let cfd = {};
-                    try { cfd = JSON.parse(cust.form_data || "{}"); } catch(e){}
-                    const sendTo = cfd.invoice_send_to || cust.address || '住所未登録';
-                    return `
-                        <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 10px; background:#fff; border:1px solid #E5E7EB; border-radius:8px; margin-bottom:6px;">
-                            <div>
-                                <div style="font-weight:600; font-size:0.85rem;">${utils.escapeHtml(inv.customer_name)}</div>
-                                <div style="font-size:0.75rem; color:var(--text-secondary);">¥${Number(inv.total_amount).toLocaleString()} ・ ${utils.escapeHtml(sendTo)}</div>
-                            </div>
-                            <div>
-                                <button class="btn btn-xs" style="padding:2px 8px; font-size:0.75rem; background:#D97706; color:#fff; border:none; border-radius:6px;" onclick="event.stopPropagation(); downloadPdf('${inv.id}')">📄 PDF</button>
-                            </div>
-                        </div>
-                    `;
-                }).join('');
-            }
-            document.getElementById('postalQueueCount').textContent = postalQueue.length > 0 ? `(${postalQueue.length}件)` : '';
+            panel.style.display = allDeliveryItems.length > 0 ? 'block' : 'none';
+            document.getElementById('emailQueueBadge').textContent = allDeliveryItems.filter(d => d.type === 'email').length;
+            document.getElementById('postalQueueBadge').textContent = allDeliveryItems.filter(d => d.type === 'postal').length;
+            renderDeliveryList();
         }
 
-        function toggleDeliveryBox(type) {
-            const emailBox = document.getElementById('emailQueueBox');
-            const postalBox = document.getElementById('postalQueueBox');
-            if (type === 'email') {
-                emailBox.style.display = emailBox.style.display === 'none' ? 'block' : 'none';
-                postalBox.style.display = 'none';
-            } else {
-                postalBox.style.display = postalBox.style.display === 'none' ? 'block' : 'none';
-                emailBox.style.display = 'none';
+        function renderDeliveryList() {
+            const list = document.getElementById('deliveryQueueList');
+            if (!list) return;
+            let filtered = allDeliveryItems;
+            if (deliverySortMode === 'unsent') filtered = allDeliveryItems.filter(d => !d.inv.sent_at);
+            else if (deliverySortMode === 'sent') filtered = allDeliveryItems.filter(d => !!d.inv.sent_at);
+            ['unsent', 'sent', 'all'].forEach(m => {
+                const btn = document.getElementById('delivSort' + m.charAt(0).toUpperCase() + m.slice(1));
+                if (btn) btn.style.opacity = deliverySortMode === m ? '1' : '0.5';
+            });
+            if (!filtered.length) {
+                list.innerHTML = `<p style="text-align:center; color:var(--text-tertiary); font-size:0.85rem; margin:12px 0;">${deliverySortMode === 'sent' ? '送付済みはありません' : deliverySortMode === 'unsent' ? '未送付はありません' : '対象なし'}</p>`;
+                return;
             }
+            filtered.sort((a, b) => {
+                const aNew = isNewCustomer(a.inv.customer_id) ? 0 : 1;
+                const bNew = isNewCustomer(b.inv.customer_id) ? 0 : 1;
+                return aNew - bNew;
+            });
+            list.innerHTML = filtered.map(d => {
+                const inv = d.inv;
+                const isNew = isNewCustomer(inv.customer_id);
+                const isSent = !!inv.sent_at;
+                const methodBadge = d.type === 'email'
+                    ? `<span style="background:#EDE9FE;color:#5B21B6;padding:1px 6px;border-radius:4px;font-size:0.68rem;border:1px solid #C4B5FD;">✉️</span>`
+                    : `<span style="background:#FEF3C7;color:#92400E;padding:1px 6px;border-radius:4px;font-size:0.68rem;border:1px solid #FDE68A;">📮</span>`;
+                const newBadge = isNew ? `<span style="background:#DC2626;color:#fff;padding:1px 6px;border-radius:4px;font-size:0.68rem;font-weight:700;animation:pulse 1.5s infinite;">🆕新規</span>` : '';
+                const sentBadge = isSent
+                    ? `<span style="background:#D1FAE5;color:#065F46;padding:1px 5px;border-radius:4px;font-size:0.65rem;">✅済</span>`
+                    : `<span style="background:#FEF3C7;color:#92400E;padding:1px 5px;border-radius:4px;font-size:0.65rem;">🔴未</span>`;
+                const actionBtn = d.type === 'email'
+                    ? `<button class="btn btn-xs" style="padding:2px 8px;font-size:0.72rem;background:#7C3AED;color:#fff;border:none;border-radius:6px;" onclick="event.stopPropagation();sendEmail('${inv.id}')">送信</button>`
+                    : `<button class="btn btn-xs" style="padding:2px 8px;font-size:0.72rem;background:#D97706;color:#fff;border:none;border-radius:6px;" onclick="event.stopPropagation();downloadPdf('${inv.id}')">PDF</button>`;
+                const borderLeft = isNew ? 'border-left:3px solid #DC2626;' : '';
+                return `
+                    <div style="display:flex;justify-content:space-between;align-items:center;padding:8px 10px;background:${isSent ? '#F9FAFB' : '#fff'};border:1px solid #E5E7EB;border-radius:8px;margin-bottom:6px;${borderLeft}">
+                        <div style="min-width:0;flex:1;">
+                            <div style="display:flex;align-items:center;gap:4px;flex-wrap:wrap;">
+                                ${newBadge}
+                                <span style="font-weight:600;font-size:0.85rem;">${utils.escapeHtml(inv.customer_name)}</span>
+                                ${methodBadge} ${sentBadge}
+                            </div>
+                            <div style="font-size:0.73rem;color:var(--text-secondary);margin-top:2px;">¥${Number(inv.total_amount).toLocaleString()}${isSent ? ' ・ 送付:' + inv.sent_at.slice(0,10) : ''}</div>
+                        </div>
+                        <div style="flex-shrink:0;margin-left:8px;">${actionBtn}</div>
+                    </div>`;
+            }).join('');
+        }
+
+        function setDeliverySort(mode) { deliverySortMode = mode; renderDeliveryList(); }
+
+        function toggleDeliveryBox() {
+            const box = document.getElementById('deliveryQueueBox');
+            box.style.display = box.style.display === 'none' ? 'block' : 'none';
         }
 
         async function sendAllEmailQueue() {
-            const emailQueue = allInvoices.filter(inv => {
-                if (inv.status === 'paid') return false;
-                const m = getCustomerDeliveryMethod(inv.customer_id);
-                return m === 'メール' || m === 'その他電子メール';
-            });
-            if (!emailQueue.length) { alert('送信対象がありません'); return; }
+            const emailQueue = allDeliveryItems.filter(d => d.type === 'email' && !d.inv.sent_at).map(d => d.inv);
+            if (!emailQueue.length) { alert('未送付のメール対象がありません'); return; }
             if (!confirm(`メール送信対象 ${emailQueue.length}件 を一斉送信しますか？`)) return;
-
             const btn = document.getElementById('sendAllEmailBtn');
-            btn.disabled = true;
-            btn.textContent = '送信中...';
-            let successCount = 0;
-            let failCount = 0;
-
+            btn.disabled = true; btn.textContent = '送信中...';
+            let ok = 0, ng = 0;
             for (const inv of emailQueue) {
                 try {
                     await fetch(`${API_BASE}/v1/invoices/${inv.id}/send`, {
                         method: 'POST',
-                        headers: {
-                            'Authorization': `Bearer ${localStorage.getItem('ryubee_token')}`,
-                            'Content-Type': 'application/json'
-                        },
-                        body: JSON.stringify({
-                            subject: '【ご請求書】送付のご案内',
-                            body: 'いつも大変お世話になっております。\n添付の通り、ご請求書を送付いたします。\n\nご確認のほどよろしくお願い申し上げます。'
-                        })
+                        headers: { 'Authorization': `Bearer ${localStorage.getItem('ryubee_token')}`, 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ subject: '【ご請求書】送付のご案内', body: 'いつも大変お世話になっております。\n添付の通り、ご請求書を送付いたします。\n\nご確認のほどよろしくお願い申し上げます。' })
                     });
-                    successCount++;
-                } catch (e) {
-                    failCount++;
-                    console.error(`Send failed for ${inv.customer_name}:`, e);
-                }
+                    ok++;
+                } catch (e) { ng++; }
             }
-
-            btn.disabled = false;
-            btn.textContent = '📨 一斉メール送信';
-            alert(`✅ ${successCount}件 送信完了${failCount > 0 ? `、${failCount}件 失敗` : ''}`);
+            btn.disabled = false; btn.textContent = '📨 一斉メール送信';
+            alert(`✅ ${ok}件 送信完了${ng > 0 ? `、${ng}件 失敗` : ''}`);
             loadInvoices();
         }
 
         async function downloadPostalBundle() {
-            const postalQueue = allInvoices.filter(inv => {
-                if (inv.status === 'paid') return false;
-                const m = getCustomerDeliveryMethod(inv.customer_id);
-                return m === '郵送代行' || m === '郵送';
-            });
-            if (!postalQueue.length) { alert('郵送代行対象の請求書がありません'); return; }
-            
-            if (!confirm(`郵送代行対象 ${postalQueue.length}件 のPDFをZIPでダウンロードしますか？`)) return;
-            
-            const btn = document.querySelector('#postalQueueBox .btn-primary');
-            btn.disabled = true;
-            btn.textContent = '📦 ZIP作成中... 0/' + postalQueue.length;
-
+            const postalQueue = allDeliveryItems.filter(d => d.type === 'postal').map(d => d.inv);
+            if (!postalQueue.length) { alert('郵送代行対象がありません'); return; }
+            if (!confirm(`郵送代行 ${postalQueue.length}件 のPDFをZIPでダウンロード？`)) return;
+            const btn = document.getElementById('postalDlBtn');
+            btn.disabled = true; btn.textContent = '📦 0/' + postalQueue.length;
             const zip = new JSZip();
             const token = localStorage.getItem('ryubee_token');
             let count = 0;
-
             for (const inv of postalQueue) {
                 try {
-                    const res = await fetch(`${API_BASE}/v1/invoices/${inv.id}/pdf`, {
-                        headers: { 'Authorization': `Bearer ${token}` }
-                    });
+                    const res = await fetch(`${API_BASE}/v1/invoices/${inv.id}/pdf`, { headers: { 'Authorization': `Bearer ${token}` } });
                     if (!res.ok) continue;
-                    const blob = await res.blob();
-                    const fileName = `請求書_${(inv.customer_name || '不明').replace(/[\s\/\\]/g, '_')}_${inv.month || ''}.pdf`;
-                    zip.file(fileName, blob);
+                    zip.file(`請求書_${(inv.customer_name||'').replace(/[\s\/\\]/g,'_')}_${inv.month||''}.pdf`, await res.blob());
                     count++;
-                    btn.textContent = `📦 ZIP作成中... ${count}/${postalQueue.length}`;
-                } catch (e) {
-                    console.error(`PDF取得失敗: ${inv.customer_name}`, e);
-                }
+                    btn.textContent = `📦 ${count}/${postalQueue.length}`;
+                } catch (e) { console.error(e); }
             }
-
-            if (count === 0) {
-                btn.disabled = false;
-                btn.textContent = '📥 一括ダウンロード';
-                alert('PDFの取得に失敗しました');
-                return;
-            }
-
-            btn.textContent = '📦 ZIP圧縮中...';
+            if (!count) { btn.disabled = false; btn.textContent = '📥 郵送ZIP'; alert('PDF取得失敗'); return; }
+            btn.textContent = '📦 圧縮中...';
             const month = document.getElementById('monthFilter').value || 'all';
             const zipBlob = await zip.generateAsync({ type: 'blob' });
             const url = URL.createObjectURL(zipBlob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `郵送代行_請求書_${month}.zip`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            URL.revokeObjectURL(url);
-
-            btn.disabled = false;
-            btn.textContent = '📥 一括ダウンロード';
-            alert(`✅ ${count}件のPDFをZIPにまとめてダウンロードしました`);
+            const a = document.createElement('a'); a.href = url; a.download = `郵送代行_${month}.zip`;
+            document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
+            btn.disabled = false; btn.textContent = '📥 郵送ZIP';
+            alert(`✅ ${count}件のPDFをZIPにまとめました`);
         }
 
         function renderInvoices() {
