@@ -10,12 +10,13 @@
         @media print {
             @page {
                 size: A4;
-                margin: 5mm 10mm;
+                margin: 5mm 8mm;
             }
 
             body {
                 background: #fff;
                 padding: 0;
+                margin: 0;
             }
 
             .no-print {
@@ -25,17 +26,52 @@
             .sheet {
                 box-shadow: none;
                 margin: 0;
-                padding: 0;
-                transform: scale(0.95);
-                transform-origin: top left;
-                width: 105%;
+                padding: 10px 15px;
+                border-radius: 0;
+            }
+
+            .sheet h1 {
+                font-size: 1.2rem;
+                margin-bottom: 6px;
+                padding-bottom: 4px;
             }
 
             .driver-table th,
             .driver-table td {
-                padding: 6px 8px;
-                /* Compact padding for print */
-                font-size: 0.9rem;
+                padding: 4px 6px;
+                font-size: 0.8rem;
+                border-width: 1.5px;
+            }
+
+            .driver-table {
+                margin-top: 10px !important;
+            }
+
+            /* 注意事項エリアを縮小 */
+            .driver-table td[style*="height:100px"] {
+                height: auto !important;
+                min-height: 40px;
+            }
+
+            /* 特記事項ボックスを縮小 */
+            .memo-box {
+                margin-top: 10px !important;
+                padding: 6px !important;
+            }
+            .memo-box h3 {
+                font-size: 0.8rem !important;
+                margin-bottom: 4px !important;
+            }
+            .memo-box .memo-area {
+                min-height: 50px !important;
+            }
+
+            /* 産廃テーブルの行高さ縮小 */
+            .driver-table tr[style*="height: 48px"] {
+                height: 30px !important;
+            }
+            .driver-table tr[style*="height: 40px"] {
+                height: 26px !important;
             }
 
             #photoSection.hidden-for-print {
@@ -230,15 +266,15 @@
                 <th colspan="5" style="border-bottom:none;text-align:left;padding-top:16px;">※注意事項 / 現場情報</th>
             </tr>
             <tr>
-                <td colspan="5" style="border-top:none;padding-bottom:16px;height:100px;vertical-align:top;">
+                <td colspan="5" id="dsNotesCell" style="border-top:none;padding-bottom:10px;vertical-align:top;">
                     <div id="dsNotes" style="font-size:0.95rem; white-space:pre-wrap;"></div>
-                    <div id="dsAddress" style="font-size:0.9rem; margin-top: 8px;"></div>
+                    <div id="dsAddress" style="font-size:0.9rem; margin-top: 4px;"></div>
                 </td>
             </tr>
         </table>
 
         <!-- 大型ゴミ請求 -->
-        <table class="driver-table" style="margin-top: 24px;">
+        <table class="driver-table" style="margin-top: 14px;">
             <tr style="height: 48px;">
                 <th class="text-left" colspan="1" style="vertical-align:middle;">大型ごみ 請求:</th>
                 <td colspan="3" class="text-left" style="vertical-align:middle;font-weight:bold;">
@@ -249,7 +285,7 @@
         </table>
 
         <!-- 産業廃棄物 品目 混載 -->
-        <table class="driver-table" style="margin-top: 24px;">
+        <table class="driver-table" style="margin-top: 14px;">
             <tr>
                 <th colspan="4" class="text-center" style="font-size:1.05rem;">産業廃棄物 品目 混載</th>
             </tr>
@@ -289,9 +325,9 @@
         </table>
 
         <!-- 印刷後手書き用 特記事項ボックス -->
-        <div style="margin-top: 24px; border: 2px solid #333; border-radius: 4px; padding: 12px;">
-            <h3 style="font-size: 0.95rem; margin-bottom: 8px; color: #333;">📝 特記事項（現場メモ）</h3>
-            <div style="min-height: 120px; width: 100%;"></div>
+        <div class="memo-box" style="margin-top: 16px; border: 2px solid #333; border-radius: 4px; padding: 8px;">
+            <h3 style="font-size: 0.9rem; margin-bottom: 6px; color: #333;">📝 特記事項（現場メモ）</h3>
+            <div class="memo-area" style="min-height: 60px; width: 100%;"></div>
         </div>
 
         <div id="photoSection" style="display:none; margin-top:30px;">
