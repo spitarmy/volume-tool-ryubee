@@ -914,6 +914,7 @@
 
     <script src="assets/js/utils.js"></script>
     <script src="assets/js/api.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <script>
         if (!RyubeeAPI.requireAuth()) throw new Error("Not authenticated");
 
@@ -1291,40 +1292,54 @@
             });
             if (!postalQueue.length) { alert('郵送代行対象の請求書がありません'); return; }
             
-            if (!confirm(`郵送代行対象 ${postalQueue.length}件 のPDFを一括ダウンロードしますか？`)) return;
+            if (!confirm(`郵送代行対象 ${postalQueue.length}件 のPDFをZIPでダウンロードしますか？`)) return;
             
             const btn = document.querySelector('#postalQueueBox .btn-primary');
             btn.disabled = true;
-            btn.textContent = 'ダウンロード中...';
+            btn.textContent = '📦 ZIP作成中... 0/' + postalQueue.length;
+
+            const zip = new JSZip();
+            const token = localStorage.getItem('ryubee_token');
             let count = 0;
 
             for (const inv of postalQueue) {
                 try {
-                    const token = localStorage.getItem('ryubee_token');
                     const res = await fetch(`${API_BASE}/v1/invoices/${inv.id}/pdf`, {
                         headers: { 'Authorization': `Bearer ${token}` }
                     });
                     if (!res.ok) continue;
                     const blob = await res.blob();
-                    const url = URL.createObjectURL(blob);
-                    const a = document.createElement('a');
-                    a.href = url;
-                    a.download = `請求書_${(inv.customer_name || '').replace(/\s/g, '_')}_${inv.month || ''}.pdf`;
-                    document.body.appendChild(a);
-                    a.click();
-                    document.body.removeChild(a);
-                    URL.revokeObjectURL(url);
+                    const fileName = `請求書_${(inv.customer_name || '不明').replace(/[\s\/\\]/g, '_')}_${inv.month || ''}.pdf`;
+                    zip.file(fileName, blob);
                     count++;
-                    // ブラウザが複数ダウンロードをブロックしないよう少し待つ
-                    await new Promise(r => setTimeout(r, 500));
+                    btn.textContent = `📦 ZIP作成中... ${count}/${postalQueue.length}`;
                 } catch (e) {
-                    console.error(`PDF download failed for ${inv.customer_name}:`, e);
+                    console.error(`PDF取得失敗: ${inv.customer_name}`, e);
                 }
             }
 
+            if (count === 0) {
+                btn.disabled = false;
+                btn.textContent = '📥 一括ダウンロード';
+                alert('PDFの取得に失敗しました');
+                return;
+            }
+
+            btn.textContent = '📦 ZIP圧縮中...';
+            const month = document.getElementById('monthFilter').value || 'all';
+            const zipBlob = await zip.generateAsync({ type: 'blob' });
+            const url = URL.createObjectURL(zipBlob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `郵送代行_請求書_${month}.zip`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+
             btn.disabled = false;
             btn.textContent = '📥 一括ダウンロード';
-            alert(`✅ ${count}件のPDFをダウンロードしました`);
+            alert(`✅ ${count}件のPDFをZIPにまとめてダウンロードしました`);
         }
 
         function renderInvoices() {
