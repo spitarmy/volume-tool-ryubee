@@ -484,6 +484,10 @@
             <input type="month" id="monthFilter" />
             <button class="btn btn-xs btn-primary" onclick="loadInvoices()">表示</button>
         </div>
+        <div style="margin-top:10px;">
+            <input type="text" id="searchInput" placeholder="🔍 顧客名・管理番号で検索..." oninput="renderInvoices()"
+                style="width:100%; padding: 10px 14px; border-radius: var(--r-pill); border: 1px solid var(--border); font-size: 0.95rem; box-sizing:border-box;">
+        </div>
     </header>
 
     <div class="billing-content">
@@ -557,11 +561,9 @@
                     style="width:100%;font-size:0.75rem;">📋 操作ログ</button>
             </div>
 
-            <!-- 検索・フィルター -->
+            <!-- フィルター -->
             <div style="padding: 16px 20px 0;">
-                <div style="display:flex; gap:8px; margin-bottom: 12px;">
-                    <input type="text" id="searchInput" placeholder="🔍 顧客名・管理番号で検索..." oninput="renderInvoices()"
-                        style="flex: 1; padding: 10px 14px; border-radius: var(--r-pill); border: 1px solid var(--border); font-size: 0.95rem;">
+                <div style="display:flex; gap:8px; margin-bottom: 12px; justify-content:flex-end;">
                     <select id="sortSelect" onchange="renderInvoices()"
                         style="width: auto; padding: 10px; border-radius: var(--r-pill); border: 1px solid var(--border); font-size: 0.9rem; background: #fff; cursor: pointer; color: var(--text-primary);">
                         <option value="yama_asc">🎫 管理番号順</option>
