@@ -909,7 +909,7 @@
                 return;
             }
             const month = document.getElementById('monthFilter').value;
-            const url = `https://ryubee-backend.onrender.com/v1/invoices/csv-export?month=${month}`;
+            const url = `${API_BASE}/v1/invoices/csv-export?month=${month}`;
             
             // fetchを使ってTokenヘッダー付きでダウンロード
             fetch(url, {
@@ -1237,7 +1237,7 @@
             btn.textContent = "送信中...";
 
             try {
-                const res = await fetch(`https://ryubee-backend.onrender.com/v1/invoices/${currentEmailInvoiceId}/send`, {
+                const res = await fetch(`${API_BASE}/v1/invoices/${currentEmailInvoiceId}/send`, {
                     method: 'POST',
                     headers: {
                         'Authorization': `Bearer ${localStorage.getItem('ryubee_token')}`,
@@ -1327,6 +1327,10 @@
         function viewInvoice(id) {
             const inv = allInvoices.find(i => i.id === id);
             if (!inv) return;
+            const customer = allCustomers.find(c => c.id === inv.customer_id) || {};
+            let cfd = {};
+            try { cfd = JSON.parse(customer.form_data || "{}"); } catch(e) {}
+            const customerNo = cfd.yamabun_management_number || "未設定";
             const statusLabel = { draft: '下書き', sent: '送付済', paid: '入金済', partial: '一部入金', overdue: '期限超過' };
             const methodLabels = { bank_transfer: '銀行振込', cash: '現金', other: 'その他' };
             const remaining = inv.total_amount - inv.paid_total;
@@ -1380,10 +1384,6 @@
                 `;
             }
 
-            const customer = allCustomers.find(c => c.id === inv.customer_id) || {};
-            let cfd = {};
-            try { cfd = JSON.parse(customer.form_data || "{}"); } catch(e) {}
-            const customerNo = cfd.yamabun_management_number || "未設定";
 
             // Company html mapping exactly to Yamabun's logo and info layout
             const companyHtml = `
