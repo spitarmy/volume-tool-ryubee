@@ -778,7 +778,14 @@
                 fd.period = period;
                 fd.validity = validity;
                 
-                await RyubeeAPI.updateJob(jobId, { form_data: JSON.stringify(fd) });
+                const totalStr = document.getElementById('out-total-price').textContent.replace(/,/g, '');
+                const totalAmt = parseInt(totalStr, 10) || 0;
+                
+                await RyubeeAPI.updateJob(jobId, { 
+                    form_data: JSON.stringify(fd),
+                    estimated_price: totalAmt,
+                    price_total: totalAmt
+                });
                 
                 // 履歴に自動記録
                 if (job.customer_id) {

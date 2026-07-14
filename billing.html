@@ -928,7 +928,15 @@
         // ── モーダル背景スクロール防止 ──
         let _savedScrollY = 0;
         new MutationObserver(() => {
-            const anyOpen = document.querySelector('.payment-modal-overlay.show');
+            let anyOpen = document.querySelector('.payment-modal-overlay.show, .inv-detail-overlay.show');
+            if (!anyOpen) {
+                const em = document.getElementById('emailModal');
+                if (em && em.style.display === 'flex') anyOpen = true;
+            }
+            if (!anyOpen) {
+                const am = document.getElementById('autoDebitModal');
+                if (am && am.style.display === 'flex') anyOpen = true;
+            }
             if (anyOpen && !document.body.classList.contains('modal-open')) {
                 _savedScrollY = window.scrollY;
                 document.body.classList.add('modal-open');
@@ -938,7 +946,7 @@
                 document.body.style.top = '';
                 window.scrollTo(0, _savedScrollY);
             }
-        }).observe(document.body, { subtree: true, attributes: true, attributeFilter: ['class'], childList: true });
+        }).observe(document.body, { subtree: true, attributes: true, attributeFilter: ['class', 'style'], childList: true });
 
         document.addEventListener('DOMContentLoaded', async () => {
             const now = new Date();
