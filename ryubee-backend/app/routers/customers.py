@@ -233,8 +233,62 @@ def delete_customer(
     ).first()
     if not cust:
         raise HTTPException(404, "顧客が見つかりません")
-    db.delete(cust)
-    db.commit()
+    
+    try:
+        # 関連データのcustomer_idをNULLに設定（外部キー制約回避）
+        # Jobs
+        db.query(models.Job).filter(
+            models.Job.customer_id == customer_id
+        ).update({"customer_id": None}, synchronize_session=False)
+        
+        # Invoice子テーブルを先に削除（filter().delete()ではcascadeが動かないため）
+        invoice_ids = [i.id for i in db.query(models.Invoice.id).filter(
+            models.Invoice.customer_id == customer_id
+        ).all()]
+        if invoice_ids:
+            # InvoiceItem の manifest_id FK を解除
+            db.query(models.InvoiceItem).filter(
+                models.InvoiceItem.invoice_id.in_(invoice_ids)
+            ).delete(synchronize_session=False)
+            db.query(models.Payment).filter(
+                models.Payment.invoice_id.in_(invoice_ids)
+            ).delete(synchronize_session=False)
+        
+        # Manifests
+        db.query(models.Manifest).filter(
+            models.Manifest.customer_id == customer_id
+        ).delete(synchronize_session=False)
+        
+        # Invoices
+        db.query(models.Invoice).filter(
+            models.Invoice.customer_id == customer_id
+        ).delete(synchronize_session=False)
+        
+        # DailyReports
+        if hasattr(models, 'DailyReport'):
+            db.query(models.DailyReport).filter(
+                models.DailyReport.customer_id == customer_id
+            ).delete(synchronize_session=False)
+        
+        # OCR Invoices
+        if hasattr(models, 'OcrInvoice'):
+            db.query(models.OcrInvoice).filter(
+                models.OcrInvoice.matched_customer_id == customer_id
+            ).update({"matched_customer_id": None}, synchronize_session=False)
+        
+        # RouteStops
+        if hasattr(models, 'RouteStop'):
+            db.query(models.RouteStop).filter(
+                models.RouteStop.customer_id == customer_id
+            ).delete(synchronize_session=False)
+        
+        # CustomerHistory & CustomerContract are cascade-deleted via relationship
+        
+        db.delete(cust)
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(500, f"顧客の削除に失敗しました: {str(e)}")
 
 
 @router.post("/bulk-delete")
@@ -246,11 +300,66 @@ def bulk_delete_customers(
     customer_ids = body.get("customer_ids", [])
     if not customer_ids:
         return {"message": "No customers provided"}
-    db.query(models.Customer).filter(
-        models.Customer.company_id == current_user.company_id,
-        models.Customer.id.in_(customer_ids)
-    ).delete(synchronize_session=False)
-    db.commit()
+    
+    try:
+        # 関連データを先に処理
+        db.query(models.Job).filter(
+            models.Job.customer_id.in_(customer_ids)
+        ).update({"customer_id": None}, synchronize_session=False)
+        
+        # Invoice子テーブルを先に削除
+        invoice_ids = [i.id for i in db.query(models.Invoice.id).filter(
+            models.Invoice.customer_id.in_(customer_ids)
+        ).all()]
+        if invoice_ids:
+            db.query(models.InvoiceItem).filter(
+                models.InvoiceItem.invoice_id.in_(invoice_ids)
+            ).delete(synchronize_session=False)
+            db.query(models.Payment).filter(
+                models.Payment.invoice_id.in_(invoice_ids)
+            ).delete(synchronize_session=False)
+        
+        db.query(models.Manifest).filter(
+            models.Manifest.customer_id.in_(customer_ids)
+        ).delete(synchronize_session=False)
+        
+        db.query(models.Invoice).filter(
+            models.Invoice.customer_id.in_(customer_ids)
+        ).delete(synchronize_session=False)
+        
+        if hasattr(models, 'DailyReport'):
+            db.query(models.DailyReport).filter(
+                models.DailyReport.customer_id.in_(customer_ids)
+            ).delete(synchronize_session=False)
+        
+        if hasattr(models, 'OcrInvoice'):
+            db.query(models.OcrInvoice).filter(
+                models.OcrInvoice.matched_customer_id.in_(customer_ids)
+            ).update({"matched_customer_id": None}, synchronize_session=False)
+        
+        if hasattr(models, 'RouteStop'):
+            db.query(models.RouteStop).filter(
+                models.RouteStop.customer_id.in_(customer_ids)
+            ).delete(synchronize_session=False)
+        
+        # CustomerHistory & CustomerContract
+        db.query(models.CustomerHistory).filter(
+            models.CustomerHistory.customer_id.in_(customer_ids)
+        ).delete(synchronize_session=False)
+        
+        db.query(models.CustomerContract).filter(
+            models.CustomerContract.customer_id.in_(customer_ids)
+        ).delete(synchronize_session=False)
+        
+        db.query(models.Customer).filter(
+            models.Customer.company_id == current_user.company_id,
+            models.Customer.id.in_(customer_ids)
+        ).delete(synchronize_session=False)
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        raise HTTPException(500, f"一括削除に失敗しました: {str(e)}")
+    
     return {"message": f"{len(customer_ids)} customers deleted"}
 
 
