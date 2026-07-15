@@ -757,6 +757,32 @@
         let allDisposalCompaniesMaster = [];
 
         async function loadCustomers() {
+            // ── キャッシュから即座に表示 ──
+            try {
+                const cached = localStorage.getItem('ryubee_customers_cache');
+                if (cached) {
+                    const cache = JSON.parse(cached);
+                    allCustomers = cache.customers || [];
+                    allWasteContracts = cache.contracts || [];
+                    allUsers = cache.users || [];
+                    appSettings = cache.settings || {};
+                    allTemplates = cache.templates || [];
+                    allDisposalCompaniesMaster = cache.disposal || [];
+
+                    const sel = document.getElementById('custAssignedUser');
+                    if (sel) {
+                        sel.innerHTML = '<option value="">未設定</option>' + allUsers.map(u => `<option value="${u.id}">${utils.escapeHtml(u.name)}</option>`).join('');
+                    }
+                    allCustomers.forEach(c => {
+                        try { c.parsed_form = JSON.parse(c.form_data || "{}"); } catch (e) { c.parsed_form = {}; }
+                    });
+                    filterCustomers();
+                    document.getElementById('customerList').insertAdjacentHTML('afterbegin',
+                        '<div id="cacheNotice" style="text-align:center;color:var(--text-tertiary);font-size:12px;padding:4px 0;">⏳ 最新データを取得中...</div>');
+                }
+            } catch (e) { /* キャッシュ読み込み失敗は無視 */ }
+
+            // ── APIから最新データを取得 ──
             try {
                 const [custRes, contractsRes, usersRes, settingsRes, templatesRes, disposalRes] = await Promise.all([
                     RyubeeAPI.fetchCustomers(),
@@ -782,8 +808,28 @@
                     try { c.parsed_form = JSON.parse(c.form_data || "{}"); } catch (e) { c.parsed_form = {}; }
                 });
                 filterCustomers();
+
+                // キャッシュに保存
+                try {
+                    localStorage.setItem('ryubee_customers_cache', JSON.stringify({
+                        customers: custRes,
+                        contracts: contractsRes,
+                        users: usersRes || [],
+                        settings: settingsRes || {},
+                        templates: templatesRes || [],
+                        disposal: disposalRes || [],
+                        timestamp: Date.now()
+                    }));
+                } catch (e) { /* localStorage容量超過時は無視 */ }
+
+                const notice = document.getElementById('cacheNotice');
+                if (notice) notice.remove();
             } catch (e) {
-                document.getElementById('customerList').innerHTML = `<div class="alert alert-danger">${e.message}</div>`;
+                const notice = document.getElementById('cacheNotice');
+                if (notice) notice.remove();
+                if (!allCustomers.length) {
+                    document.getElementById('customerList').innerHTML = `<div class="alert alert-danger">${e.message}</div>`;
+                }
             }
         }
 
