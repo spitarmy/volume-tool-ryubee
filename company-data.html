@@ -451,6 +451,8 @@
             <div class="form-group"><label>タイヤ交換日</label><input type="date" id="vTireDate"></div>
             <div class="form-group"><label>備考</label><textarea id="vNotes" rows="2" placeholder="リース車、予備車など"></textarea>
             </div>
+            <div class="form-group"><label>📎 書類アップロード（PDF・画像）</label><input type="file" id="vFile" accept="image/*,.pdf" style="padding:8px;"></div>
+            <div id="vFilePreview" style="margin-bottom:8px;"></div>
             <button class="btn btn-primary" onclick="saveVehicle()">保存する</button>
             <button class="btn btn-secondary mt-1"
                 onclick="document.getElementById('vehicleOverlay').classList.remove('show')">キャンセル</button>
@@ -481,6 +483,8 @@
             <div class="form-group"><label>申請月</label><input type="text" id="pAppMonth" placeholder="9月"></div>
             <div class="form-group"><label>備考</label><textarea id="pNotes" rows="2" placeholder="葉書、ネット申請など"></textarea>
             </div>
+            <div class="form-group"><label>📎 書類アップロード（PDF・画像）</label><input type="file" id="pFile" accept="image/*,.pdf" style="padding:8px;"></div>
+            <div id="pFilePreview" style="margin-bottom:8px;"></div>
             <button class="btn btn-primary" onclick="savePermit()">保存する</button>
             <button class="btn btn-secondary mt-1"
                 onclick="document.getElementById('permitOverlay').classList.remove('show')">キャンセル</button>
@@ -508,6 +512,8 @@
                 <div class="form-group"><label>有効期限</label><input type="date" id="cExpiryDate"></div>
             </div>
             <div class="form-group"><label>備考</label><textarea id="cNotes" rows="2"></textarea></div>
+            <div class="form-group"><label>📎 書類アップロード（PDF・画像）</label><input type="file" id="cFile" accept="image/*,.pdf" style="padding:8px;"></div>
+            <div id="cFilePreview" style="margin-bottom:8px;"></div>
             <button class="btn btn-primary" onclick="saveContract()">保存する</button>
             <button class="btn btn-secondary mt-1"
                 onclick="document.getElementById('contractOverlay').classList.remove('show')">キャンセル</button>
@@ -604,6 +610,31 @@
         let currentTab = 'vehicles';
         let editingId = null;
 
+        // ── ファイルアップロードヘルパー ──
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function renderFilePreview(previewId, dataUrl, fileName) {
+            const el = document.getElementById(previewId);
+            if (!dataUrl) { el.innerHTML = ''; return; }
+            const isPdf = dataUrl.startsWith('data:application/pdf') || (fileName && fileName.endsWith('.pdf'));
+            el.innerHTML = `
+                <div style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f0f9ff;border:1px solid #bae6fd;border-radius:8px;">
+                    <span>${isPdf ? '📄' : '🖼️'}</span>
+                    <span style="flex:1;font-size:0.85rem;font-weight:600;color:#0369a1;">${utils.escapeHtml(fileName || '添付ファイル')}</span>
+                    <a href="${dataUrl}" target="_blank" style="font-size:0.8rem;color:#0ea5e9;font-weight:700;text-decoration:none;">表示</a>
+                    <button type="button" onclick="document.getElementById('${previewId}').innerHTML='';document.getElementById('${previewId}').dataset.url=''" style="background:none;border:none;cursor:pointer;font-size:1rem;">✕</button>
+                </div>`;
+            el.dataset.url = dataUrl;
+            el.dataset.fileName = fileName || '';
+        }
+
         document.addEventListener('DOMContentLoaded', async () => {
             await Promise.all([loadVehicles(), loadPermits(), loadContracts(), loadAlerts()]);
         });
@@ -686,7 +717,7 @@
                         <div class="dc-meta">🏭 ${v.maker || '–'} | ${v.vehicle_type || '–'}</div>
                         <div class="dc-meta">⚖️ 積載: ${v.max_capacity_kg ? v.max_capacity_kg.toLocaleString() + ' kg' : '–'} | 👤 ${v.driver_name || '–'}</div>
                         <div class="dc-meta">🔧 車検: ${v.inspection_expiry || '未設定'} | 🛞 タイヤ: ${v.tire_replacement_date || '未設定'}</div>
-                        ${v.notes ? `<div class="dc-meta" style="color:var(--text-tertiary);font-size:0.8rem;">📝 ${utils.escapeHtml(v.notes)}</div>` : ''}
+                        ${(() => { try { const m = JSON.parse(v.notes||'{}'); return m._file_url ? '<div class="dc-meta" style="color:#0ea5e9;font-weight:600;font-size:0.8rem;">📎 書類添付あり</div>' + (m._notes ? `<div class="dc-meta" style="color:var(--text-tertiary);font-size:0.8rem;">📝 ${utils.escapeHtml(m._notes)}</div>` : '') : (v.notes ? `<div class="dc-meta" style="color:var(--text-tertiary);font-size:0.8rem;">📝 ${utils.escapeHtml(v.notes)}</div>` : ''); } catch(e) { return v.notes ? `<div class="dc-meta" style="color:var(--text-tertiary);font-size:0.8rem;">📝 ${utils.escapeHtml(v.notes)}</div>` : ''; } })()}
                         <div class="card-actions">
                             <button class="btn btn-xs btn-secondary" onclick="event.stopPropagation();openFax('vehicle','${v.id}')">📠 FAX</button>
                         </div>
@@ -715,6 +746,17 @@
             document.getElementById('vInspExpiry').value = v.inspection_expiry || '';
             document.getElementById('vTireDate').value = v.tire_replacement_date || '';
             document.getElementById('vNotes').value = v.notes || '';
+            document.getElementById('vFile').value = '';
+            // Check for stored file
+            const vfp = document.getElementById('vFilePreview');
+            vfp.innerHTML = ''; vfp.dataset.url = '';
+            try {
+                const meta = JSON.parse(v.notes || '{}');
+                if (meta._file_url) {
+                    renderFilePreview('vFilePreview', meta._file_url, meta._file_name);
+                    document.getElementById('vNotes').value = meta._notes || '';
+                }
+            } catch(e) { /* notes is plain text */ }
             document.getElementById('vDeleteBtn').style.display = 'block';
             document.getElementById('vehicleOverlay').classList.add('show');
         }
@@ -729,10 +771,23 @@
                 else el.value = '';
             });
             document.getElementById('vDeleteBtn').style.display = 'none';
+            document.getElementById('vFile').value = '';
+            document.getElementById('vFilePreview').innerHTML = '';
+            document.getElementById('vFilePreview').dataset.url = '';
             document.getElementById('vehicleOverlay').classList.add('show');
         }
 
         async function saveVehicle() {
+            let notesVal = document.getElementById('vNotes').value.trim();
+            const fileInput = document.getElementById('vFile');
+            const existingUrl = document.getElementById('vFilePreview').dataset.url || '';
+            let fileUrl = existingUrl;
+            let fileName = document.getElementById('vFilePreview').dataset.fileName || '';
+            if (fileInput.files.length > 0) {
+                fileUrl = await fileToBase64(fileInput.files[0]);
+                fileName = fileInput.files[0].name;
+            }
+            const notesStore = fileUrl ? JSON.stringify({_notes: notesVal, _file_url: fileUrl, _file_name: fileName}) : notesVal;
             const body = {
                 plate_area: document.getElementById('vPlateArea').value.trim(),
                 plate_class: document.getElementById('vPlateClass').value.trim(),
@@ -747,7 +802,7 @@
                 first_registration: document.getElementById('vFirstReg').value.trim() || null,
                 inspection_expiry: document.getElementById('vInspExpiry').value || null,
                 tire_replacement_date: document.getElementById('vTireDate').value || null,
-                notes: document.getElementById('vNotes').value.trim(),
+                notes: notesStore,
             };
             try {
                 const editId = document.getElementById('vEditId').value;
@@ -804,7 +859,7 @@
                     ${p.permit_number ? `<div class="dc-meta">🔖 許可番号: ${utils.escapeHtml(p.permit_number)}</div>` : ''}
                     <div class="dc-meta">📅 有効期限: ${p.expiry_date || '未設定'}</div>
                     <div class="dc-meta">📝 申請月: ${p.application_month || '–'}</div>
-                    ${p.notes ? `<div class="dc-meta" style="color:var(--text-tertiary);font-size:0.8rem;">💬 ${utils.escapeHtml(p.notes)}</div>` : ''}
+                    ${(() => { try { const m = JSON.parse(p.notes||'{}'); return m._file_url ? '<div class="dc-meta" style="color:#0ea5e9;font-weight:600;font-size:0.8rem;">📎 書類添付あり</div>' + (m._notes ? `<div class="dc-meta" style="color:var(--text-tertiary);font-size:0.8rem;">💬 ${utils.escapeHtml(m._notes)}</div>` : '') : (p.notes ? `<div class="dc-meta" style="color:var(--text-tertiary);font-size:0.8rem;">💬 ${utils.escapeHtml(p.notes)}</div>` : ''); } catch(e) { return p.notes ? `<div class="dc-meta" style="color:var(--text-tertiary);font-size:0.8rem;">💬 ${utils.escapeHtml(p.notes)}</div>` : ''; } })()}
                     <div class="card-actions">
                         <button class="btn btn-xs btn-secondary" onclick="event.stopPropagation();openFax('permit','${p.id}')">📠 FAX</button>
                     </div>
@@ -823,6 +878,16 @@
             document.getElementById('pExpiryDate').value = p.expiry_date || '';
             document.getElementById('pAppMonth').value = p.application_month || '';
             document.getElementById('pNotes').value = p.notes || '';
+            document.getElementById('pFile').value = '';
+            const pfp = document.getElementById('pFilePreview');
+            pfp.innerHTML = ''; pfp.dataset.url = '';
+            try {
+                const meta = JSON.parse(p.notes || '{}');
+                if (meta._file_url) {
+                    renderFilePreview('pFilePreview', meta._file_url, meta._file_name);
+                    document.getElementById('pNotes').value = meta._notes || '';
+                }
+            } catch(e) { }
             document.getElementById('pDeleteBtn').style.display = 'block';
             document.getElementById('permitOverlay').classList.add('show');
         }
@@ -833,17 +898,30 @@
             ['pPrefecture', 'pPermitNumber', 'pExpiryDate', 'pAppMonth', 'pNotes'].forEach(id => document.getElementById(id).value = '');
             document.getElementById('pPermitType').value = '産廃';
             document.getElementById('pDeleteBtn').style.display = 'none';
+            document.getElementById('pFile').value = '';
+            document.getElementById('pFilePreview').innerHTML = '';
+            document.getElementById('pFilePreview').dataset.url = '';
             document.getElementById('permitOverlay').classList.add('show');
         }
 
         async function savePermit() {
+            let notesVal = document.getElementById('pNotes').value.trim();
+            const fileInput = document.getElementById('pFile');
+            const existingUrl = document.getElementById('pFilePreview').dataset.url || '';
+            let fileUrl = existingUrl;
+            let fileName = document.getElementById('pFilePreview').dataset.fileName || '';
+            if (fileInput.files.length > 0) {
+                fileUrl = await fileToBase64(fileInput.files[0]);
+                fileName = fileInput.files[0].name;
+            }
+            const notesStore = fileUrl ? JSON.stringify({_notes: notesVal, _file_url: fileUrl, _file_name: fileName}) : notesVal;
             const body = {
                 prefecture: document.getElementById('pPrefecture').value.trim(),
                 permit_type: document.getElementById('pPermitType').value,
                 permit_number: document.getElementById('pPermitNumber').value.trim(),
                 expiry_date: document.getElementById('pExpiryDate').value || null,
                 application_month: document.getElementById('pAppMonth').value.trim(),
-                notes: document.getElementById('pNotes').value.trim(),
+                notes: notesStore,
             };
             try {
                 const editId = document.getElementById('pEditId').value;
@@ -1019,6 +1097,7 @@
                     <div class="dc-meta">♻️ ${utils.escapeHtml(c.waste_type || '–')}</div>
                     <div class="dc-meta">📅 契約: ${c.contract_date || '–'} ～ ${c.expiry_date || '–'}</div>
                     ${c.notes ? `<div class="dc-meta" style="color:var(--text-tertiary);font-size:0.8rem;">💬 ${utils.escapeHtml(c.notes)}</div>` : ''}
+                    ${c.document_url ? '<div class="dc-meta" style="color:#0ea5e9;font-weight:600;font-size:0.8rem;">📎 書類添付あり</div>' : ''}
                     <div class="card-actions">
                         <button class="btn btn-xs btn-secondary" onclick="event.stopPropagation();openFax('contract','${c.id}')">📠 FAX</button>
                     </div>
@@ -1039,6 +1118,12 @@
             document.getElementById('cContractDate').value = c.contract_date || '';
             document.getElementById('cExpiryDate').value = c.expiry_date || '';
             document.getElementById('cNotes').value = c.notes || '';
+            document.getElementById('cFile').value = '';
+            const cfp = document.getElementById('cFilePreview');
+            cfp.innerHTML = ''; cfp.dataset.url = '';
+            if (c.document_url) {
+                renderFilePreview('cFilePreview', c.document_url, '契約書PDF');
+            }
             document.getElementById('cDeleteBtn').style.display = 'block';
             document.getElementById('contractOverlay').classList.add('show');
         }
@@ -1048,10 +1133,18 @@
             document.getElementById('cEditId').value = '';
             ['cContractName', 'cContractor', 'cDisposal', 'cTransport', 'cWasteType', 'cContractDate', 'cExpiryDate', 'cNotes'].forEach(id => document.getElementById(id).value = '');
             document.getElementById('cDeleteBtn').style.display = 'none';
+            document.getElementById('cFile').value = '';
+            document.getElementById('cFilePreview').innerHTML = '';
+            document.getElementById('cFilePreview').dataset.url = '';
             document.getElementById('contractOverlay').classList.add('show');
         }
 
         async function saveContract() {
+            const fileInput = document.getElementById('cFile');
+            let docUrl = document.getElementById('cFilePreview').dataset.url || '';
+            if (fileInput.files.length > 0) {
+                docUrl = await fileToBase64(fileInput.files[0]);
+            }
             const body = {
                 contract_name: document.getElementById('cContractName').value.trim(),
                 contractor_name: document.getElementById('cContractor').value.trim(),
@@ -1061,6 +1154,7 @@
                 contract_date: document.getElementById('cContractDate').value || null,
                 expiry_date: document.getElementById('cExpiryDate').value || null,
                 notes: document.getElementById('cNotes').value.trim(),
+                document_url: docUrl,
             };
             try {
                 const editId = document.getElementById('cEditId').value;
