@@ -349,8 +349,11 @@
         <button class="btn btn-primary" onclick="openEmailModal()" style="flex:1; margin-right:4px; margin-bottom:4px; padding:8px 4px; font-size:12px;">
             ✉️ メール送信
         </button>
-        <button class="btn btn-success" onclick="generatePDF()" style="flex:1; margin-bottom:4px; padding:8px 4px; font-size:12px;">
+        <button class="btn btn-success" onclick="generatePDF()" style="flex:1; margin-right:4px; margin-bottom:4px; padding:8px 4px; font-size:12px;">
             📄 PDF出力
+        </button>
+        <button class="btn" id="unitPriceToggle" onclick="toggleUnitPriceMode()" style="flex:1; margin-bottom:4px; padding:8px 4px; font-size:12px; background:#f0f9ff; border:1px solid #7dd3fc; color:#0369a1; font-weight:700;">
+            📋 単価見積
         </button>
     </div>
 
@@ -423,8 +426,13 @@
 
         <div class="middle-section">
             <div class="bank-box">
-                <div style="font-size:16pt; font-weight:bold; padding:10px; border-bottom:2px solid #000; display:inline-block; margin-bottom:10px;">
-                    御見積金額： ¥<span id="out-total-price">0</span>
+                <div style="display:flex; align-items:center; gap:0;">
+                    <div id="totalPriceBox" style="font-size:16pt; font-weight:bold; padding:10px; border-bottom:2px solid #000; display:inline-block; margin-bottom:10px;">
+                        御見積金額： ¥<span id="out-total-price">0</span>
+                    </div>
+                    <div id="unitPriceBox" style="font-size:14pt; font-weight:bold; padding:10px; border-bottom:2px solid #000; display:none; margin-bottom:10px; margin-left:16px;">
+                        単価見積
+                    </div>
                 </div>
             </div>
             <div class="elephant-box">
@@ -604,12 +612,16 @@
                 // 明細テーブル作成
                 if (fd.estimate_items && fd.estimate_items.length > 0) {
                     fd.estimate_items.forEach(item => {
-                        addItemRow(item.description, item.quantity, item.unit_price, item.unit || '', item.notes || '');
+                        addItemRow(item.description, item.quantity, item.unit_price, item.unit || '', item.notes || '', item.amount_override !== undefined ? item.amount_override : null);
                     });
                 } else {
                     const priceTotal = job.final_price || job.estimated_price || job.price_total || 0;
                     const subtotal = Math.round(priceTotal / 1.1);
                     addItemRow('不用品回収・運搬費一式', 1, subtotal, '式', '');
+                }
+                // 単価見積もりモード復元
+                if (fd.is_unit_price_mode) {
+                    toggleUnitPriceMode();
                 }
 
                 // 10行に満たない場合は空行を追加して見た目を整える
@@ -662,6 +674,7 @@
             // 数量と単位を一つのカラムに表示させるため、inputを2つ並べる
             const unitVal = unit || '';
             const notesVal = notes || '';
+            const amtVal = arguments.length >= 6 ? arguments[5] : null;
             tr.innerHTML = `
                 <td><input type="text" list="item-presets" value="${escAttr(name)}" oninput="recalcAll()" placeholder="品目名" class="desc-input"></td>
                 <td style="display:flex; align-items:center; justify-content:center; height:100%;">
@@ -669,7 +682,7 @@
                     <input type="text" list="unit-presets" value="${escAttr(unitVal)}" placeholder="単位" style="width:40px; text-align:center; margin-left:4px;" class="unit-input">
                 </td>
                 <td><input type="number" value="${unitPrice}" style="text-align:right;" oninput="recalcAll()" class="price-input"></td>
-                <td class="price amt-cell" style="text-align:right;">0</td>
+                <td class="price" style="text-align:right;"><input type="number" value="${amtVal !== null ? amtVal : 0}" style="text-align:right;" oninput="onAmtManualEdit(this)" class="amt-input" ${amtVal !== null ? 'data-manual="1"' : ''}></td>
                 <td style="display:flex; align-items:center; height:100%;">
                     <input type="text" value="${escAttr(notesVal)}" placeholder="備考" style="width:100%;" class="notes-input">
                     <button class="row-delete-btn" onclick="deleteRow('${rid}')" title="削除">✕</button>
@@ -714,22 +727,38 @@
             return (s || '').replace(/"/g, '&quot;').replace(/</g, '&lt;');
         }
 
+        // 金額セルを手動編集した時
+        function onAmtManualEdit(el) {
+            el.dataset.manual = '1';
+            recalcTotals();
+        }
+
         function recalcAll() {
             const rows = document.querySelectorAll('.item-row');
-            let subtotal = 0;
 
             rows.forEach(tr => {
                 const qtyInput = tr.querySelector('.qty-input');
                 const priceInput = tr.querySelector('.price-input');
-                if (!qtyInput || !priceInput) return;
+                const amtInput = tr.querySelector('.amt-input');
+                if (!qtyInput || !priceInput || !amtInput) return;
                 
-                const qty = parseFloat(qtyInput.value) || 0;
-                const unit = parseFloat(priceInput.value) || 0;
-                const amt = Math.round(qty * unit);
-                subtotal += amt;
-                
-                const amtCell = tr.querySelector('.amt-cell');
-                if (amtCell) amtCell.textContent = amt.toLocaleString();
+                // 手動編集されていない場合のみ自動計算
+                if (!amtInput.dataset.manual) {
+                    const qty = parseFloat(qtyInput.value) || 0;
+                    const unit = parseFloat(priceInput.value) || 0;
+                    const amt = Math.round(qty * unit);
+                    amtInput.value = amt;
+                }
+            });
+            recalcTotals();
+        }
+
+        function recalcTotals() {
+            const rows = document.querySelectorAll('.item-row');
+            let subtotal = 0;
+            rows.forEach(tr => {
+                const amtInput = tr.querySelector('.amt-input');
+                if (amtInput) subtotal += parseFloat(amtInput.value) || 0;
             });
 
             const taxAmt = Math.round(subtotal * 0.1);
@@ -742,6 +771,28 @@
             document.getElementById('out-subtotal').textContent = subtotal.toLocaleString();
             document.getElementById('out-tax').textContent = taxAmt.toLocaleString();
             document.getElementById('out-total-bottom').textContent = total.toLocaleString();
+        }
+
+        // 単価見積もりモード
+        let isUnitPriceMode = false;
+        function toggleUnitPriceMode() {
+            isUnitPriceMode = !isUnitPriceMode;
+            const btn = document.getElementById('unitPriceToggle');
+            const totalBox = document.getElementById('totalPriceBox');
+            const unitBox = document.getElementById('unitPriceBox');
+            if (isUnitPriceMode) {
+                btn.style.background = '#0369a1';
+                btn.style.color = '#fff';
+                btn.textContent = '✅ 単価見積';
+                totalBox.style.display = 'none';
+                unitBox.style.display = 'inline-block';
+            } else {
+                btn.style.background = '#f0f9ff';
+                btn.style.color = '#0369a1';
+                btn.textContent = '📋 単価見積';
+                totalBox.style.display = 'inline-block';
+                unitBox.style.display = 'none';
+            }
         }
 
         async function saveEstimateItems() {
@@ -757,10 +808,14 @@
                 const qty = parseFloat(tr.querySelector('.qty-input')?.value) || 0;
                 const unit = tr.querySelector('.unit-input')?.value.trim() || '式';
                 const price = parseFloat(tr.querySelector('.price-input')?.value) || 0;
+                const amt = parseFloat(tr.querySelector('.amt-input')?.value) || 0;
+                const amtManual = tr.querySelector('.amt-input')?.dataset.manual === '1';
                 const notes = tr.querySelector('.notes-input')?.value.trim() || '';
                 
                 if (desc) {
-                    items.push({ description: desc, quantity: qty, unit_price: price, unit: unit, notes: notes });
+                    const item = { description: desc, quantity: qty, unit_price: price, unit: unit, notes: notes };
+                    if (amtManual) item.amount_override = amt;
+                    items.push(item);
                 }
             });
 
@@ -777,6 +832,7 @@
                 fd.pic_name = picName;
                 fd.period = period;
                 fd.validity = validity;
+                fd.is_unit_price_mode = isUnitPriceMode;
                 
                 const totalStr = document.getElementById('out-total-price').textContent.replace(/,/g, '');
                 const totalAmt = parseInt(totalStr, 10) || 0;
