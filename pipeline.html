@@ -989,6 +989,27 @@
             height: 18px;
             accent-color: var(--blue);
         }
+        @media (max-width: 600px) {
+            .pipeline-board {
+                flex-direction: column;
+            }
+            .pipeline-column {
+                width: 100%;
+                min-width: 100%;
+            }
+            .job-card {
+                padding: 8px;
+            }
+            #detailDrawer {
+                width: 100% !important;
+            }
+            .drawer-content {
+                padding: 12px;
+            }
+            .drawer-content * {
+                font-size: 0.9em;
+            }
+        }
     </style>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#1A237E">

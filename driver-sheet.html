@@ -10,73 +10,22 @@
         @media print {
             @page {
                 size: A4;
-                margin: 5mm 8mm;
-            }
-
-            body {
-                background: #fff;
-                padding: 0;
-                margin: 0;
-            }
-
-            .no-print {
-                display: none !important;
-            }
-
-            .sheet {
-                box-shadow: none;
-                margin: 0;
-                padding: 10px 15px;
-                border-radius: 0;
-            }
-
-            .sheet h1 {
-                font-size: 1.2rem;
-                margin-bottom: 6px;
-                padding-bottom: 4px;
-            }
-
-            .driver-table th,
-            .driver-table td {
-                padding: 4px 6px;
-                font-size: 0.8rem;
-                border-width: 1.5px;
-            }
-
-            .driver-table {
-                margin-top: 10px !important;
-            }
-
-            /* 注意事項エリアを縮小 */
-            .driver-table td[style*="height:100px"] {
-                height: auto !important;
-                min-height: 40px;
-            }
-
-            /* 特記事項ボックスを縮小 */
-            .memo-box {
-                margin-top: 10px !important;
-                padding: 6px !important;
-            }
-            .memo-box h3 {
-                font-size: 0.8rem !important;
-                margin-bottom: 4px !important;
-            }
-            .memo-box .memo-area {
-                min-height: 50px !important;
-            }
-
-            /* 産廃テーブルの行高さ縮小 */
-            .driver-table tr[style*="height: 48px"] {
-                height: 30px !important;
-            }
-            .driver-table tr[style*="height: 40px"] {
-                height: 26px !important;
-            }
-
-            #photoSection.hidden-for-print {
-                display: none !important;
-            }
+            @page { size: A4; margin: 3mm 5mm; }
+            body { background: #fff; padding: 0; margin: 0; }
+            .no-print, .bottom-nav { display: none !important; }
+            .sheet { box-shadow: none; margin: 0; padding: 4px 8px !important; border-radius: 0; }
+            .sheet h1 { font-size: 1rem !important; margin-bottom: 2px !important; padding-bottom: 2px !important; }
+            .driver-table { margin-top: 3px !important; margin-bottom: 3px !important; }
+            .driver-table th, .driver-table td { padding: 2px 4px !important; font-size: 0.7rem !important; line-height: 1.2 !important; border-width: 1px !important; }
+            .driver-table th[style], .driver-table td[style] { padding: 2px 4px !important; font-size: 0.7rem !important; line-height: 1.2 !important; }
+            .driver-table tr, .driver-table tr[style] { height: auto !important; min-height: 0 !important; }
+            #dsCustomer, #dsPhone, #dsCode, #dsPrice { font-size: 0.7rem !important; }
+            .memo-box { margin-top: 3px !important; padding: 3px !important; }
+            .memo-box h3 { font-size: 0.7rem !important; margin-bottom: 1px !important; }
+            .memo-box .memo-area { min-height: 25px !important; font-size: 0.7rem !important; }
+            #photoSection { display: none !important; }
+            #photoSection.print-visible { display: block !important; }
+            .photo-grid img { max-height: 50px !important; }
         }
 
         body {
