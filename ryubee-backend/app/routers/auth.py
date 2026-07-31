@@ -152,3 +152,29 @@ def update_user_role(
     db.commit()
     db.refresh(target_user)
     return target_user
+
+
+class PasswordResetRequest(BaseModel):
+    password: str
+
+
+@router.put("/users/{user_id}/password", response_model=UserOut)
+def reset_user_password(
+    user_id: str,
+    req: PasswordResetRequest,
+    current_user: models.User = Depends(auth.require_admin),
+    db: Session = Depends(get_db),
+):
+    """管理者がスタッフのパスワードをリセットする"""
+    target_user = db.query(models.User).filter(
+        models.User.id == user_id,
+        models.User.company_id == current_user.company_id
+    ).first()
+
+    if not target_user:
+        raise HTTPException(status_code=404, detail="ユーザーが見つかりません")
+
+    target_user.password_hash = auth.hash_password(req.password)
+    db.commit()
+    db.refresh(target_user)
+    return target_user
