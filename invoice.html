@@ -595,8 +595,17 @@
         </table>
 
         <div class="clearfix">
-        <div class="clearfix">
             <table class="totals-table">
+                <tr>
+                    <td class="label">内訳</td>
+                    <td style="font-size:10pt;">10%対象(税抜)</td>
+                    <td class="num" id="out-subtotal">0円</td>
+                </tr>
+                <tr>
+                    <td class="label"></td>
+                    <td style="font-size:9pt;">10%消費税</td>
+                    <td class="num" id="out-tax">0円</td>
+                </tr>
                 <tr>
                     <td class="label" style="border-bottom:2px solid #000;"></td>
                     <td style="font-size:10pt; font-weight:bold; border-bottom:2px solid #000;">合計金額</td>
@@ -838,14 +847,19 @@
                 if (amtInput) subtotal += parseFloat(amtInput.value) || 0;
             });
 
-            // 見積書では自動的に10%を上乗せしない（請求書で乗るためややこしいとの要望）
-            const taxAmt = 0; // Math.round(subtotal * 0.1);
-            const total = subtotal; // subtotal + taxAmt;
+            const taxAmt = Math.round(subtotal * 0.1);
+            const total = subtotal + taxAmt;
 
             // Update header total
             document.getElementById('out-total-price').textContent = total.toLocaleString();
 
             // Update summary table
+            const subtotalEl = document.getElementById('out-subtotal');
+            if (subtotalEl) subtotalEl.textContent = subtotal.toLocaleString();
+            
+            const taxEl = document.getElementById('out-tax');
+            if (taxEl) taxEl.textContent = taxAmt.toLocaleString();
+
             const totalBottom = document.getElementById('out-total-bottom');
             if (totalBottom) totalBottom.textContent = total.toLocaleString();
         }
@@ -911,13 +925,14 @@
                 fd.validity = validity;
                 fd.is_unit_price_mode = isUnitPriceMode;
                 
-                const totalStr = document.getElementById('out-total-price').textContent.replace(/,/g, '');
-                const totalAmt = parseInt(totalStr, 10) || 0;
+                // 請求書で10%上乗せされるため、ここでは税抜の小計（subtotal）を保存する
+                const subtotalStr = document.getElementById('out-subtotal').textContent.replace(/,/g, '');
+                const subtotalAmt = parseInt(subtotalStr, 10) || 0;
                 
                 await RyubeeAPI.updateJob(jobId, { 
                     form_data: JSON.stringify(fd),
-                    estimated_price: totalAmt,
-                    price_total: totalAmt
+                    estimated_price: subtotalAmt,
+                    price_total: subtotalAmt
                 });
                 
                 // 履歴に自動記録
