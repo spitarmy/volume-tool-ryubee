@@ -433,112 +433,147 @@
       <a href="#" target="_blank" id="driver-sheet-link" class="pdf-btn"
         style="background:#E3F2FD;color:#1565C0;border-color:#BBDEFB;"><span
           style="font-size:1.2rem;">🚚</span>ドライバー指示書</a>
-      <div class="card">
-        <h3 class="card-title">基本情報編集</h3>
-        <div class="form-group">
-          <label>ステータス（フォルダ）</label>
-          <select id="status">
-            <option value="estimated">見積済</option>
-            <option value="scheduled">作業予定</option>
-            <option value="completed">作業完了</option>
-            <option value="lost">不成約（失注）</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>案件タイプ</label>
-          <select id="job_type">
-            <option value="other">その他</option>
-            <option value="store_removal">店舗残置物撤去</option>
-            <option value="estate">遺品整理</option>
-            <option value="welfare">福祉残置物撤去</option>
-            <option value="general_waste">一般ゴミ収集</option>
-          </select>
-        </div>
-        <div class="form-group">
-          <label>業務種別（ドライバー指示用）</label>
-          <div style="display:flex; gap:16px; margin-top:6px;">
-            <label style="display:inline-flex; align-items:center; gap:4px; font-weight:normal; cursor:pointer;"><input type="radio" name="yamabun_work_type" value="引上げ"> 引上げ</label>
-            <label style="display:inline-flex; align-items:center; gap:4px; font-weight:normal; cursor:pointer;"><input type="radio" name="yamabun_work_type" value="交換"> 交換</label>
-            <label style="display:inline-flex; align-items:center; gap:4px; font-weight:normal; cursor:pointer;"><input type="radio" name="yamabun_work_type" value="積込み"> 積込み</label>
-            <label style="display:inline-flex; align-items:center; gap:4px; font-weight:normal; cursor:pointer;"><input type="radio" name="yamabun_work_type" value=""> 未設定</label>
-          </div>
-        </div>
-        <div class="form-group">
-          <label>パイプラインステージ</label>
-          <select id="pipeline_stage">
-            <option value="prospect">🎯 潜在顧客</option>
-            <option value="inquiry">問合せ</option>
-            <option value="estimate">見積</option>
-            <option value="negotiation">商談</option>
-            <option value="contract">契約</option>
-            <option value="scheduled">作業予定</option>
-            <option value="waiting_manifest">マニフェスト待ち</option>
-            <option value="completed">完了</option>
-            <option value="lost">不成約</option>
-          </select>
-        </div>
-        <div class="form-group" id="tmplSelectorGroup" style="display:none;">
-          <label>雛形から入力（任意）</label>
-          <select id="tmplSelector" onchange="applyJobTemplate()"
-            style="padding:6px; font-size:0.9rem; margin-bottom:12px;">
-            <option value="">-- 追加する雛形を選択 --</option>
-          </select>
-        </div>
-        <div class="form-group"><label>現場名（案件名）</label><input type="text" id="job_name"></div>
-        <div class="form-group"><label>お客様名</label><input type="text" id="customer_name"></div>
-        <div class="form-group"><label>📍 住所</label><input type="text" id="address"></div>
-        <div class="d-flex gap-2">
-          <div class="form-group flex-1" style="width:50%;"><label>👤 担当者名</label><input type="text" id="fd_contact_name" placeholder="担当者名"></div>
-          <div class="form-group flex-1" style="width:50%;"><label>✉️ メールアドレス</label><input type="email" id="fd_email" placeholder="info@example.com"></div>
-        </div>
-        <div class="d-flex gap-2">
-          <div class="form-group flex-1" style="width:50%;"><label>📞 電話番号</label><input type="tel" id="fd_phone" placeholder="075-XXX-XXXX"></div>
-          <div class="form-group flex-1" style="width:50%;"><label>📱 携帯番号</label><input type="tel" id="fd_mobile" placeholder="090-XXX-XXXX"></div>
-        </div>
+      <div class="card" style="padding: 24px;">
+        <h3 class="card-title" id="job-edit-title">基本情報編集</h3>
+        <div class="edit-grid">
+          
+          <!-- 左カラム: 基本情報 -->
+          <div class="edit-col">
+            <h4 class="section-title">🏢 基本情報</h4>
+            
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+              <div class="form-group"><label>📁 ステータス（フォルダ）</label>
+                <select id="status">
+                  <option value="estimated">見積済</option>
+                  <option value="scheduled">作業予定</option>
+                  <option value="completed">作業完了</option>
+                  <option value="lost">不成約（失注）</option>
+                </select>
+              </div>
+              <div class="form-group"><label>🎯 パイプラインステージ</label>
+                <select id="pipeline_stage">
+                  <option value="prospect">🎯 潜在顧客</option>
+                  <option value="inquiry">問合せ</option>
+                  <option value="estimate">見積</option>
+                  <option value="negotiation">商談</option>
+                  <option value="contract">契約</option>
+                  <option value="scheduled">作業予定</option>
+                  <option value="waiting_manifest">マニフェスト待ち</option>
+                  <option value="completed">完了</option>
+                  <option value="lost">不成約</option>
+                </select>
+              </div>
+            </div>
 
-        <h3 class="card-title" style="margin-top:16px; padding-top:12px; border-top:1px solid var(--border);">💰 請求・支払情報</h3>
-        <div class="d-flex gap-2">
-          <div class="form-group flex-1" style="width:50%;">
-            <label>支払方法</label>
-            <select id="fd_payment_method">
-              <option value="">未設定</option>
-              <option value="振込">振込</option>
-              <option value="自動引落し">自動引落し</option>
-              <option value="集金">集金</option>
-            </select>
-          </div>
-          <div class="form-group flex-1" style="width:50%;">
-            <label>📄 請求書送付方法</label>
-            <select id="fd_invoice_delivery">
-              <option value="">未設定</option>
-              <option value="郵送">郵送</option>
-              <option value="メール">メール</option>
-              <option value="FAX">FAX</option>
-              <option value="手渡し">手渡し</option>
-              <option value="不要">不要</option>
-            </select>
-          </div>
-        </div>
-        <div class="form-group"><label>📮 送付先</label><input type="text" id="fd_invoice_send_to" placeholder="送付先名・住所"></div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+              <div class="form-group"><label>🏢 案件タイプ</label>
+                <select id="job_type">
+                  <option value="general_waste">一般ゴミ収集</option>
+                  <option value="industrial_waste">産業廃棄物</option>
+                  <option value="store_removal">店舗残置物撤去</option>
+                  <option value="estate">遺品整理</option>
+                  <option value="welfare">福祉残置物撤去</option>
+                  <option value="large_waste">大型ゴミ等</option>
+                  <option value="other">その他</option>
+                </select>
+              </div>
+              <div class="form-group"><label>🚚 業務種別 (ドライバー指示用)</label>
+                <select id="yamabun_work_type_select">
+                  <option value="">未設定</option>
+                  <option value="引上げ">引上げ</option>
+                  <option value="交換">交換</option>
+                  <option value="積込み">積込み</option>
+                </select>
+              </div>
+            </div>
 
-        <h3 class="card-title" style="margin-top:16px; padding-top:12px; border-top:1px solid var(--border);">📋 作業情報</h3>
-        <div class="d-flex gap-2">
-          <div class="form-group flex-1" style="width:50%;"><label>作業日</label><input type="date" id="work_date"></div>
-          <div class="form-group flex-1" style="width:50%;"><label>時間帯</label><input type="text" id="work_time" placeholder="10:00~"></div>
+            <div class="form-group"><label>📝 現場名（案件名）</label><input type="text" id="job_name" placeholder="例: 〇〇ビル 3F回収"></div>
+            
+            <!-- 顧客選択 -->
+            <div class="form-group">
+              <label>👤 お客様選択 <button type="button" onclick="clearCustomerSelection()" style="font-size:0.65rem;padding:2px 6px;border-radius:4px;border:1px solid var(--border);background:#FEF2F2;color:#DC2626;cursor:pointer;margin-left:4px;">新規に入力</button></label>
+              <select id="customer_select" onchange="onCustomerSelected(this.value)">
+                <option value="">-- 既存顧客から選択 --</option>
+              </select>
+            </div>
+            <div class="form-group"><label>お客様名（顧客マスター）</label><input type="text" id="customer_name" placeholder="株式会社〇〇"></div>
+
+            <div class="form-group"><label>📍 住所</label><input type="text" id="address"></div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+              <div class="form-group"><label>担当者名</label><input type="text" id="fd_contact_name" placeholder="担当者名"></div>
+              <div class="form-group"><label>メールアドレス</label><input type="email" id="fd_email" placeholder="info@example.com"></div>
+            </div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+              <div class="form-group"><label>電話番号</label><input type="tel" id="fd_phone" placeholder="075-XXX-XXXX"></div>
+              <div class="form-group"><label>携帯番号</label><input type="tel" id="fd_mobile" placeholder="090-XXX-XXXX"></div>
+            </div>
+            
+            <div class="form-group" id="tmplSelectorGroup" style="display:none; margin-top:12px; padding:12px; background:#F8FAFC; border-radius:8px; border:1px solid var(--border);">
+              <label style="margin-bottom:4px; font-weight:700;">📑 雛形から入力（任意）</label>
+              <select id="tmplSelector" onchange="applyJobTemplate()" style="padding:6px; font-size:0.9rem;">
+                <option value="">-- 追加する雛形を選択 --</option>
+              </select>
+            </div>
+
+          </div>
+
+          <!-- 右カラム: 請求・作業情報 -->
+          <div class="edit-col">
+            <h4 class="section-title">💰 請求・作業情報</h4>
+            
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+              <div class="form-group"><label>支払方法</label>
+                <select id="fd_payment_method">
+                  <option value="">未設定</option>
+                  <option value="振込">振込</option>
+                  <option value="自動引落し">自動引落し</option>
+                  <option value="集金">集金</option>
+                </select>
+              </div>
+              <div class="form-group"><label>📄 請求書送付方法</label>
+                <select id="fd_invoice_delivery">
+                  <option value="">未設定</option>
+                  <option value="郵送代行">郵送代行</option>
+                  <option value="郵送">郵送</option>
+                  <option value="メール">メール</option>
+                  <option value="その他電子メール">その他電子メール</option>
+                  <option value="FAX">FAX</option>
+                  <option value="手渡し">手渡し</option>
+                  <option value="不要">不要</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-group"><label>📮 送付先</label><input type="text" id="fd_invoice_send_to" placeholder="送付先名・住所"></div>
+
+            <div style="background:#F0F9FF; border:1px solid #BAE6FD; padding:12px; border-radius:8px; margin:16px 0;">
+              <label style="font-weight:700; color:#0369A1; margin-bottom:8px;">📋 作業情報</label>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                <div class="form-group" style="margin-bottom:8px;"><label>作業日</label><input type="date" id="work_date"></div>
+                <div class="form-group" style="margin-bottom:8px;"><label>時間帯</label><input type="text" id="work_time" placeholder="10:00~"></div>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                <div class="form-group" style="margin-bottom:8px;"><label>見積金額(税抜)</label><input type="number" id="price_total"></div>
+                <div class="form-group" style="margin-bottom:8px;"><label>作業員数</label><input type="number" id="workers"></div>
+              </div>
+              <div class="form-group" style="margin-bottom:0;"><label>備考</label><textarea id="notes" placeholder="注意事項などを入力..."></textarea></div>
+            </div>
+
+            <div class="section-title" style="margin-left:0; font-size:0.9rem;">✍️ お客様サイン（電子署名）</div>
+            <div class="signature-area"><canvas id="signature-canvas"></canvas></div>
+            <div class="signature-controls">
+              <button class="btn btn-secondary" onclick="clearSignature()" style="margin:0;padding:4px 12px;font-size:.8rem;">書き直す</button>
+              <span style="font-size:.8rem;color:var(--text-muted);align-self:center;">※枠内にお書きください</span>
+            </div>
+
+            <div style="display:flex; gap:12px; margin-top:24px;">
+              <button class="btn btn-primary" onclick="updateJob()" id="update-btn" style="flex:1;">更新を保存する</button>
+              <button class="btn btn-primary" onclick="createJob()" id="create-btn" style="flex:1; display:none;">新規登録する</button>
+            </div>
+            <p id="sync-notice" style="font-size:0.75rem; color:var(--text-secondary); margin-top:8px; text-align:center;">
+              ※顧客情報（住所・連絡先等）を変更して保存すると、顧客マスター側にも自動で反映（同期）されます。
+            </p>
+          </div>
         </div>
-        <div class="d-flex gap-2">
-          <div class="form-group flex-1" style="width:50%;"><label>見積金額(円)</label><input type="number" id="price_total"></div>
-          <div class="form-group flex-1" style="width:50%;"><label>作業員数</label><input type="number" id="workers"></div>
-        </div>
-        <div class="form-group"><label>備考</label><textarea id="notes" placeholder="注意事項などを入力..."></textarea></div>
-        <div class="section-title" style="margin-left:0;">✍️ お客様サイン（電子署名）</div>
-        <div class="signature-area"><canvas id="signature-canvas"></canvas></div>
-        <div class="signature-controls">
-          <button class="btn btn-secondary" onclick="clearSignature()"
-            style="margin:0;padding:4px 12px;font-size:.8rem;">書き直す</button>
-          <span style="font-size:.8rem;color:var(--text-muted);align-self:center;">※枠内にお書きください</span>
-        </div>
-        <button class="btn btn-primary" onclick="updateJob()" id="update-btn">更新を保存する</button>
       </div>
       <div class="section-title">📸 現場写真</div>
       <div class="card" style="padding: 16px; margin-bottom: 20px;">
@@ -602,6 +637,60 @@
           });
         }
       } catch (e) { console.error("Template load err:", e); }
+    }
+
+    let _cachedCustomers = null;
+    async function populateCustomerDropdown() {
+      const sel = document.getElementById('customer_select');
+      if (!sel) return;
+      if (!_cachedCustomers) {
+        try { _cachedCustomers = await RyubeeAPI.fetchCustomers(); } catch (e) { _cachedCustomers = []; }
+      }
+      let html = '<option value="">-- 既存顧客から選択 --</option>';
+      _cachedCustomers.forEach(c => {
+        let cFd = {};
+        try { cFd = JSON.parse(c.form_data || '{}'); } catch(e){}
+        const yama = cFd.yamabun_management_number ? ` [${cFd.yamabun_management_number}]` : '';
+        html += `<option value="${c.id}">${esc(c.name)}${yama}</option>`;
+      });
+      sel.innerHTML = html;
+      if(currentJobId) {
+          const job = allJobs.find(j => j.job_id === currentJobId);
+          if (job && job.customer_id) {
+              sel.value = job.customer_id;
+          }
+      }
+    }
+
+    function onCustomerSelected(custId) {
+      if(!custId) { clearCustomerSelection(); return; }
+      const c = _cachedCustomers.find(x => x.id === custId);
+      if(!c) return;
+      document.getElementById('customer_name').value = c.name || '';
+      document.getElementById('address').value = c.address || '';
+      let fd = {};
+      try { fd = JSON.parse(c.form_data || "{}"); } catch(e){}
+      document.getElementById('fd_contact_name').value = fd.contact_name || '';
+      document.getElementById('fd_email').value = fd.email || '';
+      document.getElementById('fd_phone').value = fd.phone || '';
+      document.getElementById('fd_mobile').value = fd.mobile || '';
+      document.getElementById('fd_payment_method').value = fd.payment_method || '';
+      document.getElementById('fd_invoice_delivery').value = fd.invoice_delivery || '';
+      document.getElementById('fd_invoice_send_to').value = fd.invoice_send_to || '';
+    }
+
+    function clearCustomerSelection() {
+      document.getElementById('customer_select').value = '';
+      document.getElementById('customer_name').value = '';
+      document.getElementById('address').value = '';
+      document.getElementById('fd_contact_name').value = '';
+      document.getElementById('fd_email').value = '';
+      document.getElementById('fd_phone').value = '';
+      document.getElementById('fd_mobile').value = '';
+      document.getElementById('fd_payment_method').value = '';
+      document.getElementById('fd_invoice_delivery').value = '';
+      document.getElementById('fd_invoice_send_to').value = '';
+      document.getElementById('customer_name').focus();
     }
 
     function applyJobTemplate() {
@@ -715,6 +804,7 @@
         console.warn('Failed to fetch full job data:', e);
       }
       fillForm(job);
+      populateCustomerDropdown();
       renderAiSummary(job.ai_result);
       renderJobsPhotos(job);
       document.getElementById('pdf-link').href = `invoice.html?id=${jobId}`;
@@ -841,10 +931,7 @@
         try { fd = JSON.parse(job.form_data); } catch(e){}
       }
       const wt = fd.yamabun_work_type || '';
-      const radios = document.getElementsByName('yamabun_work_type');
-      radios.forEach(r => {
-        r.checked = (r.value === wt);
-      });
+      document.getElementById('yamabun_work_type_select').value = wt;
 
       // 顧客情報フィールドを読み込み
       document.getElementById('fd_contact_name').value = fd.contact_name || '';
@@ -911,12 +998,7 @@
       if (job && job.form_data) {
         try { fd = JSON.parse(job.form_data); } catch (e) { }
       }
-      const radios = document.getElementsByName('yamabun_work_type');
-      let selectedWt = '';
-      radios.forEach(r => {
-        if (r.checked) selectedWt = r.value;
-      });
-      fd.yamabun_work_type = selectedWt;
+      fd.yamabun_work_type = document.getElementById('yamabun_work_type_select').value;
 
       // 顧客情報フィールドを保存
       fd.contact_name = document.getElementById('fd_contact_name').value.trim();
@@ -928,12 +1010,46 @@
       fd.invoice_send_to = document.getElementById('fd_invoice_send_to').value.trim();
       payload.form_data = JSON.stringify(fd);
 
+      // Customer Sync
+      const custId = document.getElementById('customer_select').value;
+      if (custId) {
+          payload.customer_id = custId;
+          const custUpdate = {
+              name: payload.customer_name,
+              address: payload.address
+          };
+          const cFd = {
+              contact_name: fd.contact_name,
+              email: fd.email,
+              phone: fd.phone,
+              mobile: fd.mobile,
+              payment_method: fd.payment_method,
+              invoice_delivery: fd.invoice_delivery,
+              invoice_send_to: fd.invoice_send_to
+          };
+          let existingCust = _cachedCustomers ? _cachedCustomers.find(c => c.id === custId) : null;
+          if (!existingCust) {
+              try {
+                  const allC = await RyubeeAPI.fetchCustomers();
+                  existingCust = allC.find(c => c.id === custId);
+              } catch(e) {}
+          }
+          if (existingCust) {
+              let eFd = {};
+              try { eFd = JSON.parse(existingCust.form_data || "{}"); } catch(e){}
+              custUpdate.form_data = JSON.stringify({ ...eFd, ...cFd });
+              await RyubeeAPI.updateCustomer(custId, custUpdate);
+          }
+      } else {
+          payload.customer_id = null;
+      }
+
       Object.keys(payload).forEach(k => payload[k] === undefined && delete payload[k]);
       try {
         await RyubeeAPI.updateJob(currentJobId, payload);
         await fetchJobList();
         document.getElementById('drawer-title').textContent = payload.job_name || '案件詳細';
-        showToast('✅ 保存しました');
+        showToast('✅ 保存・同期しました');
       } catch (e) { alert('更新に失敗しました：' + e.message); }
       finally { btn.textContent = '更新を保存する'; btn.disabled = false; }
     }

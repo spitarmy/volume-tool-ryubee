@@ -110,23 +110,7 @@
             -webkit-overflow-scrolling: touch;
             animation: sheetUp 0.3s cubic-bezier(0.25, 1, 0.5, 1);
         }
-        /* 2カラム編集レイアウト */
-        .edit-grid {
-            display: grid;
-            grid-template-columns: 1fr;
-            gap: 0;
-        }
-        @media (min-width: 800px) {
-            .edit-grid {
-                grid-template-columns: 1fr 1fr;
-                gap: 24px;
-                align-items: start;
-            }
-        }
-        .edit-col .section-title {
-            font-size: 0.95rem;
-            margin: 16px 0 8px;
-        }
+        /* 2カラム編集レイアウトは style.css に移動済 */
         /* 回収カテゴリのコンパクトな行 */
         .collect-row {
             display: grid;

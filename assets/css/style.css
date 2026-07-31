@@ -229,8 +229,25 @@ video {
 }
 
 /* ==========================================================================
-   Forms
+   Forms & Grid Layouts
    ========================================================================== */
+/* 2カラム編集レイアウト (Modal / Drawer) */
+.edit-grid {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0;
+}
+@media (min-width: 800px) {
+  .edit-grid {
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      align-items: start;
+  }
+}
+.edit-col .section-title {
+  font-size: 0.95rem;
+  margin: 16px 0 8px;
+}
 .form-group {
   margin-bottom: 24px;
 }
