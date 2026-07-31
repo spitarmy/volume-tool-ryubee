@@ -1,5 +1,5 @@
 // Ryu兵衛 for 山文 — Service Worker
-const CACHE_NAME = 'ryubee-yamabun-v9';
+const CACHE_NAME = 'ryubee-yamabun-v10';
 const PRECACHE_URLS = [
     '/volume-tool-ryubee/',
     '/volume-tool-ryubee/index.html',

@@ -352,7 +352,8 @@
         margin-bottom: 4px !important;
     }
     .bank-box { display: block !important; width: 100% !important; }
-    .elephant-box { display: none !important; }
+    .elephant-box { text-align: center !important; margin-top: -30px !important; margin-right: 10px !important; }
+    .elephant-box img { max-height: 40px !important; }
     #totalPriceBox, #unitPriceBox { font-size: 12pt !important; margin-bottom: 4px !important; }
     .items-table {
         font-size: 8px !important;
@@ -594,17 +595,8 @@
         </table>
 
         <div class="clearfix">
+        <div class="clearfix">
             <table class="totals-table">
-                <tr>
-                    <td class="label">内訳</td>
-                    <td style="font-size:10pt;">10%対象(税抜)</td>
-                    <td class="num" id="out-subtotal">0円</td>
-                </tr>
-                <tr>
-                    <td class="label"></td>
-                    <td style="font-size:9pt;">10%消費税</td>
-                    <td class="num" id="out-tax">0円</td>
-                </tr>
                 <tr>
                     <td class="label" style="border-bottom:2px solid #000;"></td>
                     <td style="font-size:10pt; font-weight:bold; border-bottom:2px solid #000;">合計金額</td>
@@ -701,7 +693,7 @@
                     });
                 } else {
                     const priceTotal = job.final_price || job.estimated_price || job.price_total || 0;
-                    const subtotal = Math.round(priceTotal / 1.1);
+                    const subtotal = priceTotal; // 10%抜きしない
                     addItemRow('不用品回収・運搬費一式', 1, subtotal, '式', '');
                 }
                 // 単価見積もりモード復元
@@ -846,16 +838,16 @@
                 if (amtInput) subtotal += parseFloat(amtInput.value) || 0;
             });
 
-            const taxAmt = Math.round(subtotal * 0.1);
-            const total = subtotal + taxAmt;
+            // 見積書では自動的に10%を上乗せしない（請求書で乗るためややこしいとの要望）
+            const taxAmt = 0; // Math.round(subtotal * 0.1);
+            const total = subtotal; // subtotal + taxAmt;
 
             // Update header total
             document.getElementById('out-total-price').textContent = total.toLocaleString();
 
             // Update summary table
-            document.getElementById('out-subtotal').textContent = subtotal.toLocaleString();
-            document.getElementById('out-tax').textContent = taxAmt.toLocaleString();
-            document.getElementById('out-total-bottom').textContent = total.toLocaleString();
+            const totalBottom = document.getElementById('out-total-bottom');
+            if (totalBottom) totalBottom.textContent = total.toLocaleString();
         }
 
         // 単価見積もりモード
