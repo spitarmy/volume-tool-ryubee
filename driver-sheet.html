@@ -62,11 +62,46 @@
 
         /* ── モバイルCSS ── */
         @media screen and (max-width: 768px) {
-            .sheet { padding: 8px; border-radius: 0; margin: 0; }
-            .sheet h1 { font-size: 1.1rem; margin-bottom: 8px; padding-bottom: 6px; }
-            .driver-table { font-size: 0.7rem; min-width: 580px; }
-            .driver-table th, .driver-table td { padding: 4px 3px; border-width: 1.5px; }
+            .sheet { padding: 10px; border-radius: 0; margin: 0; box-shadow: none; }
+            .sheet h1 { font-size: 1.1rem; margin-bottom: 10px; padding-bottom: 6px; }
+
+            .table-scroll-wrapper { overflow-x: visible; }
+
+            .driver-table { font-size: 0.8rem; min-width: unset !important; width: 100%; }
+            .driver-table th, .driver-table td {
+                padding: 6px 6px;
+                border-width: 1px;
+                word-break: break-all;
+            }
+            .driver-table th {
+                background: #e8eaf6;
+                font-size: 0.75rem;
+                white-space: nowrap;
+            }
+            .driver-table td {
+                font-size: 0.8rem;
+            }
+            /* コード/締日セルの固定幅を解除 */
+            .driver-table th[width], .driver-table td[width] {
+                width: auto !important;
+            }
+            /* 排出業者名を見やすく */
+            .driver-table td .print-field[style*="font-size:1.1rem"] {
+                font-size: 0.95rem !important;
+            }
+            /* 注意事項/現場情報のテキスト */
+            #dsNotes { font-size: 0.8rem !important; }
+            #dsAddress { font-size: 0.75rem !important; }
+            /* チェックボックス付きセルを縦並びに */
+            .driver-table td > div[style*="flex-direction: column"] {
+                gap: 2px !important;
+            }
+            .driver-table td > div[style*="flex-direction: column"] span {
+                font-size: 0.75rem !important;
+            }
+            /* 写真ギャラリー */
             .photo-gallery { grid-template-columns: 1fr 1fr; }
+            /* メモ */
             .memo-box { padding: 6px !important; }
             .memo-box h3 { font-size: 0.8rem !important; }
         }
