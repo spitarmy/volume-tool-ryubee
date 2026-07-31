@@ -315,26 +315,102 @@
 
 @media (max-width: 600px) {
     .invoice-container {
-        max-width: 100%;
-        padding: 8px;
+        max-width: 100% !important;
+        padding: 10px !important;
+        font-size: 9pt !important;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    .title {
+        font-size: 14pt !important;
+        letter-spacing: 8px !important;
+        margin-bottom: 16px !important;
     }
     .top-section {
-        flex-direction: column;
+        display: flex !important;
+        flex-direction: column !important;
     }
-    .company-info, .customer-info, .invoice-meta {
-        width: 100%;
+    .left-box, .right-box {
+        display: block !important;
+        width: 100% !important;
+        text-align: left !important;
+    }
+    .right-box {
+        margin-top: 12px;
+    }
+    .customer-name {
+        font-size: 12pt !important;
+        width: 100% !important;
+    }
+    .company-box {
+        font-size: 9pt !important;
+        margin-left: 0 !important;
+    }
+    .company-name {
+        font-size: 11pt !important;
+    }
+    .meta-table {
+        font-size: 8pt !important;
+    }
+    .meta-inputs {
+        font-size: 8pt !important;
+    }
+    .meta-line label {
+        width: 80px !important;
+        font-size: 8pt !important;
+    }
+    .meta-line input {
+        font-size: 8pt !important;
+    }
+    .middle-section {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: flex-start !important;
+    }
+    .bank-box, .elephant-box {
+        display: block !important;
+        width: 100% !important;
+    }
+    .elephant-box {
+        text-align: center !important;
+    }
+    .elephant-box img {
+        max-height: 50px !important;
+    }
+    #totalPriceBox, #unitPriceBox {
+        font-size: 12pt !important;
     }
     .items-table {
-        font-size: 9px;
+        font-size: 8px !important;
+        min-width: 500px;
     }
-    .items-table th, .items-table td {
-        padding: 4px;
+    .items-table th {
+        font-size: 8px !important;
+        padding: 3px 2px !important;
     }
-    .invoice-title {
-        font-size: 1.2rem;
+    .items-table td {
+        font-size: 8px !important;
+        padding: 4px 2px !important;
+        height: 28px !important;
     }
-    .meta-item {
-        font-size: 0.8rem;
+    .items-table input {
+        font-size: 8px !important;
+        padding: 2px 1px !important;
+    }
+    .totals-table {
+        width: 60% !important;
+        font-size: 8pt !important;
+    }
+    .totals-table td {
+        padding: 3px 6px !important;
+        font-size: 8pt !important;
+    }
+    .action-buttons {
+        flex-wrap: wrap !important;
+    }
+    .action-buttons button, .action-buttons label {
+        font-size: 10px !important;
+        padding: 6px 3px !important;
     }
 }
 </style>
