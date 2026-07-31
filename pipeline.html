@@ -261,6 +261,8 @@
             z-index: 3000;
             align-items: flex-end;
             justify-content: center;
+            overflow: hidden;
+            touch-action: none;
         }
 
         .detail-drawer-overlay.show,
@@ -275,6 +277,8 @@
             max-width: 900px;
             max-height: 92vh;
             overflow-y: auto;
+            -webkit-overflow-scrolling: touch;
+            overscroll-behavior: contain;
             padding: 20px;
             animation: sheetUp 0.3s cubic-bezier(0.25, 1, 0.5, 1);
         }
@@ -1609,11 +1613,13 @@
         function closeDrawer(e) {
             if (e && e.target !== document.getElementById('drawerOverlay')) return;
             document.getElementById('drawerOverlay').classList.remove('show');
+            document.body.style.overflow = '';
         }
 
         async function openJobDetail(jobId) {
             const drawer = document.getElementById('drawerOverlay');
             const body = document.getElementById('drawerBody');
+            document.body.style.overflow = 'hidden';
 
             // パイプラインキャッシュからベース情報を取得
             let job = null;
@@ -2031,6 +2037,7 @@
 
                 _cachedCustomers = null;
                 document.getElementById('drawerOverlay').classList.remove('show');
+                document.body.style.overflow = '';
                 loadPipeline();
             } catch (e) {
                 console.error('紐づけエラー:', e);
@@ -2078,6 +2085,7 @@
                 const inv = await RyubeeAPI.createInvoiceFromEstimate(jobId);
                 showToast(`✅ 請求書を発行しました (税込¥${inv.total_amount.toLocaleString()})`);
                 document.getElementById('drawerOverlay').classList.remove('show');
+                document.body.style.overflow = '';
                 setTimeout(() => { window.location.href = 'billing.html'; }, 1500);
             } catch (e) { alert('エラー: ' + e.message); }
         }
@@ -2107,6 +2115,7 @@
                 const inv = await RyubeeAPI.createInvoiceAndCollectCash(jobId);
                 showToast(`✅ 現金回収を記録しました (税込¥${inv.total_amount.toLocaleString()})`);
                 document.getElementById('drawerOverlay').classList.remove('show');
+                document.body.style.overflow = '';
                 loadPipeline();
             } catch (e) { alert('エラー: ' + e.message); }
         }
@@ -2208,6 +2217,7 @@
         async function openProspectDetail(jobId) {
             const drawer = document.getElementById('drawerOverlay');
             const body = document.getElementById('drawerBody');
+            document.body.style.overflow = 'hidden';
 
             let job = null;
             for (const jobs of Object.values(pipelineData)) {
@@ -2367,6 +2377,7 @@
             try {
                 await RyubeeAPI.updateJobStage(jobId, 'negotiation');
                 document.getElementById('drawerOverlay').classList.remove('show');
+                document.body.style.overflow = '';
                 await loadPipeline();
                 showToast('✅ 商談ステージに移動しました！');
             } catch (e) { alert('エラー: ' + e.message); }
