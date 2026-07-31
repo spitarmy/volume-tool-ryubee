@@ -62,45 +62,75 @@
 
         /* ── モバイルCSS ── */
         @media screen and (max-width: 768px) {
-            .sheet { padding: 10px; border-radius: 0; margin: 0; box-shadow: none; }
-            .sheet h1 { font-size: 1.1rem; margin-bottom: 10px; padding-bottom: 6px; }
+            .sheet { padding: 10px !important; border-radius: 0 !important; margin: 0 !important; box-shadow: none !important; }
+            .sheet h1 { font-size: 1.1rem !important; margin-bottom: 10px !important; padding-bottom: 6px !important; }
 
-            .table-scroll-wrapper { overflow-x: visible; }
+            .table-scroll-wrapper { overflow-x: auto !important; }
 
-            .driver-table { font-size: 0.8rem; min-width: unset !important; width: 100%; }
+            .driver-table {
+                font-size: 0.85rem !important;
+                min-width: unset !important;
+                width: 100% !important;
+                table-layout: auto !important;
+            }
             .driver-table th, .driver-table td {
-                padding: 6px 6px;
-                border-width: 1px;
-                word-break: break-all;
+                padding: 8px 6px !important;
+                border-width: 1px !important;
+                border-color: #999 !important;
+                word-break: break-word !important;
+                font-size: 0.85rem !important;
+                width: auto !important;
+                height: auto !important;
+                line-height: 1.4 !important;
             }
             .driver-table th {
-                background: #e8eaf6;
-                font-size: 0.75rem;
-                white-space: nowrap;
+                background: #e8eaf6 !important;
+                font-size: 0.78rem !important;
+                white-space: nowrap !important;
+                padding: 6px 4px !important;
             }
             .driver-table td {
-                font-size: 0.8rem;
+                font-size: 0.85rem !important;
             }
-            /* コード/締日セルの固定幅を解除 */
-            .driver-table th[width], .driver-table td[width] {
-                width: auto !important;
+            /* 排出業者名 */
+            #dsCustomer {
+                font-size: 1rem !important;
+                font-weight: bold !important;
             }
-            /* 排出業者名を見やすく */
-            .driver-table td .print-field[style*="font-size:1.1rem"] {
-                font-size: 0.95rem !important;
+            /* 電話番号 */
+            #dsPhone {
+                font-size: 0.85rem !important;
             }
-            /* 注意事項/現場情報のテキスト */
-            #dsNotes { font-size: 0.8rem !important; }
-            #dsAddress { font-size: 0.75rem !important; }
-            /* チェックボックス付きセルを縦並びに */
+            /* 注意事項/現場情報 */
+            #dsNotes { font-size: 0.85rem !important; }
+            #dsAddress { font-size: 0.8rem !important; }
+            /* チェックボックス作業種別 */
             .driver-table td > div[style*="flex-direction: column"] {
                 gap: 2px !important;
             }
-            .driver-table td > div[style*="flex-direction: column"] span {
-                font-size: 0.75rem !important;
+            .driver-table td > div[style*="flex-direction: column"] span[style*="font-weight"] {
+                font-size: 0.78rem !important;
+            }
+            /* 大型ごみ請求行 */
+            .driver-table tr[style*="height: 48px"] {
+                height: auto !important;
+            }
+            .driver-table tr[style*="height: 48px"] th,
+            .driver-table tr[style*="height: 48px"] td {
+                height: auto !important;
+                padding: 8px 6px !important;
+            }
+            /* 産廃品目テーブル */
+            .driver-table tr[style*="height: 40px"] {
+                height: auto !important;
+            }
+            .driver-table tr[style*="height: 40px"] th,
+            .driver-table tr[style*="height: 40px"] td {
+                height: auto !important;
             }
             /* 写真ギャラリー */
-            .photo-gallery { grid-template-columns: 1fr 1fr; }
+            .photo-gallery { grid-template-columns: 1fr 1fr !important; }
+            .photo-gallery img { height: 120px !important; }
             /* メモ */
             .memo-box { padding: 6px !important; }
             .memo-box h3 { font-size: 0.8rem !important; }
