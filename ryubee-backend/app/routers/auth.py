@@ -178,3 +178,29 @@ def reset_user_password(
     db.commit()
     db.refresh(target_user)
     return target_user
+
+
+class PasswordResetByEmailRequest(BaseModel):
+    email: EmailStr
+    password: str
+    migrate_to_company: bool = True
+
+
+@router.put("/admin/reset-password-by-email", response_model=UserOut)
+def reset_password_by_email(
+    req: PasswordResetByEmailRequest,
+    current_user: models.User = Depends(auth.require_admin),
+    db: Session = Depends(get_db),
+):
+    """管理者がメールアドレスでパスワードをリセット（別会社のユーザーも対象、自社に移行可能）"""
+    target_user = db.query(models.User).filter_by(email=req.email).first()
+
+    if not target_user:
+        raise HTTPException(status_code=404, detail="ユーザーが見つかりません")
+
+    target_user.password_hash = auth.hash_password(req.password)
+    if req.migrate_to_company:
+        target_user.company_id = current_user.company_id
+    db.commit()
+    db.refresh(target_user)
+    return target_user
