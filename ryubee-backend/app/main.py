@@ -73,14 +73,16 @@ allowed_origins = [
     "http://localhost:5500",
     "http://localhost:5501",
     "https://ryubee-frontend-app.onrender.com",
-    "https://volumary-app.onrender.com"
+    "https://volumary-app.onrender.com",
 ]
 if env_origin and env_origin != "*":
     allowed_origins.append(env_origin)
 
+# Vercelプレビューデプロイのドメインも許可
 app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
+    allow_origin_regex=r"https://.*\.vercel\.app",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
