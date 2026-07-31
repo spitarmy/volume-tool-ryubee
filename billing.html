@@ -473,6 +473,68 @@
                 display: none !important;
             }
         }
+
+        /* モバイル用請求書ビュー */
+        @media (max-width: 600px) {
+            .inv-detail-overlay {
+                padding: 0 !important;
+                align-items: flex-end !important;
+            }
+            .inv-detail-modal {
+                max-height: 95vh !important;
+                border-radius: 12px 12px 0 0 !important;
+                max-width: 100% !important;
+            }
+            .inv-doc {
+                padding: 14px 10px !important;
+                font-size: 0.82rem !important;
+            }
+            .inv-doc-header {
+                padding-bottom: 10px !important;
+                margin-bottom: 14px !important;
+            }
+            .inv-doc-header h2 {
+                font-size: 1.1rem !important;
+                letter-spacing: 0.1em !important;
+            }
+            .inv-doc-meta {
+                flex-direction: column !important;
+                gap: 6px !important;
+                font-size: 0.78rem !important;
+            }
+            .inv-doc-to {
+                font-size: 0.95rem !important;
+            }
+            .inv-doc table {
+                font-size: 0.78rem !important;
+                min-width: unset !important;
+                width: 100% !important;
+            }
+            .inv-doc table th, .inv-doc table td {
+                padding: 5px 6px !important;
+                font-size: 0.78rem !important;
+                word-break: break-word !important;
+            }
+            .inv-doc table th {
+                font-size: 0.72rem !important;
+                white-space: nowrap !important;
+            }
+            .inv-doc-payments {
+                font-size: 0.8rem !important;
+            }
+            .inv-doc-pay-row {
+                font-size: 0.78rem !important;
+            }
+            .inv-doc-actions {
+                flex-wrap: wrap !important;
+                padding: 10px !important;
+                gap: 6px !important;
+            }
+            .inv-doc-actions button {
+                font-size: 0.75rem !important;
+                padding: 8px 4px !important;
+            }
+        }
     </style>
     <link rel="manifest" href="manifest.json">
     <meta name="theme-color" content="#1A237E">

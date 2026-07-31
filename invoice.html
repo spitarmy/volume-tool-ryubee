@@ -316,15 +316,14 @@
 @media (max-width: 600px) {
     .invoice-container {
         max-width: 100% !important;
-        padding: 10px !important;
-        font-size: 9pt !important;
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
+        padding: 12px !important;
+        font-size: 10pt !important;
+        overflow-x: visible !important;
     }
     .title {
         font-size: 14pt !important;
         letter-spacing: 8px !important;
-        margin-bottom: 16px !important;
+        margin-bottom: 12px !important;
     }
     .top-section {
         display: flex !important;
@@ -335,79 +334,61 @@
         width: 100% !important;
         text-align: left !important;
     }
-    .right-box {
-        margin-top: 12px;
-    }
+    .right-box { margin-top: 12px; }
     .customer-name {
-        font-size: 12pt !important;
+        font-size: 13pt !important;
         width: 100% !important;
     }
-    .company-box {
-        font-size: 9pt !important;
-        margin-left: 0 !important;
-    }
-    .company-name {
-        font-size: 11pt !important;
-    }
-    .meta-table {
-        font-size: 8pt !important;
-    }
-    .meta-inputs {
-        font-size: 8pt !important;
-    }
-    .meta-line label {
-        width: 80px !important;
-        font-size: 8pt !important;
-    }
-    .meta-line input {
-        font-size: 8pt !important;
-    }
+    .company-box { font-size: 9pt !important; margin-left: 0 !important; }
+    .company-name { font-size: 11pt !important; }
+    .meta-table { font-size: 9pt !important; }
+    .meta-table td, .meta-table th { padding: 3px 6px !important; }
+    .meta-inputs { font-size: 9pt !important; }
+    .meta-line label { width: 80px !important; font-size: 9pt !important; }
+    .meta-line input { font-size: 9pt !important; }
     .middle-section {
         display: flex !important;
         flex-direction: column !important;
         align-items: flex-start !important;
     }
-    .bank-box, .elephant-box {
-        display: block !important;
-        width: 100% !important;
-    }
-    .elephant-box {
-        text-align: center !important;
-    }
-    .elephant-box img {
-        max-height: 50px !important;
-    }
-    #totalPriceBox, #unitPriceBox {
-        font-size: 12pt !important;
-    }
+    .bank-box, .elephant-box { display: block !important; width: 100% !important; }
+    .elephant-box { text-align: center !important; }
+    .elephant-box img { max-height: 40px !important; }
+    #totalPriceBox, #unitPriceBox { font-size: 13pt !important; }
+    /* 明細テーブル - 横スクロール不要 */
     .items-table {
-        font-size: 8px !important;
-        min-width: 500px;
+        font-size: 9px !important;
+        min-width: unset !important;
+        width: 100% !important;
+        table-layout: fixed !important;
     }
     .items-table th {
         font-size: 8px !important;
-        padding: 3px 2px !important;
+        padding: 4px 2px !important;
+        word-break: break-all !important;
     }
     .items-table td {
-        font-size: 8px !important;
-        padding: 4px 2px !important;
-        height: 28px !important;
+        font-size: 9px !important;
+        padding: 4px 3px !important;
+        height: auto !important;
+        word-break: break-word !important;
+        overflow: hidden !important;
     }
     .items-table input {
-        font-size: 8px !important;
+        font-size: 9px !important;
         padding: 2px 1px !important;
+        width: 100% !important;
+        box-sizing: border-box !important;
     }
-    .totals-table {
-        width: 60% !important;
-        font-size: 8pt !important;
-    }
-    .totals-table td {
-        padding: 3px 6px !important;
-        font-size: 8pt !important;
-    }
-    .action-buttons {
-        flex-wrap: wrap !important;
-    }
+    .items-table th:nth-child(1), .items-table td:nth-child(1) { width: 35% !important; }
+    .items-table th:nth-child(2), .items-table td:nth-child(2) { width: 12% !important; }
+    .items-table th:nth-child(3), .items-table td:nth-child(3) { width: 16% !important; }
+    .items-table th:nth-child(4), .items-table td:nth-child(4) { width: 18% !important; }
+    .items-table th:nth-child(5), .items-table td:nth-child(5) { width: 15% !important; }
+    .items-table th:last-child, .items-table td:last-child { width: 4% !important; }
+    .totals-table { width: 70% !important; font-size: 9pt !important; }
+    .totals-table td { padding: 4px 6px !important; font-size: 9pt !important; }
+    .action-buttons { flex-wrap: wrap !important; gap: 4px !important; }
     .action-buttons button, .action-buttons label {
         font-size: 10px !important;
         padding: 6px 3px !important;
