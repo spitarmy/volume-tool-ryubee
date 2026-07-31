@@ -316,67 +316,65 @@
 @media (max-width: 600px) {
     .invoice-container {
         max-width: 100% !important;
-        padding: 12px !important;
-        font-size: 10pt !important;
+        padding: 6px !important;
+        font-size: 9pt !important;
         overflow-x: visible !important;
     }
     .title {
-        font-size: 14pt !important;
-        letter-spacing: 8px !important;
-        margin-bottom: 12px !important;
+        font-size: 12pt !important;
+        letter-spacing: 6px !important;
+        margin-bottom: 6px !important;
     }
     .top-section {
         display: flex !important;
         flex-direction: column !important;
+        margin-bottom: 4px !important;
     }
     .left-box, .right-box {
         display: block !important;
         width: 100% !important;
         text-align: left !important;
     }
-    .right-box { margin-top: 12px; }
-    .customer-name {
-        font-size: 13pt !important;
-        width: 100% !important;
-    }
-    .company-box { font-size: 9pt !important; margin-left: 0 !important; }
-    .company-name { font-size: 11pt !important; }
-    .meta-table { font-size: 9pt !important; }
-    .meta-table td, .meta-table th { padding: 3px 6px !important; }
-    .meta-inputs { font-size: 9pt !important; }
-    .meta-line label { width: 80px !important; font-size: 9pt !important; }
-    .meta-line input { font-size: 9pt !important; }
+    .right-box { margin-top: 6px; }
+    .customer-name { font-size: 11pt !important; width: 100% !important; }
+    .company-box { font-size: 8pt !important; margin-left: 0 !important; }
+    .company-name { font-size: 10pt !important; }
+    .meta-table { font-size: 8pt !important; margin-bottom: 4px !important; }
+    .meta-table td, .meta-table th { padding: 1px 4px !important; }
+    .meta-inputs { font-size: 8pt !important; }
+    .meta-line { margin-bottom: 2px !important; }
+    .meta-line label { width: 70px !important; font-size: 8pt !important; }
+    .meta-line input { font-size: 8pt !important; padding: 2px 4px !important; }
     .middle-section {
         display: flex !important;
         flex-direction: column !important;
         align-items: flex-start !important;
+        margin-bottom: 4px !important;
     }
-    .bank-box, .elephant-box { display: block !important; width: 100% !important; }
-    .elephant-box { text-align: center !important; }
-    .elephant-box img { max-height: 40px !important; }
-    #totalPriceBox, #unitPriceBox { font-size: 13pt !important; }
-    /* 明細テーブル - 横スクロール不要 */
+    .bank-box { display: block !important; width: 100% !important; }
+    .elephant-box { display: none !important; }
+    #totalPriceBox, #unitPriceBox { font-size: 12pt !important; margin-bottom: 4px !important; }
     .items-table {
-        font-size: 9px !important;
+        font-size: 8px !important;
         min-width: unset !important;
         width: 100% !important;
         table-layout: fixed !important;
     }
     .items-table th {
-        font-size: 8px !important;
-        padding: 4px 2px !important;
+        font-size: 7px !important;
+        padding: 2px 1px !important;
         word-break: break-all !important;
     }
     .items-table td {
-        font-size: 9px !important;
-        padding: 4px 3px !important;
+        font-size: 8px !important;
+        padding: 2px 2px !important;
         height: auto !important;
         word-break: break-word !important;
         overflow: hidden !important;
     }
     .items-table input {
-        font-size: 9px !important;
-        padding: 2px 1px !important;
+        font-size: 8px !important;
+        padding: 1px !important;
         width: 100% !important;
         box-sizing: border-box !important;
     }
@@ -386,13 +384,19 @@
     .items-table th:nth-child(4), .items-table td:nth-child(4) { width: 18% !important; }
     .items-table th:nth-child(5), .items-table td:nth-child(5) { width: 15% !important; }
     .items-table th:last-child, .items-table td:last-child { width: 4% !important; }
-    .totals-table { width: 70% !important; font-size: 9pt !important; }
-    .totals-table td { padding: 4px 6px !important; font-size: 9pt !important; }
-    .action-buttons { flex-wrap: wrap !important; gap: 4px !important; }
+    /* 空行を非表示 */
+    .items-table .empty-filler-row { display: none !important; }
+    .totals-table { width: 65% !important; font-size: 8pt !important; }
+    .totals-table td { padding: 2px 4px !important; font-size: 8pt !important; }
+    .add-row-bar { margin: 4px 0 !important; }
+    .add-row-bar button { font-size: 10px !important; padding: 4px 8px !important; }
+    .clearfix { margin-bottom: 4px !important; }
+    .action-buttons { flex-wrap: wrap !important; gap: 3px !important; }
     .action-buttons button, .action-buttons label {
-        font-size: 10px !important;
-        padding: 6px 3px !important;
+        font-size: 9px !important;
+        padding: 5px 2px !important;
     }
+    .inv-signature-box { margin-top: 6px !important; }
 }
 </style>
     <link rel="manifest" href="manifest.json">
