@@ -347,14 +347,15 @@
     .meta-line input { font-size: 8pt !important; padding: 2px 4px !important; }
     .middle-section {
         display: flex !important;
-        flex-direction: column !important;
-        align-items: flex-start !important;
-        margin-bottom: 4px !important;
+        flex-direction: row !important;
+        justify-content: space-between !important;
+        align-items: flex-end !important;
+        margin-bottom: 8px !important;
     }
-    .bank-box { display: block !important; width: 100% !important; }
-    .elephant-box { text-align: center !important; margin-top: -30px !important; margin-right: 10px !important; }
-    .elephant-box img { max-height: 40px !important; }
-    #totalPriceBox, #unitPriceBox { font-size: 12pt !important; margin-bottom: 4px !important; }
+    .bank-box { display: block !important; width: auto !important; }
+    .elephant-box { text-align: right !important; margin: 0 !important; width: 60px !important; }
+    .elephant-box img { max-height: 40px !important; max-width: 100% !important; object-fit: contain !important; }
+    #totalPriceBox, #unitPriceBox { font-size: 11pt !important; margin-bottom: 0 !important; padding: 4px !important; }
     .items-table {
         font-size: 8px !important;
         min-width: unset !important;

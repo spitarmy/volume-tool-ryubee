@@ -448,6 +448,25 @@
             flex: 1;
         }
 
+        .billing-middle-section {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-end;
+            margin-bottom: 10px;
+        }
+        .billing-bank-box {
+            width: 60%;
+        }
+        .billing-elephant-box {
+            width: 30%;
+            text-align: right;
+        }
+        .billing-elephant-box img {
+            max-height: 80px;
+            max-width: 100%;
+            object-fit: contain;
+        }
+
         @media print {
             .inv-detail-overlay {
                 position: static;
@@ -533,6 +552,20 @@
             .inv-doc-actions button {
                 font-size: 0.75rem !important;
                 padding: 8px 4px !important;
+            }
+            .billing-middle-section {
+                flex-direction: row !important;
+                margin-bottom: 8px !important;
+            }
+            .billing-bank-box {
+                width: auto !important;
+            }
+            .billing-elephant-box {
+                width: 60px !important;
+                margin: 0 !important;
+            }
+            .billing-elephant-box img {
+                max-height: 40px !important;
             }
         }
     </style>
@@ -1836,12 +1869,13 @@
                 </div>
 
                 <!-- 振込先・振替日等 & ゾウさんロゴ -->
-                <div style="display:flex; justify-content:space-between; align-items:flex-end; margin-bottom:10px;">
-                    <div style="width:60%;">
+                <!-- 振込先・振替日等 & ゾウさんロゴ -->
+                <div class="billing-middle-section">
+                    <div class="billing-bank-box">
                         ${paymentBoxHtml}
                     </div>
-                    <div style="width:30%; text-align:right;">
-                        <img src="assets/images/yamabun_elephant.png" alt="Yamabun Logo" style="max-height:80px;" onerror="this.style.display='none'">
+                    <div class="billing-elephant-box">
+                        <img src="assets/images/yamabun_elephant.png" alt="Yamabun Logo" onerror="this.style.display='none'">
                     </div>
                 </div>
 

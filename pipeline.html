@@ -1415,7 +1415,7 @@
                         <span>更新: ${updatedText}</span>
                     </div>
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
-                        <span style="font-weight:700; color:var(--blue-dark); font-size:0.95rem;">${price}</span>
+                        <span style="font-weight:700; color:var(--blue-dark); font-size:0.95rem;">${price}<span style="font-size:0.65rem; font-weight:normal; margin-left:4px;">(税抜)</span></span>
                         <span style="font-size:0.7rem;font-weight:600;padding:2px 8px;border-radius:10px;" class="pc-type ${typeClass}">${typeLabel}</span>
                     </div>
                     ${(job.estimated_price && job.final_price && job.estimated_price !== job.final_price) ? `
@@ -2082,7 +2082,7 @@
                     <div class="drawer-section-title">💰 金額</div>
                     <a href="invoice.html?id=${jobId}" target="_blank" class="amount-card">
                         <div>
-                            <div class="amount-label">${fin ? '成約金額' : '見積金額'}</div>
+                            <div class="amount-label">${fin ? '成約金額(税抜)' : '見積金額(税抜)'}</div>
                             <div class="amount-value">¥${displayPrice.toLocaleString()}</div>
                             ${disc ? `<span style="font-size:0.72rem;color:var(--red);">調整額 -¥${disc.toLocaleString()}</span>` : ''}
                             ${surcharge ? `<span style="font-size:0.72rem;color:var(--blue);margin-left:6px;">追加 +¥${surcharge.toLocaleString()}</span>` : ''}
