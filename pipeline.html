@@ -1065,7 +1065,9 @@
     <div class="detail-drawer-overlay" id="drawerOverlay" onclick="closeDrawer(event)">
         <div class="detail-drawer" id="drawerContent">
             <div class="modal-drag-handle"></div>
-            <button onclick="closeDrawer()" style="position:sticky; top:0; float:right; background:none; border:none; font-size:1.5rem; color:var(--text-secondary); cursor:pointer; padding:4px 8px; z-index:10; line-height:1;" aria-label="閉じる">✕</button>
+            <div style="position:sticky; top:0; z-index:10; background:#fff; display:flex; justify-content:flex-end; padding:0 4px 8px 4px; border-bottom:1px solid var(--border); margin-bottom:12px;">
+                <button onclick="closeDrawer()" style="background:var(--bg-secondary); border:1px solid var(--border); border-radius:20px; font-size:0.85rem; color:var(--text-primary); cursor:pointer; padding:6px 16px; font-weight:600;">✕ 閉じる</button>
+            </div>
             <div id="drawerBody"></div>
         </div>
     </div>
