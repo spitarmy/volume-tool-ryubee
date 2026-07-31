@@ -2034,11 +2034,43 @@
                     await RyubeeAPI.updateJob(jobId, { customer_id: newCus.id, customer_name: name });
                     showToast(`✅ "${name}" 様を登録して紐づけました`);
                 } else {
-                    // 既存顧客に紐づけ
+                    // 既存顧客に紐づけ → 顧客データを自動コピー
                     const cust = _cachedCustomers ? _cachedCustomers.find(c => String(c.id) === String(val)) : null;
                     const custName = cust ? cust.name : '';
-                    await RyubeeAPI.updateJob(jobId, { customer_id: String(val), customer_name: custName });
-                    showToast(`✅ "${custName}" 様を紐づけました`);
+
+                    // 顧客詳細を取得して案件に自動入力
+                    let custDetail = null;
+                    try { custDetail = await RyubeeAPI.fetchCustomer(val); } catch (e) { console.warn('顧客詳細取得失敗:', e); }
+
+                    const updatePayload = { customer_id: String(val), customer_name: custName };
+
+                    if (custDetail) {
+                        // 住所をコピー
+                        if (custDetail.address) updatePayload.address = custDetail.address;
+
+                        // form_data にコピーするフィールド
+                        const job = await RyubeeAPI.fetchJob(jobId);
+                        let fd = {};
+                        try { fd = JSON.parse(job.form_data || '{}'); } catch (e) {}
+
+                        let custFd = {};
+                        try { custFd = JSON.parse(custDetail.form_data || '{}'); } catch (e) {}
+
+                        if (custDetail.contact_person) fd.contact_name = custDetail.contact_person;
+                        if (custDetail.phone) fd.phone = custDetail.phone;
+                        if (custDetail.email) fd.email = custDetail.email;
+                        if (custFd.mobile) fd.mobile = custFd.mobile;
+                        if (custFd.payment_method) fd.payment_method = custFd.payment_method;
+                        if (custFd.invoice_delivery) fd.invoice_delivery = custFd.invoice_delivery;
+                        if (custFd.invoice_send_to) fd.invoice_send_to = custFd.invoice_send_to;
+                        if (custFd.yamabun_management_number) fd.yamabun_management_number = custFd.yamabun_management_number;
+                        if (custDetail.assigned_user_id) updatePayload.assigned_to = custDetail.assigned_user_id;
+
+                        updatePayload.form_data = JSON.stringify(fd);
+                    }
+
+                    await RyubeeAPI.updateJob(jobId, updatePayload);
+                    showToast(`✅ "${custName}" 様を紐づけました（住所・連絡先を自動入力しました）`);
                 }
 
                 _cachedCustomers = null;

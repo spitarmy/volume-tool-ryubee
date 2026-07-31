@@ -486,15 +486,48 @@
         </div>
         <div class="form-group"><label>現場名（案件名）</label><input type="text" id="job_name"></div>
         <div class="form-group"><label>お客様名</label><input type="text" id="customer_name"></div>
-        <div class="form-group"><label>住所</label><input type="text" id="address"></div>
+        <div class="form-group"><label>📍 住所</label><input type="text" id="address"></div>
         <div class="d-flex gap-2">
-          <div class="form-group flex-1" style="width:50%;"><label>作業日</label><input type="date" id="work_date"></div>
-          <div class="form-group flex-1" style="width:50%;"><label>時間帯</label><input type="text" id="work_time"
-              placeholder="10:00~"></div>
+          <div class="form-group flex-1" style="width:50%;"><label>👤 担当者名</label><input type="text" id="fd_contact_name" placeholder="担当者名"></div>
+          <div class="form-group flex-1" style="width:50%;"><label>✉️ メールアドレス</label><input type="email" id="fd_email" placeholder="info@example.com"></div>
         </div>
         <div class="d-flex gap-2">
-          <div class="form-group flex-1" style="width:50%;"><label>見積金額(円)</label><input type="number" id="price_total">
+          <div class="form-group flex-1" style="width:50%;"><label>📞 電話番号</label><input type="tel" id="fd_phone" placeholder="075-XXX-XXXX"></div>
+          <div class="form-group flex-1" style="width:50%;"><label>📱 携帯番号</label><input type="tel" id="fd_mobile" placeholder="090-XXX-XXXX"></div>
+        </div>
+
+        <h3 class="card-title" style="margin-top:16px; padding-top:12px; border-top:1px solid var(--border);">💰 請求・支払情報</h3>
+        <div class="d-flex gap-2">
+          <div class="form-group flex-1" style="width:50%;">
+            <label>支払方法</label>
+            <select id="fd_payment_method">
+              <option value="">未設定</option>
+              <option value="振込">振込</option>
+              <option value="自動引落し">自動引落し</option>
+              <option value="集金">集金</option>
+            </select>
           </div>
+          <div class="form-group flex-1" style="width:50%;">
+            <label>📄 請求書送付方法</label>
+            <select id="fd_invoice_delivery">
+              <option value="">未設定</option>
+              <option value="郵送">郵送</option>
+              <option value="メール">メール</option>
+              <option value="FAX">FAX</option>
+              <option value="手渡し">手渡し</option>
+              <option value="不要">不要</option>
+            </select>
+          </div>
+        </div>
+        <div class="form-group"><label>📮 送付先</label><input type="text" id="fd_invoice_send_to" placeholder="送付先名・住所"></div>
+
+        <h3 class="card-title" style="margin-top:16px; padding-top:12px; border-top:1px solid var(--border);">📋 作業情報</h3>
+        <div class="d-flex gap-2">
+          <div class="form-group flex-1" style="width:50%;"><label>作業日</label><input type="date" id="work_date"></div>
+          <div class="form-group flex-1" style="width:50%;"><label>時間帯</label><input type="text" id="work_time" placeholder="10:00~"></div>
+        </div>
+        <div class="d-flex gap-2">
+          <div class="form-group flex-1" style="width:50%;"><label>見積金額(円)</label><input type="number" id="price_total"></div>
           <div class="form-group flex-1" style="width:50%;"><label>作業員数</label><input type="number" id="workers"></div>
         </div>
         <div class="form-group"><label>備考</label><textarea id="notes" placeholder="注意事項などを入力..."></textarea></div>
@@ -813,6 +846,15 @@
         r.checked = (r.value === wt);
       });
 
+      // 顧客情報フィールドを読み込み
+      document.getElementById('fd_contact_name').value = fd.contact_name || '';
+      document.getElementById('fd_phone').value = fd.phone || '';
+      document.getElementById('fd_mobile').value = fd.mobile || '';
+      document.getElementById('fd_email').value = fd.email || '';
+      document.getElementById('fd_payment_method').value = fd.payment_method || '';
+      document.getElementById('fd_invoice_delivery').value = fd.invoice_delivery || '';
+      document.getElementById('fd_invoice_send_to').value = fd.invoice_send_to || '';
+
       clearSignature();
       if (job.signature_data) { const img = new Image(); img.onload = () => sigCtx.drawImage(img, 0, 0, sigCanvas.width, sigCanvas.height); img.src = job.signature_data; }
     }
@@ -875,6 +917,15 @@
         if (r.checked) selectedWt = r.value;
       });
       fd.yamabun_work_type = selectedWt;
+
+      // 顧客情報フィールドを保存
+      fd.contact_name = document.getElementById('fd_contact_name').value.trim();
+      fd.phone = document.getElementById('fd_phone').value.trim();
+      fd.mobile = document.getElementById('fd_mobile').value.trim();
+      fd.email = document.getElementById('fd_email').value.trim();
+      fd.payment_method = document.getElementById('fd_payment_method').value;
+      fd.invoice_delivery = document.getElementById('fd_invoice_delivery').value;
+      fd.invoice_send_to = document.getElementById('fd_invoice_send_to').value.trim();
       payload.form_data = JSON.stringify(fd);
 
       Object.keys(payload).forEach(k => payload[k] === undefined && delete payload[k]);
