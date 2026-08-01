@@ -1484,6 +1484,29 @@
             let jobsInfo = [];
             try { jobsInfo = await RyubeeAPI.fetchJobs({ customer_id: id }); } catch (e) { }
 
+            const jobBranches = [];
+            const seenProp = new Set();
+            jobsInfo.forEach(j => {
+                const jName = (j.job_name || '').trim();
+                const jAddr = (j.address || '').trim();
+                // Filter out if it's the exact same as the customer's HQ to avoid duplicate
+                if (jName === c.name.trim() && jAddr === (c.address||'').trim()) return;
+                if (!jName && !jAddr) return;
+                const key = jName + '|' + jAddr;
+                if (!seenProp.has(key)) {
+                    seenProp.add(key);
+                    let jFd = {};
+                    try { jFd = JSON.parse(j.form_data || '{}'); } catch(e){}
+                    const freq = jFd.collection_frequency ? jFd.collection_frequency + (jFd.collection_days ? ' ' + jFd.collection_days : '') : '';
+                    jobBranches.push({
+                        branch_name: jName,
+                        branch_address: jAddr,
+                        collection_general: freq,
+                        is_job_property: true
+                    });
+                }
+            });
+
             let settings = {};
             try { settings = await RyubeeAPI.fetchSettings(); } catch (e) { }
 
@@ -1566,7 +1589,11 @@
                     
                     ${(() => {
                         const branches = fd.branches || [];
-                        const branchList = branches.length > 0 ? branches : (fd.collection_general || fd.collection_recycle) ? [fd] : [];
+                        const branchList = branches.length > 0 ? [...branches] : (fd.collection_general || fd.collection_recycle) ? [{...fd}] : [];
+                        jobBranches.forEach(jb => {
+                            const exists = branchList.some(b => (b.branch_name||'').trim() === jb.branch_name && (b.branch_address||'').trim() === jb.branch_address);
+                            if (!exists) branchList.push(jb);
+                        });
                         if (branchList.length === 0) return '';
                         // 基本情報エリアには全拠点のサマリを表示
                         return `
@@ -1586,8 +1613,8 @@
                 
                 ${(() => {
                     // 複数事業所表示（新形式 or 旧形式互換）
-                    const branches = fd.branches && Array.isArray(fd.branches) && fd.branches.length > 0
-                        ? fd.branches
+                    let branches = fd.branches && Array.isArray(fd.branches) && fd.branches.length > 0
+                        ? [...fd.branches]
                         : (fd.branch_name || fd.branch_address) ? [{
                             branch_name: fd.branch_name, branch_address: fd.branch_address,
                             industry_type: fd.industry_type, average_volume: fd.average_volume,
@@ -1597,10 +1624,16 @@
                             business_hours: fd.business_hours, regular_holiday: fd.regular_holiday,
                             collection_start_date: fd.collection_start_date, collection_end_date: fd.collection_end_date,
                         }] : [];
-                    if (branches.length === 0) return '<div style="background:var(--bg-secondary);padding:12px;border-radius:12px;margin-bottom:16px;font-size:0.85rem;color:var(--text-tertiary);text-align:center;">事業所未登録</div>';
+                        
+                    jobBranches.forEach(jb => {
+                        const exists = branches.some(b => (b.branch_name||'').trim() === jb.branch_name && (b.branch_address||'').trim() === jb.branch_address);
+                        if (!exists) branches.push(jb);
+                    });
+
+                    if (branches.length === 0) return '<div style="background:var(--bg-secondary);padding:12px;border-radius:12px;margin-bottom:16px;font-size:0.85rem;color:var(--text-tertiary);text-align:center;">物件・事業所未登録</div>';
                     return branches.map((b, i) => `
-                        <div style="background:var(--bg-secondary); padding:14px; border-radius:12px; margin-bottom:10px; font-size:0.9rem; line-height:1.6;">
-                            📍 <strong style="margin-left:4px;">${utils.escapeHtml(b.branch_name || `事業所 #${i+1}`)}</strong>
+                        <div style="background:var(--bg-secondary); padding:14px; border-radius:12px; margin-bottom:10px; font-size:0.9rem; line-height:1.6; ${b.is_job_property ? 'border:1px dashed #93C5FD;' : ''}">
+                            📍 <strong style="margin-left:4px;">${utils.escapeHtml(b.branch_name || `物件・事業所 #${i+1}`)}</strong> ${b.is_job_property ? '<span style="font-size:0.7rem;background:#EFF6FF;color:#1D4ED8;padding:2px 6px;border-radius:4px;margin-left:8px;">案件から自動追加</span>' : ''}
                             ${b.branch_address ? `<br><span style="color:var(--text-tertiary);font-size:0.82rem;">住所:</span> ${utils.escapeHtml(b.branch_address)} ${b.branch_address ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(b.branch_address)}" target="_blank" style="font-size:0.75rem;text-decoration:none;background:#E2E8F0;padding:1px 6px;border-radius:4px;">🗺</a>` : ''}` : ''}
                             ${b.subcontractor ? `<br><span style="color:var(--text-tertiary);font-size:0.82rem;">👥 下請:</span> ${utils.escapeHtml(b.subcontractor)}` : ''}
                             ${(() => {
