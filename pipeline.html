@@ -1934,7 +1934,7 @@
                         
                         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
                         <div class="form-group"><label>📁 ステータス</label>
-                            <select id="status">
+                            <select id="status_edit">
                             <option value="estimated" ${job.status==='estimated'?'selected':''}>見積済</option>
                             <option value="scheduled" ${job.status==='scheduled'?'selected':''}>作業予定</option>
                             <option value="completed" ${job.status==='completed'?'selected':''}>作業完了</option>
@@ -1942,7 +1942,7 @@
                             </select>
                         </div>
                         <div class="form-group"><label>🎯 パイプラインステージ</label>
-                            <select id="pipeline_stage">
+                            <select id="pipeline_stage_edit">
                             <option value="prospect" ${job.pipeline_stage==='prospect'?'selected':''}>🎯 潜在顧客</option>
                             <option value="inquiry" ${job.pipeline_stage==='inquiry'?'selected':''}>問合せ</option>
                             <option value="estimate" ${job.pipeline_stage==='estimate'?'selected':''}>見積</option>
@@ -1958,7 +1958,7 @@
 
                         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
                         <div class="form-group"><label>🏢 案件タイプ</label>
-                            <select id="job_type">
+                            <select id="job_type_edit">
                             <option value="general_waste" ${job.job_type==='general_waste'?'selected':''}>一般ゴミ収集</option>
                             <option value="industrial_waste" ${job.job_type==='industrial_waste'?'selected':''}>産業廃棄物</option>
                             <option value="store_removal" ${job.job_type==='store_removal'?'selected':''}>店舗残置物撤去</option>
@@ -1969,7 +1969,7 @@
                             </select>
                         </div>
                         <div class="form-group"><label>🆕 処理区分</label>
-                            <select id="processing_category">
+                            <select id="processing_category_edit">
                             <option value="" ${!fd.processing_category?'selected':''}>未設定</option>
                             <option value="新規" ${fd.processing_category==='新規'?'selected':''}>新規（コード追加）</option>
                             <option value="既存" ${fd.processing_category==='既存'?'selected':''}>既存（コードあり・追加店舗等）</option>
@@ -1979,7 +1979,7 @@
                         </div>
 
                         <div class="form-group"><label>🚚 業務種別 (ドライバー指示用)</label>
-                            <select id="yamabun_work_type_select">
+                            <select id="yamabun_work_type_select_edit">
                             <option value="" ${!fd.yamabun_work_type?'selected':''}>未設定</option>
                             <option value="引上げ" ${fd.yamabun_work_type==='引上げ'?'selected':''}>引上げ</option>
                             <option value="交換" ${fd.yamabun_work_type==='交換'?'selected':''}>交換</option>
@@ -1988,28 +1988,28 @@
                             </select>
                         </div>
 
-                        <div class="form-group"><label>📝 現場名（案件名）</label><input type="text" id="job_name" value="${utils.escapeHtml(job.job_name||'')}"></div>
+                        <div class="form-group"><label>📝 現場名（案件名）</label><input type="text" id="job_name_edit" value="${utils.escapeHtml(job.job_name||'')}"></div>
                         
                         <!-- 顧客選択 -->
                         <div class="form-group">
                         <label>👤 お客様選択 <button type="button" onclick="clearCustomerSelection()" style="font-size:0.65rem;padding:2px 6px;border-radius:4px;border:1px solid var(--border);background:#FEF2F2;color:#DC2626;cursor:pointer;margin-left:4px;">新規に入力</button></label>
-                        <select id="customer_select" onchange="onCustomerSelected(this.value)">
+                        <select id="customer_select_edit" onchange="onCustomerSelected(this.value)">
                             <option value="">-- 既存顧客から選択 --</option>
                         </select>
-                        <input type="hidden" id="original_customer_id" value="${job.customer_id || ''}">
+                        <input type="hidden" id="original_customer_id_edit" value="${job.customer_id || ''}">
                         </div>
                         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-                        <div class="form-group"><label>お客様名（顧客マスター）</label><input type="text" id="customer_name" value="${utils.escapeHtml(job.customer_name||'')}"></div>
-                        <div class="form-group"><label>🎫 顧客コード(管理番号)</label><input type="text" id="fd_yamabun_management_number" value="${utils.escapeHtml(fd.yamabun_management_number||'')}"></div>
+                        <div class="form-group"><label>お客様名（顧客マスター）</label><input type="text" id="customer_name_edit" value="${utils.escapeHtml(job.customer_name||'')}"></div>
+                        <div class="form-group"><label>🎫 顧客コード(管理番号)</label><input type="text" id="fd_yamabun_management_number_edit" value="${utils.escapeHtml(fd.yamabun_management_number||'')}"></div>
                         </div>
 
-                        <div class="form-group"><label>📍 現場（回収場所）の住所</label><input type="text" id="address" value="${utils.escapeHtml(job.address||'')}"></div>
+                        <div class="form-group"><label>📍 現場（回収場所）の住所</label><input type="text" id="address_edit" value="${utils.escapeHtml(job.address||'')}"></div>
                         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-                        <div class="form-group"><label>担当者名</label><input type="text" id="fd_contact_name" value="${utils.escapeHtml(fd.contact_name||'')}"></div>
-                        <div class="form-group"><label>メールアドレス</label><input type="email" id="fd_email" value="${utils.escapeHtml(fd.email||'')}"></div>
+                        <div class="form-group"><label>担当者名</label><input type="text" id="fd_contact_name_edit" value="${utils.escapeHtml(fd.contact_name||'')}"></div>
+                        <div class="form-group"><label>メールアドレス</label><input type="email" id="fd_email_edit" value="${utils.escapeHtml(fd.email||'')}"></div>
                         </div>
-                        <div class="form-group"><label>電話番号</label><input type="tel" id="fd_phone" value="${utils.escapeHtml(fd.phone||'')}"></div>
-                        <div class="form-group"><label>携帯番号</label><input type="tel" id="fd_mobile" value="${utils.escapeHtml(fd.mobile||'')}"></div>
+                        <div class="form-group"><label>電話番号</label><input type="tel" id="fd_phone_edit" value="${utils.escapeHtml(fd.phone||'')}"></div>
+                        <div class="form-group"><label>携帯番号</label><input type="tel" id="fd_mobile_edit" value="${utils.escapeHtml(fd.mobile||'')}"></div>
 
                     </div>
 
@@ -2019,7 +2019,7 @@
                         
                         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
                         <div class="form-group"><label>支払方法</label>
-                            <select id="fd_payment_method">
+                            <select id="fd_payment_method_edit">
                             <option value="" ${!fd.payment_method?'selected':''}>未設定</option>
                             <option value="振込" ${fd.payment_method==='振込'?'selected':''}>振込</option>
                             <option value="自動引落し" ${fd.payment_method==='自動引落し'?'selected':''}>自動引落し</option>
@@ -2027,7 +2027,7 @@
                             </select>
                         </div>
                         <div class="form-group"><label>📄 請求書送付方法</label>
-                            <select id="fd_invoice_delivery">
+                            <select id="fd_invoice_delivery_edit">
                             <option value="" ${!fd.invoice_delivery?'selected':''}>未設定</option>
                             <option value="郵送代行" ${fd.invoice_delivery==='郵送代行'?'selected':''}>郵送代行</option>
                             <option value="郵送" ${fd.invoice_delivery==='郵送'?'selected':''}>郵送</option>
@@ -2039,26 +2039,26 @@
                             </select>
                         </div>
                         </div>
-                        <div class="form-group"><label>📮 送付先</label><input type="text" id="fd_invoice_send_to" value="${utils.escapeHtml(fd.invoice_send_to||'')}"></div>
+                        <div class="form-group"><label>📮 送付先</label><input type="text" id="fd_invoice_send_to_edit" value="${utils.escapeHtml(fd.invoice_send_to||'')}"></div>
 
                         <div style="background:#F0F9FF; border:1px solid #BAE6FD; padding:12px; border-radius:8px; margin:16px 0;">
                         <label style="font-weight:700; color:#0369A1; margin-bottom:8px;">📋 作業情報</label>
                         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-                            <div class="form-group" style="margin-bottom:8px;"><label>作業日</label><input type="date" id="work_date" value="${utils.escapeHtml(job.work_date||'')}"></div>
-                            <div class="form-group" style="margin-bottom:8px;"><label>時間帯</label><input type="text" id="work_time" value="${utils.escapeHtml(job.work_time||'')}"></div>
+                            <div class="form-group" style="margin-bottom:8px;"><label>作業日</label><input type="date" id="work_date_edit" value="${utils.escapeHtml(job.work_date||'')}"></div>
+                            <div class="form-group" style="margin-bottom:8px;"><label>時間帯</label><input type="text" id="work_time_edit" value="${utils.escapeHtml(job.work_time||'')}"></div>
                         </div>
                         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-                            <div class="form-group" style="margin-bottom:8px;"><label>♻️ 回収頻度</label><input type="text" id="fd_collection_frequency" value="${utils.escapeHtml(fd.collection_frequency||'')}" placeholder="例: 月2回"></div>
-                            <div class="form-group" style="margin-bottom:8px;"><label>🗓️ 回収曜日</label><input type="text" id="fd_collection_days" value="${utils.escapeHtml(fd.collection_days||'')}" placeholder="例: 月・木"></div>
+                            <div class="form-group" style="margin-bottom:8px;"><label>♻️ 回収頻度</label><input type="text" id="fd_collection_frequency_edit" value="${utils.escapeHtml(fd.collection_frequency||'')}" placeholder="例: 月2回"></div>
+                            <div class="form-group" style="margin-bottom:8px;"><label>🗓️ 回収曜日</label><input type="text" id="fd_collection_days_edit" value="${utils.escapeHtml(fd.collection_days||'')}" placeholder="例: 月・木"></div>
                         </div>
                         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-                            <div class="form-group" style="margin-bottom:8px;"><label>見積金額(税抜)</label><input type="number" id="price_total" value="${job.price_total||''}"></div>
-                            <div class="form-group" style="margin-bottom:8px;"><label>作業員数</label><input type="number" id="workers" value="${job.workers||''}"></div>
+                            <div class="form-group" style="margin-bottom:8px;"><label>見積金額(税抜)</label><input type="number" id="price_total_edit" value="${job.price_total||''}"></div>
+                            <div class="form-group" style="margin-bottom:8px;"><label>作業員数</label><input type="number" id="workers_edit" value="${job.workers||''}"></div>
                         </div>
                         <div style="display:grid;grid-template-columns:1fr;gap:8px;">
-                            <div class="form-group" style="margin-bottom:8px;"><label>立米 (m³)</label><input type="number" id="total_volume_m3" step="0.1" value="${job.total_volume_m3!=null?job.total_volume_m3:''}"></div>
+                            <div class="form-group" style="margin-bottom:8px;"><label>立米 (m³)</label><input type="number" id="total_volume_m3_edit" step="0.1" value="${job.total_volume_m3!=null?job.total_volume_m3:''}"></div>
                         </div>
-                        <div class="form-group" style="margin-bottom:0;"><label>備考</label><textarea id="notes">${utils.escapeHtml(job.notes||'')}</textarea></div>
+                        <div class="form-group" style="margin-bottom:0;"><label>備考</label><textarea id="notes_edit">${utils.escapeHtml(job.notes||'')}</textarea></div>
                         </div>
 
                         <div style="display:flex; gap:12px; margin-top:24px;">
@@ -2226,37 +2226,37 @@
             try { fd = JSON.parse(job.form_data || "{}"); } catch(e){}
 
             // Retrieve form values
-            const newStatus = document.getElementById('status').value;
-            const newStage = document.getElementById('pipeline_stage').value;
-            const newType = document.getElementById('job_type').value;
-            const newName = document.getElementById('job_name').value;
+            const newStatus = document.getElementById('status_edit').value;
+            const newStage = document.getElementById('pipeline_stage_edit').value;
+            const newType = document.getElementById('job_type_edit').value;
+            const newName = document.getElementById('job_name_edit').value;
             
             // Customer Info Sync
-            const custId = document.getElementById('customer_select').value || document.getElementById('original_customer_id').value;
-            const custName = document.getElementById('customer_name').value;
-            const address = document.getElementById('address').value;
+            const custId = document.getElementById('customer_select_edit').value || document.getElementById('original_customer_id_edit').value;
+            const custName = document.getElementById('customer_name_edit').value;
+            const address = document.getElementById('address_edit').value;
             
             // Form Data fields
-            fd.processing_category = document.getElementById('processing_category').value;
-            fd.yamabun_work_type = document.getElementById('yamabun_work_type_select').value;
-            fd.contact_name = document.getElementById('fd_contact_name').value;
-            fd.email = document.getElementById('fd_email').value;
-            fd.phone = document.getElementById('fd_phone').value;
-            fd.mobile = document.getElementById('fd_mobile').value;
-            fd.yamabun_management_number = document.getElementById('fd_yamabun_management_number').value;
-            fd.collection_frequency = document.getElementById('fd_collection_frequency').value;
-            fd.collection_days = document.getElementById('fd_collection_days').value;
-            fd.payment_method = document.getElementById('fd_payment_method').value;
-            fd.invoice_delivery = document.getElementById('fd_invoice_delivery').value;
-            fd.invoice_send_to = document.getElementById('fd_invoice_send_to').value;
+            fd.processing_category = document.getElementById('processing_category_edit').value;
+            fd.yamabun_work_type = document.getElementById('yamabun_work_type_select_edit').value;
+            fd.contact_name = document.getElementById('fd_contact_name_edit').value;
+            fd.email = document.getElementById('fd_email_edit').value;
+            fd.phone = document.getElementById('fd_phone_edit').value;
+            fd.mobile = document.getElementById('fd_mobile_edit').value;
+            fd.yamabun_management_number = document.getElementById('fd_yamabun_management_number_edit').value;
+            fd.collection_frequency = document.getElementById('fd_collection_frequency_edit').value;
+            fd.collection_days = document.getElementById('fd_collection_days_edit').value;
+            fd.payment_method = document.getElementById('fd_payment_method_edit').value;
+            fd.invoice_delivery = document.getElementById('fd_invoice_delivery_edit').value;
+            fd.invoice_send_to = document.getElementById('fd_invoice_send_to_edit').value;
 
             // Billing / Work fields
-            const wDate = document.getElementById('work_date').value;
-            const wTime = document.getElementById('work_time').value;
-            const pTotal = document.getElementById('price_total').value;
-            const workers = document.getElementById('workers').value;
-            const vol = document.getElementById('total_volume_m3').value;
-            const notes = document.getElementById('notes').value;
+            const wDate = document.getElementById('work_date_edit').value;
+            const wTime = document.getElementById('work_time_edit').value;
+            const pTotal = document.getElementById('price_total_edit').value;
+            const workers = document.getElementById('workers_edit').value;
+            const vol = document.getElementById('total_volume_m3_edit').value;
+            const notes = document.getElementById('notes_edit').value;
 
             const jobUpdate = {
                 status: newStatus,
