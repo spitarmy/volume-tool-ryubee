@@ -2275,8 +2275,6 @@
             }
         }
 
-        async function updateDrawerField(jobId, fieldName, value) {
-
         async function updateDrawerDate(jobId, value) {
             const job = pipelineData.find(j => j.id === jobId);
             if(!job) return;
