@@ -510,7 +510,7 @@
               <div class="form-group"><label>🎫 顧客コード(管理番号)</label><input type="text" id="fd_yamabun_management_number" placeholder="例: 12345"></div>
             </div>
 
-            <div class="form-group"><label>📍 住所</label><input type="text" id="address"></div>
+            <div class="form-group"><label>📍 現場（回収場所）の住所</label><input type="text" id="address"></div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
               <div class="form-group"><label>担当者名</label><input type="text" id="fd_contact_name" placeholder="担当者名"></div>
               <div class="form-group"><label>メールアドレス</label><input type="email" id="fd_email" placeholder="info@example.com"></div>
@@ -1038,10 +1038,7 @@
       const custId = document.getElementById('customer_select').value;
       if (custId) {
           payload.customer_id = custId;
-          const custUpdate = {
-              name: payload.customer_name,
-              address: payload.address
-          };
+          const custUpdate = {};
           const cFd = {
               contact_name: fd.contact_name,
               email: fd.email,

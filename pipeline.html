@@ -1691,7 +1691,7 @@
                         <div class="form-group"><label>🎫 顧客コード(管理番号)</label><input type="text" id="fd_yamabun_management_number" value=""></div>
                         </div>
 
-                        <div class="form-group"><label>📍 住所</label><input type="text" id="address" value=""></div>
+                        <div class="form-group"><label>📍 現場（回収場所）の住所</label><input type="text" id="address" value=""></div>
                         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
                         <div class="form-group"><label>担当者名</label><input type="text" id="fd_contact_name" value=""></div>
                         <div class="form-group"><label>メールアドレス</label><input type="email" id="fd_email" value=""></div>
@@ -2001,7 +2001,7 @@
                         <div class="form-group"><label>🎫 顧客コード(管理番号)</label><input type="text" id="fd_yamabun_management_number" value="${utils.escapeHtml(fd.yamabun_management_number||'')}"></div>
                         </div>
 
-                        <div class="form-group"><label>📍 住所</label><input type="text" id="address" value="${utils.escapeHtml(job.address||'')}"></div>
+                        <div class="form-group"><label>📍 現場（回収場所）の住所</label><input type="text" id="address" value="${utils.escapeHtml(job.address||'')}"></div>
                         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
                         <div class="form-group"><label>担当者名</label><input type="text" id="fd_contact_name" value="${utils.escapeHtml(fd.contact_name||'')}"></div>
                         <div class="form-group"><label>メールアドレス</label><input type="email" id="fd_email" value="${utils.escapeHtml(fd.email||'')}"></div>
@@ -2278,10 +2278,7 @@
 
                 // If customer is linked, Sync to Customer Master
                 if (custId) {
-                    const custUpdate = {
-                        name: custName,
-                        address: address
-                    };
+                    const custUpdate = {};
                     const cFd = {
                         contact_name: fd.contact_name,
                         email: fd.email,
