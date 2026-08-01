@@ -1801,7 +1801,8 @@
 
             try {
                 // If no custId but customer details exist, create new customer
-                if (!custId && (custName || address)) {
+                // (「大型」などコード不要の場合は、既存顧客を選んでいない限り自動作成しない)
+                if (!custId && (custName || address) && fd.processing_category !== '大型') {
                     const cFd = {
                         contact_name: fd.contact_name,
                         email: fd.email,
