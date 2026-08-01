@@ -267,6 +267,7 @@ input[type="date"],
 input[type="time"],
 input[type="email"],
 input[type="password"],
+input[type="tel"],
 textarea,
 select {
   width: 100%;
