@@ -1686,17 +1686,18 @@
                         </select>
                         <input type="hidden" id="original_customer_id" value="">
                         </div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
                         <div class="form-group"><label>お客様名（顧客マスター）</label><input type="text" id="customer_name" value=""></div>
+                        <div class="form-group"><label>🎫 顧客コード(管理番号)</label><input type="text" id="fd_yamabun_management_number" value=""></div>
+                        </div>
 
                         <div class="form-group"><label>📍 住所</label><input type="text" id="address" value=""></div>
                         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
                         <div class="form-group"><label>担当者名</label><input type="text" id="fd_contact_name" value=""></div>
                         <div class="form-group"><label>メールアドレス</label><input type="email" id="fd_email" value=""></div>
                         </div>
-                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
                         <div class="form-group"><label>電話番号</label><input type="tel" id="fd_phone" value=""></div>
                         <div class="form-group"><label>携帯番号</label><input type="tel" id="fd_mobile" value=""></div>
-                        </div>
 
                     </div>
 
@@ -1733,6 +1734,10 @@
                         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
                             <div class="form-group" style="margin-bottom:8px;"><label>作業日</label><input type="date" id="work_date" value=""></div>
                             <div class="form-group" style="margin-bottom:8px;"><label>時間帯</label><input type="text" id="work_time" value=""></div>
+                        </div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                            <div class="form-group" style="margin-bottom:8px;"><label>♻️ 回収頻度</label><input type="text" id="fd_collection_frequency" value="" placeholder="例: 月2回"></div>
+                            <div class="form-group" style="margin-bottom:8px;"><label>🗓️ 回収曜日</label><input type="text" id="fd_collection_days" value="" placeholder="例: 月・木"></div>
                         </div>
                         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
                             <div class="form-group" style="margin-bottom:8px;"><label>見積金額(税抜)</label><input type="number" id="price_total" value=""></div>
@@ -1779,6 +1784,9 @@
             fd.email = document.getElementById('fd_email').value;
             fd.phone = document.getElementById('fd_phone').value;
             fd.mobile = document.getElementById('fd_mobile').value;
+            fd.yamabun_management_number = document.getElementById('fd_yamabun_management_number').value;
+            fd.collection_frequency = document.getElementById('fd_collection_frequency').value;
+            fd.collection_days = document.getElementById('fd_collection_days').value;
             fd.payment_method = document.getElementById('fd_payment_method').value;
             fd.invoice_delivery = document.getElementById('fd_invoice_delivery').value;
             fd.invoice_send_to = document.getElementById('fd_invoice_send_to').value;
@@ -1988,17 +1996,18 @@
                         </select>
                         <input type="hidden" id="original_customer_id" value="${job.customer_id || ''}">
                         </div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
                         <div class="form-group"><label>お客様名（顧客マスター）</label><input type="text" id="customer_name" value="${utils.escapeHtml(job.customer_name||'')}"></div>
+                        <div class="form-group"><label>🎫 顧客コード(管理番号)</label><input type="text" id="fd_yamabun_management_number" value="${utils.escapeHtml(fd.yamabun_management_number||'')}"></div>
+                        </div>
 
                         <div class="form-group"><label>📍 住所</label><input type="text" id="address" value="${utils.escapeHtml(job.address||'')}"></div>
                         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
                         <div class="form-group"><label>担当者名</label><input type="text" id="fd_contact_name" value="${utils.escapeHtml(fd.contact_name||'')}"></div>
                         <div class="form-group"><label>メールアドレス</label><input type="email" id="fd_email" value="${utils.escapeHtml(fd.email||'')}"></div>
                         </div>
-                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
                         <div class="form-group"><label>電話番号</label><input type="tel" id="fd_phone" value="${utils.escapeHtml(fd.phone||'')}"></div>
                         <div class="form-group"><label>携帯番号</label><input type="tel" id="fd_mobile" value="${utils.escapeHtml(fd.mobile||'')}"></div>
-                        </div>
 
                     </div>
 
@@ -2035,6 +2044,10 @@
                         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
                             <div class="form-group" style="margin-bottom:8px;"><label>作業日</label><input type="date" id="work_date" value="${utils.escapeHtml(job.work_date||'')}"></div>
                             <div class="form-group" style="margin-bottom:8px;"><label>時間帯</label><input type="text" id="work_time" value="${utils.escapeHtml(job.work_time||'')}"></div>
+                        </div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                            <div class="form-group" style="margin-bottom:8px;"><label>♻️ 回収頻度</label><input type="text" id="fd_collection_frequency" value="${utils.escapeHtml(fd.collection_frequency||'')}" placeholder="例: 月2回"></div>
+                            <div class="form-group" style="margin-bottom:8px;"><label>🗓️ 回収曜日</label><input type="text" id="fd_collection_days" value="${utils.escapeHtml(fd.collection_days||'')}" placeholder="例: 月・木"></div>
                         </div>
                         <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
                             <div class="form-group" style="margin-bottom:8px;"><label>見積金額(税抜)</label><input type="number" id="price_total" value="${job.price_total||''}"></div>
@@ -2227,6 +2240,9 @@
             fd.email = document.getElementById('fd_email').value;
             fd.phone = document.getElementById('fd_phone').value;
             fd.mobile = document.getElementById('fd_mobile').value;
+            fd.yamabun_management_number = document.getElementById('fd_yamabun_management_number').value;
+            fd.collection_frequency = document.getElementById('fd_collection_frequency').value;
+            fd.collection_days = document.getElementById('fd_collection_days').value;
             fd.payment_method = document.getElementById('fd_payment_method').value;
             fd.invoice_delivery = document.getElementById('fd_invoice_delivery').value;
             fd.invoice_send_to = document.getElementById('fd_invoice_send_to').value;

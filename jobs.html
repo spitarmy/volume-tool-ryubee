@@ -505,17 +505,18 @@
                 <option value="">-- 既存顧客から選択 --</option>
               </select>
             </div>
-            <div class="form-group"><label>お客様名（顧客マスター）</label><input type="text" id="customer_name" placeholder="株式会社〇〇"></div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+              <div class="form-group"><label>お客様名（顧客マスター）</label><input type="text" id="customer_name" placeholder="株式会社〇〇"></div>
+              <div class="form-group"><label>🎫 顧客コード(管理番号)</label><input type="text" id="fd_yamabun_management_number" placeholder="例: 12345"></div>
+            </div>
 
             <div class="form-group"><label>📍 住所</label><input type="text" id="address"></div>
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
               <div class="form-group"><label>担当者名</label><input type="text" id="fd_contact_name" placeholder="担当者名"></div>
               <div class="form-group"><label>メールアドレス</label><input type="email" id="fd_email" placeholder="info@example.com"></div>
             </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-              <div class="form-group"><label>電話番号</label><input type="tel" id="fd_phone" placeholder="075-XXX-XXXX"></div>
-              <div class="form-group"><label>携帯番号</label><input type="tel" id="fd_mobile" placeholder="090-XXX-XXXX"></div>
-            </div>
+            <div class="form-group"><label>電話番号</label><input type="tel" id="fd_phone" placeholder="075-XXX-XXXX"></div>
+            <div class="form-group"><label>携帯番号</label><input type="tel" id="fd_mobile" placeholder="090-XXX-XXXX"></div>
             
             <div class="form-group" id="tmplSelectorGroup" style="display:none; margin-top:12px; padding:12px; background:#F8FAFC; border-radius:8px; border:1px solid var(--border);">
               <label style="margin-bottom:4px; font-weight:700;">📑 雛形から入力（任意）</label>
@@ -559,6 +560,10 @@
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
                 <div class="form-group" style="margin-bottom:8px;"><label>作業日</label><input type="date" id="work_date"></div>
                 <div class="form-group" style="margin-bottom:8px;"><label>時間帯</label><input type="text" id="work_time" placeholder="10:00~"></div>
+              </div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                <div class="form-group" style="margin-bottom:8px;"><label>♻️ 回収頻度</label><input type="text" id="fd_collection_frequency" placeholder="例: 月2回"></div>
+                <div class="form-group" style="margin-bottom:8px;"><label>🗓️ 回収曜日</label><input type="text" id="fd_collection_days" placeholder="例: 月・木"></div>
               </div>
               <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
                 <div class="form-group" style="margin-bottom:8px;"><label>見積金額(税抜)</label><input type="number" id="price_total"></div>
@@ -946,13 +951,16 @@
       document.getElementById('processing_category').value = pc;
 
       // 顧客情報フィールドを読み込み
+      document.getElementById('fd_yamabun_management_number').value = fd.yamabun_management_number || '';
       document.getElementById('fd_contact_name').value = fd.contact_name || '';
+      document.getElementById('fd_email').value = fd.email || '';
       document.getElementById('fd_phone').value = fd.phone || '';
       document.getElementById('fd_mobile').value = fd.mobile || '';
-      document.getElementById('fd_email').value = fd.email || '';
       document.getElementById('fd_payment_method').value = fd.payment_method || '';
       document.getElementById('fd_invoice_delivery').value = fd.invoice_delivery || '';
       document.getElementById('fd_invoice_send_to').value = fd.invoice_send_to || '';
+      document.getElementById('fd_collection_frequency').value = fd.collection_frequency || '';
+      document.getElementById('fd_collection_days').value = fd.collection_days || '';
 
       clearSignature();
       if (job.signature_data) { const img = new Image(); img.onload = () => sigCtx.drawImage(img, 0, 0, sigCanvas.width, sigCanvas.height); img.src = job.signature_data; }
@@ -1014,6 +1022,7 @@
       fd.processing_category = document.getElementById('processing_category').value;
 
       // 顧客情報フィールドを保存
+      fd.yamabun_management_number = document.getElementById('fd_yamabun_management_number').value.trim();
       fd.contact_name = document.getElementById('fd_contact_name').value.trim();
       fd.phone = document.getElementById('fd_phone').value.trim();
       fd.mobile = document.getElementById('fd_mobile').value.trim();
@@ -1021,6 +1030,8 @@
       fd.payment_method = document.getElementById('fd_payment_method').value;
       fd.invoice_delivery = document.getElementById('fd_invoice_delivery').value;
       fd.invoice_send_to = document.getElementById('fd_invoice_send_to').value.trim();
+      fd.collection_frequency = document.getElementById('fd_collection_frequency').value.trim();
+      fd.collection_days = document.getElementById('fd_collection_days').value.trim();
       payload.form_data = JSON.stringify(fd);
 
       // Customer Sync
