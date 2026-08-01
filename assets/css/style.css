@@ -5,10 +5,11 @@
    ========================================================================= */
 
 /* ── モーダル背景スクロール防止（全ページ共通） ── */
-body.modal-open {
+body.modal-open,
+body:has(.modal-overlay.show),
+body:has(.detail-drawer-overlay.show),
+body:has(.contract-modal-overlay.show) {
   overflow: hidden !important;
-  position: fixed !important;
-  width: 100% !important;
 }
 
 :root {
