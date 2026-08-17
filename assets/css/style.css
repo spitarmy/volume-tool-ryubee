@@ -1085,3 +1085,75 @@ textarea {
     margin-left: 260px;
   }
 }
+
+/* ==========================================================================
+   回収情報テーブル（顧客プレビュー）
+   ========================================================================== */
+.collection-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  margin-top: 8px;
+}
+.collection-table th {
+  text-align: left;
+  font-size: 0.72rem;
+  color: var(--text-tertiary);
+  font-weight: 600;
+  padding: 4px 8px;
+  border-bottom: 1px solid var(--border);
+}
+.collection-table th:nth-child(3),
+.collection-table th:nth-child(4) {
+  text-align: right;
+}
+.collection-table td {
+  padding: 5px 8px;
+  border-bottom: 1px solid rgba(0,0,0,0.04);
+  vertical-align: middle;
+}
+.collection-table td:nth-child(3) {
+  text-align: center;
+  font-weight: 600;
+}
+.collection-table td:nth-child(4) {
+  text-align: right;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+.collection-table tr:last-child td {
+  border-bottom: none;
+}
+
+/* 金額右寄せ・tabular-nums ユーティリティ */
+.text-right { text-align: right; }
+.price-cell {
+  text-align: right;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+/* マンション入居者情報 */
+.mansion-info {
+  display: none;
+  background: #FFF7ED;
+  border: 1px solid #FDBA74;
+  border-radius: 8px;
+  padding: 10px;
+  margin: 8px 0;
+}
+.mansion-info.show {
+  display: block;
+}
+.mansion-calc {
+  font-size: 0.82rem;
+  color: #9A3412;
+  font-weight: 700;
+  margin-top: 6px;
+  padding: 4px 8px;
+  background: #FEF3C7;
+  border-radius: 6px;
+  text-align: right;
+}
