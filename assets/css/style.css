@@ -1103,9 +1103,14 @@ textarea {
   padding: 4px 8px;
   border-bottom: 1px solid var(--border);
 }
-.collection-table th:nth-child(3),
+.collection-table th:nth-child(3) {
+  text-align: center;
+}
 .collection-table th:nth-child(4) {
   text-align: right;
+}
+.collection-table th:nth-child(5) {
+  text-align: center;
 }
 .collection-table td {
   padding: 5px 8px;
@@ -1121,6 +1126,14 @@ textarea {
   font-weight: 700;
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
+}
+.collection-table td:nth-child(5) {
+  text-align: center;
+  font-size: 0.78rem;
+}
+.collection-table td:nth-child(6) {
+  font-size: 0.78rem;
+  color: var(--text-secondary);
 }
 .collection-table tr:last-child td {
   border-bottom: none;
