@@ -1394,7 +1394,10 @@
                     collection_start_date: card.querySelector('.br-start')?.value || '',
                     collection_end_date: card.querySelector('.br-end')?.value || '',
                 };
-                if (Object.values(b).some(v => v && (typeof v !== 'object' || v.length > 0))) branches.push(b);
+                if (Object.values(b).some(v => v && (typeof v !== 'object' || v.length > 0))) {
+                    console.log('[collectBranches] Branch:', b.branch_name, 'collection_general:', b.collection_general, 'collection_canbottle:', b.collection_canbottle, 'collection_industrial:', b.collection_industrial);
+                    branches.push(b);
+                }
             });
             return branches;
         }
@@ -1649,13 +1652,27 @@
                     }
                     
                     return branches.map((b, i) => {
+                        console.log('[Preview] Branch', i, b.branch_name, 'collection fields:', {
+                            general: b.collection_general,
+                            canbottle: b.collection_canbottle,
+                            recycle: b.collection_recycle,
+                            plastic: b.collection_plastic,
+                            cardboard: b.collection_cardboard,
+                            paper: b.collection_paper,
+                            industrial: b.collection_industrial,
+                        });
                         const genV = b.vehicle_general || b.vehicle_number || '';
                         const rows = [];
-                        if (b.collection_general) rows.push({icon:'🟢', name:'燃えるゴミ', freq:b.collection_general, vehicle:genV, price:b.price_general, bg:'#EFF6FF', color:'#1e40af'});
-                        if (b.collection_canbottle || b.collection_recycle) rows.push({icon:'🔵', name:'缶ビンペット', freq:b.collection_canbottle || b.collection_recycle, vehicle:b.vehicle_canbottle || b.vehicle_recycle || '', price:b.price_canbottle || b.price_recycle, bg:'#F0FDF4', color:'#166534'});
-                        if (b.collection_plastic) rows.push({icon:'♻️', name:'プラ包装容器', freq:b.collection_plastic, vehicle:b.vehicle_plastic || '', price:b.price_plastic, bg:'#ECFDF5', color:'#065F46'});
-                        if (b.collection_cardboard || b.collection_paper) rows.push({icon:'📦', name:'段ボール', freq:b.collection_cardboard || b.collection_paper, vehicle:b.vehicle_cardboard || b.vehicle_paper || '', price:b.price_cardboard || b.price_paper, bg:'#FFFBEB', color:'#92400e'});
-                        if (b.collection_industrial) rows.push({icon:'🟣', name:'産廃', freq:b.collection_industrial, vehicle:b.vehicle_industrial || '', price:b.price_industrial, bg:'#FDF4FF', color:'#7e22ce'});
+                        const col_general = b.collection_general || '';
+                        const col_canbottle = b.collection_canbottle || b.collection_recycle || '';
+                        const col_plastic = b.collection_plastic || '';
+                        const col_cardboard = b.collection_cardboard || b.collection_paper || '';
+                        const col_industrial = b.collection_industrial || '';
+                        if (col_general) rows.push({icon:'🟢', name:'燃えるゴミ', freq:col_general, vehicle:genV, price:b.price_general, bg:'#EFF6FF', color:'#1e40af'});
+                        if (col_canbottle) rows.push({icon:'🔵', name:'缶ビンペット', freq:col_canbottle, vehicle:b.vehicle_canbottle || b.vehicle_recycle || '', price:b.price_canbottle || b.price_recycle, bg:'#F0FDF4', color:'#166534'});
+                        if (col_plastic) rows.push({icon:'♻️', name:'プラ包装容器', freq:col_plastic, vehicle:b.vehicle_plastic || '', price:b.price_plastic, bg:'#ECFDF5', color:'#065F46'});
+                        if (col_cardboard) rows.push({icon:'📦', name:'段ボール', freq:col_cardboard, vehicle:b.vehicle_cardboard || b.vehicle_paper || '', price:b.price_cardboard || b.price_paper, bg:'#FFFBEB', color:'#92400e'});
+                        if (col_industrial) rows.push({icon:'🟣', name:'産廃', freq:col_industrial, vehicle:b.vehicle_industrial || '', price:b.price_industrial, bg:'#FDF4FF', color:'#7e22ce'});
                         
                         const tableHtml = rows.length > 0 ? `
                             <table class="collection-table">
