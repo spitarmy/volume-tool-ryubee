@@ -419,7 +419,7 @@
 
     <div class="search-wrap">
         <div style="display:flex; gap:8px;">
-            <input type="text" id="searchInput" placeholder="🔍 顧客名・住所・電話で検索..." oninput="filterCustomers()" style="flex:1;">
+            <input type="text" id="searchInput" placeholder="🔍 顧客名・住所・電話・事業所名・管理番号で検索..." oninput="filterCustomers()" style="flex:1;">
             <select id="sortSelect" onchange="filterCustomers()" style="width:130px; border-radius:8px; border:1px solid var(--border); padding:0 8px; font-size:0.9rem; color:var(--text-primary); background:#fff;">
                 <option value="default">標準 (締日順)</option>
                 <option value="number">管理番号順</option>
@@ -891,9 +891,15 @@
                 let pricingItems = '';
                 if (fd.pricing_list) pricingItems = fd.pricing_list.map(p => p.item).join(' ');
 
+                // 事業所名を検索対象に追加
+                let branchNames = '';
+                if (fd.branches && Array.isArray(fd.branches)) {
+                    branchNames = fd.branches.map(b => (b.branch_name || '') + ' ' + (b.branch_address || '') + ' ' + (b.branch_phone || '')).join(' ');
+                }
                 const text = (
                     c.name + ' ' + (c.address || '') + ' ' + (c.phone || '') + ' ' + (c.contact_person || '') + ' ' + (c.email || '') +
                     ' ' + (fd.yamabun_management_number || '') +
+                    ' ' + branchNames +
                     ' ' + (fd.collection_general || '') + ' ' + (fd.collection_canbottle || fd.collection_recycle || '') +
                     ' ' + (fd.collection_plastic || '') + ' ' + (fd.collection_cardboard || fd.collection_paper || '') +
                     ' ' + pricingItems
@@ -1004,12 +1010,12 @@
                                 ${branchList.map(b => {
                                     const bName = b.branch_name ? `<div style="font-weight:700;color:var(--text-primary);margin-bottom:2px;">📍 ${utils.escapeHtml(b.branch_name)}</div>` : '';
                                     const genVehicle = b.vehicle_general || b.vehicle_number || '';
-                                    const genLine = b.collection_general ? `<div>🟢 一般 ${utils.escapeHtml(b.collection_general)}${genVehicle ? ' <strong>'+utils.escapeHtml(genVehicle)+'号車</strong>' : ''}${(b.unitprice_general||b.price_general) ? ' <span style="color:#1e40af;font-weight:700;">'+utils.escapeHtml(b.unitprice_general||b.price_general)+'</span>' : ''}</div>` : '';
-                                    const canLine = (b.collection_canbottle || b.collection_recycle) ? `<div>🔵 缶ビンペット ${utils.escapeHtml(b.collection_canbottle || b.collection_recycle)}${(b.vehicle_canbottle || b.vehicle_recycle) ? ' <strong>'+utils.escapeHtml(b.vehicle_canbottle || b.vehicle_recycle)+'号車</strong>' : ''}${(b.unitprice_canbottle||b.price_canbottle || b.price_recycle) ? ' <span style="color:#166534;font-weight:700;">'+utils.escapeHtml(b.unitprice_canbottle||b.price_canbottle || b.price_recycle)+'</span>' : ''}</div>` : '';
-                                    const plaLine = b.collection_plastic ? `<div>♻️ プラ包装 ${utils.escapeHtml(b.collection_plastic)}${b.vehicle_plastic ? ' <strong>'+utils.escapeHtml(b.vehicle_plastic)+'号車</strong>' : ''}${(b.unitprice_plastic||b.price_plastic) ? ' <span style="color:#065F46;font-weight:700;">'+utils.escapeHtml(b.unitprice_plastic||b.price_plastic)+'</span>' : ''}</div>` : '';
-                                    const cbLine = (b.collection_cardboard || b.collection_paper) ? `<div>📦 段ボール ${utils.escapeHtml(b.collection_cardboard || b.collection_paper)}${(b.vehicle_cardboard || b.vehicle_paper) ? ' <strong>'+utils.escapeHtml(b.vehicle_cardboard || b.vehicle_paper)+'号車</strong>' : ''}${(b.unitprice_cardboard||b.price_cardboard || b.price_paper) ? ' <span style="color:#92400e;font-weight:700;">'+utils.escapeHtml(b.unitprice_cardboard||b.price_cardboard || b.price_paper)+'</span>' : ''}</div>` : '';
-                                    const otherLine = b.collection_other ? `<div>🔸 その他 ${utils.escapeHtml(b.collection_other)}</div>` : '';
-                                    const indLine = b.collection_industrial ? `<div>🟣 産廃 ${utils.escapeHtml(b.collection_industrial)}</div>` : '';
+                                    const genLine = (b.collection_general||genVehicle||b.unitprice_general||b.price_general) ? `<div>🟢 一般 ${utils.escapeHtml(b.collection_general||'')}${genVehicle ? ' <strong>'+utils.escapeHtml(genVehicle)+'号車</strong>' : ''}${(b.unitprice_general||b.price_general) ? ' <span style="color:#1e40af;font-weight:700;">'+utils.escapeHtml(b.unitprice_general||b.price_general)+'</span>' : ''}</div>` : '';
+                                    const canLine = (b.collection_canbottle||b.collection_recycle||b.vehicle_canbottle||b.unitprice_canbottle||b.price_canbottle) ? `<div>🔵 缶ビンペット ${utils.escapeHtml(b.collection_canbottle||b.collection_recycle||'')}${(b.vehicle_canbottle||b.vehicle_recycle) ? ' <strong>'+utils.escapeHtml(b.vehicle_canbottle||b.vehicle_recycle)+'号車</strong>' : ''}${(b.unitprice_canbottle||b.price_canbottle||b.price_recycle) ? ' <span style="color:#166534;font-weight:700;">'+utils.escapeHtml(b.unitprice_canbottle||b.price_canbottle||b.price_recycle)+'</span>' : ''}</div>` : '';
+                                    const plaLine = (b.collection_plastic||b.vehicle_plastic||b.unitprice_plastic||b.price_plastic) ? `<div>♻️ プラ包装 ${utils.escapeHtml(b.collection_plastic||'')}${b.vehicle_plastic ? ' <strong>'+utils.escapeHtml(b.vehicle_plastic)+'号車</strong>' : ''}${(b.unitprice_plastic||b.price_plastic) ? ' <span style="color:#065F46;font-weight:700;">'+utils.escapeHtml(b.unitprice_plastic||b.price_plastic)+'</span>' : ''}</div>` : '';
+                                    const cbLine = (b.collection_cardboard||b.collection_paper||b.vehicle_cardboard||b.unitprice_cardboard||b.price_cardboard) ? `<div>📦 段ボール ${utils.escapeHtml(b.collection_cardboard||b.collection_paper||'')}${(b.vehicle_cardboard||b.vehicle_paper) ? ' <strong>'+utils.escapeHtml(b.vehicle_cardboard||b.vehicle_paper)+'号車</strong>' : ''}${(b.unitprice_cardboard||b.price_cardboard||b.price_paper) ? ' <span style="color:#92400e;font-weight:700;">'+utils.escapeHtml(b.unitprice_cardboard||b.price_cardboard||b.price_paper)+'</span>' : ''}</div>` : '';
+                                    const otherLine = (b.collection_other||b.vehicle_other||b.unitprice_other) ? `<div>🔸 その他 ${utils.escapeHtml(b.collection_other||'')}</div>` : '';
+                                    const indLine = (b.collection_industrial||b.vehicle_industrial||b.unitprice_industrial) ? `<div>🟣 産廃 ${utils.escapeHtml(b.collection_industrial||'')}</div>` : '';
                                     const indItemsLine = (b.industrial_items?.length > 0) ? `<div>🟣 産廃 ${b.industrial_items.length}品目</div>` : '';
                                     return bName + genLine + canLine + plaLine + cbLine + otherLine + indLine + indItemsLine;
                                 }).join('<div style="margin:4px 0;border-top:1px dotted #ddd;"></div>')}
@@ -1780,13 +1786,13 @@
                         
                         // 一般廃棄物テーブル
                         const generalRows = [];
-                        if (b.collection_general) generalRows.push({icon:'🟢', name:'燃えるゴミ', freq:b.collection_general, vehicle:genV, price:b.unitprice_general||b.price_general, unit:b.unit_general||'円/月', notes:b.notes_general, bg:'#EFF6FF', color:'#1e40af'});
-                        if (b.collection_canbottle||b.collection_recycle) generalRows.push({icon:'🔵', name:'缶ビンペット', freq:b.collection_canbottle||b.collection_recycle, vehicle:b.vehicle_canbottle||b.vehicle_recycle||'', price:b.unitprice_canbottle||b.price_canbottle||b.price_recycle, unit:b.unit_canbottle||'円/月', notes:b.notes_canbottle, bg:'#F0FDF4', color:'#166534'});
-                        if (b.collection_plastic) generalRows.push({icon:'♻️', name:'プラ包装容器', freq:b.collection_plastic, vehicle:b.vehicle_plastic||'', price:b.unitprice_plastic||b.price_plastic, unit:b.unit_plastic||'円/月', notes:b.notes_plastic, bg:'#ECFDF5', color:'#065F46'});
-                        if (b.collection_cardboard||b.collection_paper) generalRows.push({icon:'📦', name:'段ボール', freq:b.collection_cardboard||b.collection_paper, vehicle:b.vehicle_cardboard||b.vehicle_paper||'', price:b.unitprice_cardboard||b.price_cardboard||b.price_paper, unit:b.unit_cardboard||'円/月', notes:b.notes_cardboard, bg:'#FFFBEB', color:'#92400e'});
-                        if (b.collection_other) generalRows.push({icon:'🔸', name:'その他', freq:b.collection_other, vehicle:b.vehicle_other||'', price:b.unitprice_other||b.price_other, unit:b.unit_other||'円/月', notes:b.notes_other, bg:'#FEF2F2', color:'#991B1B'});
+                        if (b.collection_general||genV||b.unitprice_general||b.price_general) generalRows.push({icon:'🟢', name:'燃えるゴミ', freq:b.collection_general||'', vehicle:genV, price:b.unitprice_general||b.price_general, unit:b.unit_general||'円/月', notes:b.notes_general, bg:'#EFF6FF', color:'#1e40af'});
+                        if (b.collection_canbottle||b.collection_recycle||b.vehicle_canbottle||b.unitprice_canbottle||b.price_canbottle) generalRows.push({icon:'🔵', name:'缶ビンペット', freq:b.collection_canbottle||b.collection_recycle||'', vehicle:b.vehicle_canbottle||b.vehicle_recycle||'', price:b.unitprice_canbottle||b.price_canbottle||b.price_recycle, unit:b.unit_canbottle||'円/月', notes:b.notes_canbottle, bg:'#F0FDF4', color:'#166534'});
+                        if (b.collection_plastic||b.vehicle_plastic||b.unitprice_plastic||b.price_plastic) generalRows.push({icon:'♻️', name:'プラ包装容器', freq:b.collection_plastic||'', vehicle:b.vehicle_plastic||'', price:b.unitprice_plastic||b.price_plastic, unit:b.unit_plastic||'円/月', notes:b.notes_plastic, bg:'#ECFDF5', color:'#065F46'});
+                        if (b.collection_cardboard||b.collection_paper||b.vehicle_cardboard||b.unitprice_cardboard||b.price_cardboard) generalRows.push({icon:'📦', name:'段ボール', freq:b.collection_cardboard||b.collection_paper||'', vehicle:b.vehicle_cardboard||b.vehicle_paper||'', price:b.unitprice_cardboard||b.price_cardboard||b.price_paper, unit:b.unit_cardboard||'円/月', notes:b.notes_cardboard, bg:'#FFFBEB', color:'#92400e'});
+                        if (b.collection_other||b.vehicle_other||b.unitprice_other||b.price_other) generalRows.push({icon:'🔸', name:'その他', freq:b.collection_other||'', vehicle:b.vehicle_other||'', price:b.unitprice_other||b.price_other, unit:b.unit_other||'円/月', notes:b.notes_other, bg:'#FEF2F2', color:'#991B1B'});
                         // 旧形式: collection_industrial → generalRowsにフォールバック
-                        if (b.collection_industrial && !(b.industrial_items?.length > 0)) generalRows.push({icon:'🟣', name:'産廃', freq:b.collection_industrial, vehicle:b.vehicle_industrial||'', price:b.unitprice_industrial||b.price_industrial, unit:b.unit_industrial||'円/月', notes:b.notes_industrial, bg:'#FDF4FF', color:'#7e22ce'});
+                        if ((b.collection_industrial||b.vehicle_industrial||b.unitprice_industrial||b.price_industrial) && !(b.industrial_items?.length > 0)) generalRows.push({icon:'🟣', name:'産廃', freq:b.collection_industrial||'', vehicle:b.vehicle_industrial||'', price:b.unitprice_industrial||b.price_industrial, unit:b.unit_industrial||'円/月', notes:b.notes_industrial, bg:'#FDF4FF', color:'#7e22ce'});
                         
                         const generalTableHtml = generalRows.length > 0 ? `
                             <div style="margin-top:6px;font-size:0.75rem;font-weight:700;color:#1e3a5f;">📋 一般廃棄物</div>
