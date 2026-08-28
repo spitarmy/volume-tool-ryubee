@@ -254,7 +254,8 @@
 
                 // Populate Fields
                 document.getElementById('cName').textContent = cust.name;
-                document.getElementById('cBranchAddress').textContent = fd.branch_address || cust.address || 'ー';
+                const primaryBranch = (fd.branches && fd.branches[0]) || {};
+                document.getElementById('cBranchAddress').textContent = primaryBranch.branch_address || fd.branch_address || cust.address || 'ー';
                 
                 document.getElementById('startYear').textContent = startYearReiwa;
                 document.getElementById('startMonth').textContent = startMonth;

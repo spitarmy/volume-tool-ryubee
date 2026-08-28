@@ -96,10 +96,14 @@ def generate_contract_pdf(
 
     disposalCompany = contract.disposal_company or "（処分業者未設定）"
 
+    # branches配列からの読み取りフォールバック
+    branches = form_data.get("branches") or []
+    first_branch = branches[0] if branches and isinstance(branches, list) and len(branches) > 0 else {}
+
     context = {
         "cName": customer.name,
-        "cBranchName": form_data.get("branch_name") or customer.name,
-        "cBranchAddress": form_data.get("branch_address") or customer.address or "ー",
+        "cBranchName": first_branch.get("branch_name") or form_data.get("branch_name") or customer.name,
+        "cBranchAddress": first_branch.get("branch_address") or form_data.get("branch_address") or customer.address or "ー",
         "cStartDate": cStartDate,
         "cClosing": cClosing,
         "cPaymentOffset": cPaymentOffset,
