@@ -532,14 +532,14 @@
                             <select id="custAssignedUser"><option value="">未設定</option></select>
                         </div>
                         <div class="form-group"><label>廃棄物カテゴリ</label>
-                            <select id="custWasteCategory">
-                                <option value="general">一般ゴミ</option>
-                                <option value="industrial">産業廃棄物</option>
-                                <option value="large">大型ゴミ等</option>
-                            </select>
+                            <div id="custWasteCategoryGroup" style="display:flex;gap:10px;flex-wrap:wrap;padding:4px 0;">
+                                <label style="display:flex;align-items:center;gap:4px;font-size:0.85rem;cursor:pointer;"><input type="checkbox" class="waste-cat-cb" value="general"> 🗑 一般ゴミ</label>
+                                <label style="display:flex;align-items:center;gap:4px;font-size:0.85rem;cursor:pointer;"><input type="checkbox" class="waste-cat-cb" value="industrial"> ♻️ 産業廃棄物</label>
+                                <label style="display:flex;align-items:center;gap:4px;font-size:0.85rem;cursor:pointer;"><input type="checkbox" class="waste-cat-cb" value="large"> 🛋 大型ゴミ等</label>
+                            </div>
                         </div>
                     </div>
-                    <div class="form-group"><label>ご住所</label><input type="text" id="custAddress" placeholder="京都市..."></div>
+                    <div class="form-group"><label>ご住所</label><textarea id="custAddress" placeholder="京都市..." rows="2" style="resize:vertical;"></textarea></div>
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
                         <div class="form-group"><label>担当者名</label><input type="text" id="custContact" placeholder="山田太郎"></div>
                         <div class="form-group"><label>メールアドレス</label><input type="email" id="custEmail" inputmode="email" placeholder="info@example.com"></div>
@@ -553,7 +553,10 @@
                     <h4 class="section-title">📍 事業所・回収情報 <span id="branchCount" style="font-size:0.75rem;font-weight:400;color:var(--text-tertiary);"></span></h4>
                     <p style="font-size:0.72rem;color:var(--text-secondary);margin-bottom:6px;">回収場所ごとに情報を登録（複数可）</p>
                     <div id="branchesContainer"></div>
-                    <button class="btn btn-secondary btn-sm mt-1" style="width:100%;" onclick="addBranchCard()">＋ 事業所を追加</button>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                        <button class="btn btn-secondary btn-sm mt-1" style="width:100%;background:#EFF6FF;color:#1D4ED8;border:1px solid #93C5FD;" onclick="addBranchCard({branch_name:document.getElementById('custName').value,branch_address:document.getElementById('custAddress').value,branch_phone:document.getElementById('custPhone').value,is_headquarters:true}, 0)">🏢 本社を追加</button>
+                        <button class="btn btn-secondary btn-sm mt-1" style="width:100%;" onclick="addBranchCard()">＋ 事業所を追加</button>
+                    </div>
                 </div>
 
                 <!-- ===== 右カラム: 請求・契約・単価 ===== -->
@@ -640,7 +643,10 @@
                         </div>
                     </div>
 
-                    <div class="form-group" style="margin-top:6px;"><label>ご請求先 宛名 / 住所 <button type="button" onclick="document.getElementById('custBillingAddress').value=document.getElementById('custAddress').value" style="font-size:0.65rem;padding:2px 6px;border-radius:4px;border:1px solid var(--border);background:#EBF5FF;color:var(--blue);cursor:pointer;margin-left:4px;">📋 住所と同じ</button></label><input type="text" id="custBillingAddress" placeholder="○○株式会社 京都市..."></div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:6px;">
+                        <div class="form-group" style="margin:0;"><label>請求先 会社名 <button type="button" onclick="document.getElementById('custBillingName').value=document.getElementById('custName').value" style="font-size:0.65rem;padding:2px 6px;border-radius:4px;border:1px solid var(--border);background:#EBF5FF;color:var(--blue);cursor:pointer;margin-left:4px;">📋 会社名と同じ</button></label><input type="text" id="custBillingName" placeholder="株式会社○○"></div>
+                        <div class="form-group" style="margin:0;"><label>請求先 住所 <button type="button" onclick="document.getElementById('custBillingAddress').value=document.getElementById('custAddress').value" style="font-size:0.65rem;padding:2px 6px;border-radius:4px;border:1px solid var(--border);background:#EBF5FF;color:var(--blue);cursor:pointer;margin-left:4px;">📋 住所と同じ</button></label><textarea id="custBillingAddress" placeholder="京都市..." rows="2" style="resize:vertical;"></textarea></div>
+                    </div>
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
                         <div class="form-group"><label>請求先 メール</label><input type="email" id="custBillingEmail" placeholder="billing@example.com"></div>
                         <div class="form-group"><label>請求先 ご担当者</label><input type="text" id="custBillingContact" placeholder="経理担当者名"></div>
@@ -664,6 +670,9 @@
                         </div>
                     </div>
 
+                    <details style="margin-top:8px;border:1px solid var(--border);border-radius:var(--r-md);padding:8px;">
+                        <summary style="cursor:pointer;font-weight:700;font-size:0.85rem;color:var(--text-primary);padding:4px;">📄 単価・契約リスト / 🏢 処分先（クリックで展開）</summary>
+                        <div style="margin-top:8px;">
                     <h4 class="section-title">📄 単価・契約リスト</h4>
                     <p style="font-size:0.72rem;color:var(--text-secondary);margin-bottom:8px;">顧客固有の品目別単価</p>
                     <div id="pricingListContainer"></div>
@@ -673,6 +682,8 @@
                     <p style="font-size:0.72rem;color:var(--text-secondary);margin-bottom:6px;">手配する処分先にチェック</p>
                     <div id="custContractorsList" style="display:flex; flex-wrap:wrap; gap:6px; border:1px solid var(--border); padding:8px; border-radius:var(--r-md); background:var(--bg-secondary);">
                     </div>
+                        </div>
+                    </details>
 
                     <div id="custContractsSection" style="display:none; border-top: 1px dashed var(--border); margin-top: 12px; padding-top: 8px;">
                         <h4 class="section-title">📄 3社間契約</h4>
@@ -969,10 +980,12 @@
                     ? '<span class="badge badge-success">定期契約</span>'
                     : '<span class="badge badge-primary">スポット</span>';
 
-                let wasteBadge = '<span class="badge" style="background:#48BB78; color:white;">一般</span>'; // general
-                const wc = c.parsed_form?.waste_category;
-                if (wc === 'industrial') wasteBadge = '<span class="badge" style="background:#5A67D8; color:white;">産廃</span>';
-                if (wc === 'large') wasteBadge = '<span class="badge" style="background:#ED8936; color:white;">大型</span>';
+                const cats = c.parsed_form?.waste_categories || (c.parsed_form?.waste_category ? c.parsed_form.waste_category.split(',') : ['general']);
+                const wasteBadge = cats.map(wc => {
+                    if (wc === 'industrial') return '<span class="badge" style="background:#5A67D8; color:white;">産廃</span>';
+                    if (wc === 'large') return '<span class="badge" style="background:#ED8936; color:white;">大型</span>';
+                    return '<span class="badge" style="background:#48BB78; color:white;">一般</span>';
+                }).join(' ');
 
                 const isNew = isStatusValid(c.parsed_form?.status_new_date);
                 const isQuit = isStatusValid(c.parsed_form?.status_quit_date);
@@ -1153,10 +1166,14 @@
             
             document.getElementById('custHonorific').value = fd.honorific || '御中';
             document.getElementById('custYamabunNumber').value = fd.yamabun_management_number || '';
-            document.getElementById('custWasteCategory').value = fd.waste_category || 'general';
+            // 廃棄物カテゴリ（チェックボックス）
+            document.querySelectorAll('.waste-cat-cb').forEach(cb => cb.checked = false);
+            const cats = fd.waste_categories || (fd.waste_category ? (Array.isArray(fd.waste_category) ? fd.waste_category : fd.waste_category.split(',')) : ['general']);
+            cats.forEach(c => { const cb = document.querySelector(`.waste-cat-cb[value="${c}"]`); if (cb) cb.checked = true; });
             document.getElementById('custMobile').value = fd.mobile || '';
             document.getElementById('custFax').value = fd.fax || '';
             document.getElementById('custPaymentMethod').value = fd.payment_method || '振込';
+            document.getElementById('custBillingName').value = fd.billing_name || '';
             document.getElementById('custBillingAddress').value = fd.billing_address || '';
             document.getElementById('custBillingEmail').value = fd.billing_email || '';
             document.getElementById('custBillingContact').value = fd.billing_contact || '';
@@ -1283,16 +1300,17 @@
 
         // ── 事業所カード動的生成（2-1）──
         let _branchCounter = 0;
-        function addBranchCard(data = {}) {
+        function addBranchCard(data = {}, insertPosition = -1) {
             _branchCounter++;
             const idx = _branchCounter;
             const container = document.getElementById('branchesContainer');
             const card = document.createElement('div');
             card.className = 'branch-card';
             card.dataset.branchIdx = idx;
-            card.style.cssText = 'border:1px solid var(--border);border-radius:var(--r-md);margin-bottom:10px;overflow:hidden;';
+            card.dataset.isHeadquarters = data.is_headquarters ? '1' : '';
+            card.style.cssText = 'border:1px solid var(--border);border-radius:var(--r-md);margin-bottom:10px;overflow:hidden;' + (data.is_headquarters ? 'border-color:#93C5FD;border-width:2px;' : '');
             
-            const headerLabel = data.branch_name ? utils.escapeHtml(data.branch_name) : `事業所 #${container.children.length + 1}`;
+            const headerLabel = data.is_headquarters ? '🏢 本社: ' + (data.branch_name || '本社') : (data.branch_name || '事業所');
 
             card.innerHTML = `
                 <div class="branch-header" onclick="toggleBranch(this)" style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--bg-secondary);cursor:pointer;font-weight:700;font-size:0.88rem;">
@@ -1303,9 +1321,9 @@
                     </div>
                 </div>
                 <div class="branch-body" style="padding:12px 14px;display:none;">
-                    <div class="form-group"><label>事業所名</label><input type="text" class="br-name" value="${utils.escapeHtml(data.branch_name || '')}" placeholder="店舗名・マンション名" oninput="this.closest('.branch-card').querySelector('.branch-label').textContent='📍 '+(this.value||'事業所')"></div>
+                    <div class="form-group"><label>事業所名</label><input type="text" class="br-name" value="${utils.escapeHtml(data.branch_name || '')}" placeholder="店舗名・マンション名" oninput="const c=this.closest('.branch-card');const hq=c.dataset.isHeadquarters==='1';c.querySelector('.branch-label').textContent=(hq?'🏢 本社: ':'📍 ')+(this.value||'事業所')"></div>
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
-                        <div class="form-group"><label>事業所住所 <button type="button" onclick="this.closest('.branch-card').querySelector('.br-address').value=document.getElementById('custAddress').value" style="font-size:0.7rem;padding:2px 8px;border-radius:4px;border:1px solid var(--border);background:#EBF5FF;color:var(--blue);cursor:pointer;margin-left:4px;">📋 住所と同じ</button></label><input type="text" class="br-address" value="${utils.escapeHtml(data.branch_address || '')}"></div>
+                        <div class="form-group"><label>事業所住所 <button type="button" onclick="this.closest('.branch-card').querySelector('.br-address').value=document.getElementById('custAddress').value" style="font-size:0.7rem;padding:2px 8px;border-radius:4px;border:1px solid var(--border);background:#EBF5FF;color:var(--blue);cursor:pointer;margin-left:4px;">📋 住所と同じ</button></label><textarea class="br-address" rows="2" style="resize:vertical;">${utils.escapeHtml(data.branch_address || '')}</textarea></div>
                         <div class="form-group"><label>📞 電話番号</label><input type="tel" class="br-phone" value="${utils.escapeHtml(data.branch_phone || '')}" placeholder="075-XXX-XXXX"></div>
                     </div>
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
@@ -1373,6 +1391,19 @@
                             <select class="br-unit-other"><option value="円/月" ${(data.unit_other||'円/月')==='円/月'?'selected':''}>円/月</option><option value="円/回" ${data.unit_other==='円/回'?'selected':''}>円/回</option><option value="kg" ${data.unit_other==='kg'?'selected':''}>kg</option></select>
                             <input type="text" class="br-notes-other" value="${utils.escapeHtml(data.notes_other || '')}" placeholder="一斗缶・大型等">
                         </div>
+                        <div class="general-custom-items">
+                            ${(data.general_custom_items || []).map(item => `
+                                <div class="collect-row" style="background:#F8FAFC;">
+                                    <input type="text" class="gc-item-name" value="${utils.escapeHtml(item.item_name || '')}" placeholder="品目名" style="font-size:0.75rem;">
+                                    <input type="text" class="gc-freq" value="${utils.escapeHtml(item.freq || '')}" placeholder="頻度">
+                                    <input type="text" class="gc-vehicle" value="${utils.escapeHtml(item.vehicle || '')}" placeholder="号車">
+                                    <input type="text" class="gc-unitprice" value="${utils.escapeHtml(item.unitprice || '')}" placeholder="単価">
+                                    <select class="gc-unit"><option value="円/月" ${(item.unit||'円/月')==='円/月'?'selected':''}>円/月</option><option value="円/回" ${item.unit==='円/回'?'selected':''}>円/回</option><option value="kg" ${item.unit==='kg'?'selected':''}>kg</option></select>
+                                    <div style="display:flex;gap:2px;align-items:center;"><input type="text" class="gc-notes" value="${utils.escapeHtml(item.notes || '')}" placeholder="備考" style="flex:1;"><button type="button" onclick="this.closest('.collect-row').remove()" style="background:var(--danger);color:#fff;border:none;border-radius:4px;padding:2px 6px;cursor:pointer;font-size:0.7rem;">✕</button></div>
+                                </div>
+                            `).join('')}
+                        </div>
+                        <button type="button" onclick="addGeneralCustomRow(this.closest('.branch-card').querySelector('.general-custom-items'))" style="font-size:0.7rem;padding:2px 10px;border-radius:4px;border:1px solid #d0d8f0;background:#f0f4ff;color:#1e3a5f;cursor:pointer;font-weight:700;margin-top:4px;width:100%;">＋ 一般品目を追加</button>
                     </div>
                     <div style="background:#faf0ff;padding:8px;border-radius:8px;margin:8px 0;border:1px solid #d8b4fe;">
                         <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
@@ -1406,7 +1437,11 @@
                     </div>
                 </div>
             `;
-            container.appendChild(card);
+            if (insertPosition === 0 && container.firstChild) {
+                container.insertBefore(card, container.firstChild);
+            } else {
+                container.appendChild(card);
+            }
             updateBranchCount();
         }
 
@@ -1466,6 +1501,21 @@
             container.appendChild(row);
         }
 
+        function addGeneralCustomRow(container, item = {}) {
+            const row = document.createElement('div');
+            row.className = 'collect-row';
+            row.style.background = '#F8FAFC';
+            row.innerHTML = `
+                <input type="text" class="gc-item-name" value="${utils.escapeHtml(item.item_name || '')}" placeholder="品目名" style="font-size:0.75rem;">
+                <input type="text" class="gc-freq" value="${utils.escapeHtml(item.freq || '')}" placeholder="頻度">
+                <input type="text" class="gc-vehicle" value="${utils.escapeHtml(item.vehicle || '')}" placeholder="号車">
+                <input type="text" class="gc-unitprice" value="${utils.escapeHtml(item.unitprice || '')}" placeholder="単価">
+                <select class="gc-unit"><option value="円/月" ${(item.unit||'円/月')==='円/月'?'selected':''}>円/月</option><option value="円/回" ${item.unit==='円/回'?'selected':''}>円/回</option><option value="kg" ${item.unit==='kg'?'selected':''}>kg</option></select>
+                <div style="display:flex;gap:2px;align-items:center;"><input type="text" class="gc-notes" value="${utils.escapeHtml(item.notes || '')}" placeholder="備考" style="flex:1;"><button type="button" onclick="this.closest('.collect-row').remove()" style="background:var(--danger);color:#fff;border:none;border-radius:4px;padding:2px 6px;cursor:pointer;font-size:0.7rem;">✕</button></div>
+            `;
+            container.appendChild(row);
+        }
+
         // ── 事業所データ収集 ──
         function collectBranches() {
             const branches = [];
@@ -1483,6 +1533,21 @@
                             unitprice: row.querySelector('.ind-unitprice')?.value?.trim() || '',
                             unit: row.querySelector('.ind-unit')?.value || 'kg',
                             notes: row.querySelector('.ind-notes')?.value?.trim() || '',
+                        });
+                    }
+                });
+                // 一般廃棄物カスタム品目の収集
+                const generalCustomItems = [];
+                card.querySelectorAll('.general-custom-items .collect-row').forEach(row => {
+                    const itemName = row.querySelector('.gc-item-name')?.value?.trim() || '';
+                    if (itemName) {
+                        generalCustomItems.push({
+                            item_name: itemName,
+                            freq: row.querySelector('.gc-freq')?.value?.trim() || '',
+                            vehicle: row.querySelector('.gc-vehicle')?.value?.trim() || '',
+                            unitprice: row.querySelector('.gc-unitprice')?.value?.trim() || '',
+                            unit: row.querySelector('.gc-unit')?.value || '円/月',
+                            notes: row.querySelector('.gc-notes')?.value?.trim() || '',
                         });
                     }
                 });
@@ -1519,6 +1584,7 @@
                     collection_plastic: v('.br-freq-plastic'),
                     collection_cardboard: v('.br-freq-cardboard'),
                     collection_other: v('.br-freq-other'),
+                    general_custom_items: generalCustomItems,
                     industrial_items: industrialItems,
                     household_count: v('.br-household-count') ? parseInt(v('.br-household-count')) : null,
                     unit_price_per_household: v('.br-unit-price-household') ? parseInt(v('.br-unit-price-household')) : null,
@@ -1526,6 +1592,7 @@
                     regular_holiday: v('.br-holiday'),
                     collection_start_date: card.querySelector('.br-start')?.value || '',
                     collection_end_date: card.querySelector('.br-end')?.value || '',
+                    is_headquarters: card.dataset.isHeadquarters === '1',
                 };
                 if (Object.values(b).some(v => v && (typeof v !== 'object' || (Array.isArray(v) ? v.length > 0 : true)))) {
                     console.log('[collectBranches] Branch:', b.branch_name, 'general:', b.collection_general, 'canbottle:', b.collection_canbottle, 'industrial_items:', b.industrial_items.length);
@@ -1741,13 +1808,16 @@
                 <h3 style="font-size:1.4rem;font-weight:700;margin-bottom:8px;">${utils.escapeHtml(c.name)}</h3>
                 <div style="font-size:0.9rem; color:var(--text-secondary); margin-bottom:16px;">
                     ${fd.yamabun_management_number ? `🎫 山文管理番号: <strong style="color:var(--primary);">${utils.escapeHtml(fd.yamabun_management_number)}</strong><br>` : ''}
-                    ${fd.waste_category === 'industrial' ? '♻️ 産業廃棄物' : fd.waste_category === 'large' ? '🛋 大型ゴミ等' : '🗑 一般ゴミ'} | 
+                    ${(() => {
+                        const cats = fd.waste_categories || (fd.waste_category ? fd.waste_category.split(',') : ['general']);
+                        return cats.map(c => c === 'industrial' ? '♻️ 産業廃棄物' : c === 'large' ? '🛋 大型ゴミ等' : '🗑 一般ゴミ').join(' | ');
+                    })()} | 
                     ${c.contract_type === 'subscription' ? '🔄 定期契約' : '📍 スポット契約'}
                 </div>
                 
                 <div style="background:var(--bg-secondary); padding:16px; border-radius:12px; margin-bottom:16px; font-size:0.95rem; line-height:1.6;">
                     📍 <strong style="margin-left:4px;">基本情報</strong><br>
-                    <span style="display:inline-block;width:60px;color:var(--text-tertiary);font-size:0.85rem;">住所:</span> ${utils.escapeHtml(c.address || '-')} 
+                    <span style="display:inline-block;width:60px;color:var(--text-tertiary);font-size:0.85rem;">住所:</span> ${(c.address || '-').replace(/\n/g, '<br>')} 
                     ${c.address ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(c.address)}" target="_blank" style="font-size:0.8rem;text-decoration:none;margin-left:8px;background:#E2E8F0;padding:2px 8px;border-radius:4px;color:var(--text-primary);">🗺 マップ</a>` : ''}<br>
                     <span style="display:inline-block;width:60px;color:var(--text-tertiary);font-size:0.85rem;">TEL:</span> ${utils.escapeHtml(c.phone || '-')} <span style="margin-left:8px;color:var(--text-tertiary);font-size:0.85rem;">FAX:</span> ${utils.escapeHtml(fd.fax || '-')} <span style="margin-left:8px;color:var(--text-tertiary);font-size:0.85rem;">携帯:</span> ${utils.escapeHtml(fd.mobile || '-')}<br>
                     <span style="display:inline-block;width:60px;color:var(--text-tertiary);font-size:0.85rem;">担当:</span> ${utils.escapeHtml(c.contact_person || '-')}<br>
@@ -1793,6 +1863,10 @@
                         if (b.collection_other||b.vehicle_other||b.unitprice_other||b.price_other) generalRows.push({icon:'🔸', name:'その他', freq:b.collection_other||'', vehicle:b.vehicle_other||'', price:b.unitprice_other||b.price_other, unit:b.unit_other||'円/月', notes:b.notes_other, bg:'#FEF2F2', color:'#991B1B'});
                         // 旧形式: collection_industrial → generalRowsにフォールバック
                         if ((b.collection_industrial||b.vehicle_industrial||b.unitprice_industrial||b.price_industrial) && !(b.industrial_items?.length > 0)) generalRows.push({icon:'🟣', name:'産廃', freq:b.collection_industrial||'', vehicle:b.vehicle_industrial||'', price:b.unitprice_industrial||b.price_industrial, unit:b.unit_industrial||'円/月', notes:b.notes_industrial, bg:'#FDF4FF', color:'#7e22ce'});
+                        // カスタム一般廃棄物品目
+                        (b.general_custom_items || []).forEach(ci => {
+                            if (ci.item_name) generalRows.push({icon:'📌', name:ci.item_name, freq:ci.freq||'', vehicle:ci.vehicle||'', price:ci.unitprice, unit:ci.unit||'円/月', notes:ci.notes, bg:'#F8FAFC', color:'#334155'});
+                        });
                         
                         const generalTableHtml = generalRows.length > 0 ? `
                             <div style="margin-top:6px;font-size:0.75rem;font-weight:700;color:#1e3a5f;">📋 一般廃棄物</div>
@@ -1971,7 +2045,8 @@
             const formData = {
                 honorific: document.getElementById('custHonorific').value,
                 yamabun_management_number: document.getElementById('custYamabunNumber').value.trim(),
-                waste_category: document.getElementById('custWasteCategory').value,
+                waste_categories: Array.from(document.querySelectorAll('.waste-cat-cb:checked')).map(cb => cb.value),
+                waste_category: Array.from(document.querySelectorAll('.waste-cat-cb:checked')).map(cb => cb.value).join(','),  // 後方互換
                 mobile: document.getElementById('custMobile').value.trim(),
                 fax: document.getElementById('custFax').value.trim(),
                 status_new_date: currentStatusNewDate,
@@ -1980,6 +2055,7 @@
                 branches: collectBranches(),
                 // 請求・支払
                 payment_method: document.getElementById('custPaymentMethod').value,
+                billing_name: document.getElementById('custBillingName').value.trim(),
                 billing_address: document.getElementById('custBillingAddress').value.trim(),
                 billing_email: document.getElementById('custBillingEmail').value.trim(),
                 billing_contact: document.getElementById('custBillingContact').value.trim(),
