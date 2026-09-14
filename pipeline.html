@@ -2291,6 +2291,23 @@
                     <button class="btn btn-warning" onclick="collectCash('${jobId}')">💴 現金を回収</button>
                 </div>
 
+                <!-- 見積ファイル添付 -->
+                <div class="drawer-section" style="padding:12px; background:#FFFBEB; border:1px solid #FDE68A; border-radius:12px; margin-bottom:16px;">
+                    <div style="font-size:0.8rem; font-weight:700; margin-bottom:8px; color:#92400E;">📎 見積書ファイル（事務所作成分）</div>
+                    ${fd.estimate_filename ? `
+                        <div style="display:flex; align-items:center; gap:8px; margin-bottom:8px;">
+                            <span style="font-size:0.8rem; color:#78350F;">📄 ${fd.estimate_filename}</span>
+                            ${fd.estimate_file ? `<a href="${fd.estimate_file}" download="${fd.estimate_filename}" style="font-size:0.7rem; padding:2px 8px; background:#F59E0B; color:#fff; border-radius:4px; text-decoration:none;">ダウンロード</a>` : ''}
+                            <button onclick="removeEstimateFile('${jobId}')" style="font-size:0.65rem; padding:2px 6px; background:#FEE2E2; color:#DC2626; border:1px solid #FECACA; border-radius:4px; cursor:pointer; border:none;">✕ 削除</button>
+                        </div>
+                    ` : `<div style="font-size:0.75rem; color:#92400E; margin-bottom:8px;">未添付</div>`}
+                    <label style="display:inline-flex; align-items:center; gap:6px; padding:6px 14px; background:#F59E0B; color:#fff; border-radius:8px; cursor:pointer; font-size:0.8rem; font-weight:700;">
+                        📎 ${fd.estimate_filename ? '差し替え' : 'アップロード'}
+                        <input type="file" accept=".pdf,.jpg,.jpeg,.png,.heic,.webp" style="display:none;" onchange="uploadEstimateToJob(event, '${jobId}')">
+                    </label>
+                    <button class="btn" style="font-size:0.8rem; padding:6px 14px; background:#7C3AED; color:#fff; margin-left:6px;" onclick="uploadAndParseEstimateToJob('${jobId}')">🤖 AI解析して情報反映</button>
+                </div>
+
                 <!-- 承認ステータス -->
                 <div class="drawer-section" style="padding:12px; background:var(--bg-secondary); border-radius:12px; margin-bottom:20px;">
                     <div style="font-size:0.8rem; font-weight:700; margin-bottom:8px; color:var(--text-secondary);">✅ 承認ステータス（確認済）</div>
@@ -2768,6 +2785,149 @@
             btn.classList.add('active');
             document.getElementById('photosBeforeGrid').style.display = tab === 'before' ? 'flex' : 'none';
             document.getElementById('photosAfterGrid').style.display = tab === 'after' ? 'flex' : 'none';
+        }
+
+        // ── 既存案件への見積ファイル添付（解析なし） ──────────────
+        async function uploadEstimateToJob(event, jobId) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            showToast('📎 見積ファイルをアップロード中...');
+
+            try {
+                // ファイルをBase64に変換
+                const reader = new FileReader();
+                const b64 = await new Promise((resolve, reject) => {
+                    reader.onload = () => resolve(reader.result);
+                    reader.onerror = reject;
+                    reader.readAsDataURL(file);
+                });
+
+                // 現在のform_dataを取得
+                const job = await RyubeeAPI.fetchJob(jobId);
+                let fd = {};
+                try { fd = JSON.parse(job.form_data || '{}'); } catch(e) {}
+
+                // 見積ファイル情報を追加
+                fd.estimate_file = b64;
+                fd.estimate_filename = file.name;
+
+                await RyubeeAPI.updateJob(jobId, { form_data: JSON.stringify(fd) });
+                showToast('✅ 見積ファイルを添付しました');
+                openJobDetail(jobId); // リロード
+            } catch (e) {
+                console.error(e);
+                alert('アップロードに失敗しました: ' + e.message);
+            }
+        }
+
+        // ── 既存案件への見積ファイル添付 + AI解析で情報反映 ────────
+        async function uploadAndParseEstimateToJob(jobId) {
+            // ファイル選択
+            const input = document.createElement('input');
+            input.type = 'file';
+            input.accept = '.pdf,.jpg,.jpeg,.png,.heic,.webp';
+            input.onchange = async (event) => {
+                const file = event.target.files[0];
+                if (!file) return;
+
+                // ローディング表示
+                const overlay = document.createElement('div');
+                overlay.id = 'estimateLoadingOverlay';
+                overlay.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:10000;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#fff;font-size:1.2rem;';
+                overlay.innerHTML = `
+                    <div style="background:rgba(255,255,255,0.15);backdrop-filter:blur(10px);padding:40px;border-radius:20px;text-align:center;">
+                        <div style="font-size:3rem;margin-bottom:16px;">🤖</div>
+                        <div style="font-weight:700;margin-bottom:8px;">見積書を解析中...</div>
+                        <div style="font-size:0.85rem;color:rgba(255,255,255,0.7);">${file.name}</div>
+                        <div style="margin-top:16px;width:200px;height:4px;background:rgba(255,255,255,0.2);border-radius:2px;overflow:hidden;">
+                            <div style="width:100%;height:100%;background:#7C3AED;animation:estimateProgress 3s ease-in-out infinite;"></div>
+                        </div>
+                    </div>
+                    <style>@keyframes estimateProgress{0%{transform:translateX(-100%)}50%{transform:translateX(0)}100%{transform:translateX(100%)}}</style>
+                `;
+                document.body.appendChild(overlay);
+
+                try {
+                    // AI解析
+                    const result = await RyubeeAPI.parseEstimateFile(file);
+                    document.getElementById('estimateLoadingOverlay')?.remove();
+
+                    // 現在のjobを取得
+                    const job = await RyubeeAPI.fetchJob(jobId);
+                    let fd = {};
+                    try { fd = JSON.parse(job.form_data || '{}'); } catch(e) {}
+
+                    // 見積ファイルを保存
+                    if (result._estimate_file) {
+                        fd.estimate_file = result._estimate_file;
+                        fd.estimate_filename = result._estimate_filename || file.name;
+                    }
+
+                    // 抽出した連絡先情報をform_dataにマージ
+                    if (result.contact_name && !fd.contact_name) fd.contact_name = result.contact_name;
+                    if (result.phone && !fd.phone) fd.phone = result.phone;
+
+                    // 備考に明細を追記
+                    let noteLines = [];
+                    if (result.items && result.items.length > 0) {
+                        noteLines.push('【見積明細（AI自動抽出）】');
+                        result.items.forEach((item, i) => {
+                            const line = `${i+1}. ${item.name || '品目'}` +
+                                (item.quantity ? ` × ${item.quantity}${item.unit || ''}` : '') +
+                                (item.unit_price ? ` @${Number(item.unit_price).toLocaleString()}円` : '') +
+                                (item.amount ? ` = ${Number(item.amount).toLocaleString()}円` : '');
+                            noteLines.push(line);
+                        });
+                        if (result.total_with_tax) noteLines.push(`税込合計: ${Number(result.total_with_tax).toLocaleString()}円`);
+                    }
+                    if (result.warnings?.length > 0) {
+                        noteLines.push('⚠️ ' + result.warnings.join(' / '));
+                    }
+
+                    // 案件を更新
+                    const updateBody = {
+                        form_data: JSON.stringify(fd),
+                    };
+                    // 顧客名・住所が空の場合のみ上書き
+                    if (!job.customer_name && result.customer_name) updateBody.customer_name = result.customer_name;
+                    if (!job.address && result.address) updateBody.address = result.address;
+                    if (result.total_price && !job.estimated_price) updateBody.estimated_price = result.total_price;
+                    if (result.total_price && !job.price_total) updateBody.price_total = result.total_price;
+                    if (result.job_type && job.job_type === 'other') updateBody.job_type = result.job_type;
+                    if (noteLines.length > 0) {
+                        updateBody.notes = (job.notes || '') + (job.notes ? '\n\n' : '') + noteLines.join('\n');
+                    }
+
+                    await RyubeeAPI.updateJob(jobId, updateBody);
+                    showToast('✅ 見積書を解析し情報を反映しました');
+                    openJobDetail(jobId); // リロード
+                    fetchPipeline(); // カンバンも更新
+
+                } catch (e) {
+                    document.getElementById('estimateLoadingOverlay')?.remove();
+                    console.error(e);
+                    alert('見積書の解析に失敗しました: ' + e.message);
+                }
+            };
+            input.click();
+        }
+
+        // ── 見積ファイル削除 ──────────────────────────────────────
+        async function removeEstimateFile(jobId) {
+            if (!confirm('添付された見積ファイルを削除しますか？')) return;
+            try {
+                const job = await RyubeeAPI.fetchJob(jobId);
+                let fd = {};
+                try { fd = JSON.parse(job.form_data || '{}'); } catch(e) {}
+                delete fd.estimate_file;
+                delete fd.estimate_filename;
+                await RyubeeAPI.updateJob(jobId, { form_data: JSON.stringify(fd) });
+                showToast('🗑 見積ファイルを削除しました');
+                openJobDetail(jobId);
+            } catch (e) {
+                alert('削除に失敗しました: ' + e.message);
+            }
         }
 
         // カテゴリ別写真アップロード
