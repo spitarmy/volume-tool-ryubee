@@ -19,10 +19,23 @@
             font-size: 14px;
         }
         @media print {
+            @page { margin: 5mm 8mm; }
             body { background: #fff; }
             .no-print { display: none !important; }
-            .a4-sheet { margin: 0 !important; box-shadow: none !important; }
-            .page-break { page-break-before: always; }
+            .a4-sheet { margin: 0 !important; box-shadow: none !important; padding: 8mm 12mm !important; min-height: auto !important; }
+            h1 { font-size: 14px !important; margin-bottom: 16px !important; }
+            h2 { font-size: 11px !important; margin-top: 12px !important; margin-bottom: 4px !important; }
+            body, .clause-content, .permit-info, .contract-parties, .party-line, .signature-field, td, th { font-size: 9px !important; line-height: 1.35 !important; }
+            .clause-content { padding-left: 12px !important; margin-bottom: 8px !important; }
+            .permit-info { margin-left: 12px !important; margin-bottom: 8px !important; }
+            .permit-row { margin-bottom: 1px !important; }
+            .contract-parties { margin-bottom: 12px !important; }
+            .party-line { margin-bottom: 3px !important; }
+            th, td { padding: 3px 6px !important; }
+            .stamp-box { width: 40px !important; height: 40px !important; line-height: 40px !important; font-size: 7px !important; top: 8mm !important; left: 12mm !important; }
+            .signature-section { margin-top: 20px !important; }
+            .signature-field { margin-bottom: 4px !important; padding-left: 15px !important; }
+            .signature-date { margin-bottom: 8px !important; }
             .editable-field { border: none !important; background: transparent !important; }
         }
         .editable-field {
@@ -85,7 +98,7 @@
         table { width: 100%; border-collapse: collapse; margin-top: 10px; margin-bottom: 20px; }
         th, td { border: 1px solid #000; padding: 8px; text-align: center; }
         th { background-color: #f9f9f9; }
-        .signature-section { margin-top: 60px; display: flex; justify-content: space-between; }
+        .signature-section { margin-top: 30px; display: flex; justify-content: space-between; }
         .signature-date { margin-bottom: 20px; }
         .signature-block { width: 45%; }
         .signature-label { margin-bottom: 10px; }
@@ -177,9 +190,7 @@
                 （処分業者未設定）
             </div>
         </div>
-    </div>
 
-    <div class="a4-sheet">
         <h2>第7条（契約期間）</h2>
         <div class="clause-content">
             この契約は、有効期限を令和 <span id="startYear"></span> 年 <span id="startMonth"></span> 月 <span id="startDay"></span> 日から令和 <span id="endYear"></span> 年 <span id="endMonth"></span> 月 <span id="endDay"></span> 日までの１年間とし、期間満了の１ヶ月前までに甲、乙の一方から相手方に対する書面による解約の申し入れがないかぎり、同一条件で更新されたものとする。その後も同様とする。<br>
