@@ -248,8 +248,12 @@
             <tr style="height: 48px;">
                 <th class="text-left" colspan="1" style="vertical-align:middle;">大型ごみ 請求:</th>
                 <td colspan="3" class="text-left" style="vertical-align:middle;font-weight:bold;">
-                    <span id="dsPrice" style="margin-right:20px;">円</span>
-                    <span>・集金 ・事前振込済 ・請求書</span>
+                    <span id="dsPrice" style="margin-right:20px; font-size:1.1rem;"></span>
+                    <span id="dsPaymentOptions">
+                        <span id="dsOptCash">・集金</span>
+                        <span id="dsOptPrepaid">・事前振込済</span>
+                        <span id="dsOptInvoice">・請求書</span>
+                    </span>
                 </td>
             </tr>
         </table>
@@ -366,8 +370,48 @@
                     document.getElementById('dsWorkTypeLoadingCheck').style.display = 'block';
                 }
 
-                const displayPrice = job.final_price || job.estimated_price || job.price_total || 0;
-                document.getElementById('dsPrice').textContent = displayPrice ? displayPrice.toLocaleString() : '          ';
+                // 支払方法の取得
+                let paymentMethod = fd.payment_method || '';
+                if (!paymentMethod && customer && customer.form_data) {
+                    try {
+                        const custFd = JSON.parse(customer.form_data);
+                        paymentMethod = custFd.payment_method || '';
+                    } catch (e) { }
+                }
+
+                // 金額の算出（税込10%）
+                const rawPrice = job.final_price || job.estimated_price || job.price_total || 0;
+                const taxAmt = Math.round(rawPrice * 0.1);
+                const taxIncluded = rawPrice + taxAmt;
+
+                const dsPriceEl = document.getElementById('dsPrice');
+                const isCash = (paymentMethod === '集金') || (!paymentMethod && job.notes && job.notes.includes('集金'));
+
+                if (isCash) {
+                    // 集金の場合のみ税込金額を表示
+                    dsPriceEl.textContent = taxIncluded ? `${taxIncluded.toLocaleString()} 円 (税込)` : '';
+                    dsPriceEl.style.color = '#d32f2f'; // 現場で集金とすぐわかるよう赤字強調
+                    
+                    const optCash = document.getElementById('dsOptCash');
+                    if (optCash) {
+                        optCash.innerHTML = '<span style="border:2px solid #d32f2f; border-radius:4px; padding:1px 6px; color:#d32f2f;">✔ 集金</span>';
+                    }
+                } else {
+                    // 振込等の場合は金額を消す（表示しない）
+                    dsPriceEl.textContent = '';
+
+                    if (paymentMethod === '振込' || paymentMethod === '事前振込済') {
+                        const optPrepaid = document.getElementById('dsOptPrepaid');
+                        if (optPrepaid) {
+                            optPrepaid.innerHTML = '<span style="border:2px solid #1976d2; border-radius:4px; padding:1px 6px; color:#1976d2;">✔ 事前振込済</span>';
+                        }
+                    } else if (paymentMethod === '自動引落し' || paymentMethod === '請求書') {
+                        const optInv = document.getElementById('dsOptInvoice');
+                        if (optInv) {
+                            optInv.innerHTML = `<span style="border:2px solid #333; border-radius:4px; padding:1px 6px;">✔ ${paymentMethod}</span>`;
+                        }
+                    }
+                }
 
                 if (customer) {
                     let codeText = `C-${customer.id.substring(0, 4).toUpperCase()} / `;
