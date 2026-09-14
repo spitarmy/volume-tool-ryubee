@@ -541,6 +541,20 @@ const RyubeeAPI = {
     return res.json();
   },
 
+  // ── 見積書アップロード解析 ────────────────────────────────────
+  async parseEstimateFile(file) {
+    const formData = new FormData();
+    formData.append("file", file);
+    const token = localStorage.getItem("ryubee_token");
+    const res = await fetch(`${API_BASE}/v1/jobs/parse-estimate`, {
+      method: "POST",
+      headers: { "Authorization": `Bearer ${token}` },
+      body: formData,
+    });
+    if (!res.ok) throw new Error(await res.text());
+    return res.json();
+  },
+
   // ── Bank (銀行入金取込) ─────────────────────────────────────
 
   async uploadBankCSV(file, bankType = "kyoto") {

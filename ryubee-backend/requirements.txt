@@ -17,3 +17,4 @@ reportlab
 python-dateutil
 pykakasi
 Pillow
+PyMuPDF

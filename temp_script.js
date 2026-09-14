@@ -1,0 +1,2091 @@
+
+        if (!RyubeeAPI.requireAuth()) throw new Error("Not authenticated");
+
+        const STAGES = [
+            { key: 'lost', label: '不成約', emoji: '❌' },
+            { key: 'inquiry', label: '問合せ', emoji: '📩' },
+            { key: 'negotiation', label: '商談', emoji: '🤝' },
+            { key: 'estimate', label: '見積', emoji: '📝' },
+            { key: 'contract', label: '契約', emoji: '📋' },
+            { key: 'scheduled', label: '作業予定', emoji: '📅' },
+            { key: 'waiting_manifest', label: 'マニフェスト待ち', emoji: '📜' },
+            { key: 'completed', label: '完了', emoji: '✅' },
+        ];
+
+        const PROSPECT_STATUSES = [
+            { key: 'discovered', label: '発見', emoji: '🔍' },
+            { key: 'gathering_info', label: '情報収集', emoji: '📋' },
+            { key: 'owner_identified', label: 'オーナー判明', emoji: '👤' },
+        ];
+
+        const TYPE_LABELS = {
+            general_waste: '一般ゴミ',
+            industrial_waste: '産業廃棄物',
+            large_waste: '大型ゴミ等'
+        };
+
+        let pipelineData = {};
+        let allCustomers = [];
+        let currentStaffFilter = 'all';
+
+        function renderStaffTabs() {
+            const allNames = new Set();
+            for (const stage of Object.values(pipelineData)) {
+                for (const job of stage) {
+                    if (job.created_by_name && job.created_by_name.trim() !== 'Unknown') allNames.add(job.created_by_name.trim());
+                    if (job.assigned_to_name && job.assigned_to_name.trim() !== 'Unknown') allNames.add(job.assigned_to_name.trim());
+                }
+            }
+
+            const staffList = Array.from(allNames).sort();
+            const tabsDiv = document.getElementById('staffTabs');
+
+            let html = `<button class="btn btn-xs ${currentStaffFilter === 'all' ? 'btn-primary' : 'btn-secondary'}" style="flex-shrink:0;" onclick="filterByStaff('all')">全て</button>`;
+
+            staffList.forEach(name => {
+                const isActive = currentStaffFilter === name;
+                html += `<button class="btn btn-xs ${isActive ? 'btn-primary' : 'btn-secondary'}" style="flex-shrink:0;" onclick="filterByStaff('${utils.escapeHtml(name).replace(/'/g, "\\'")}')">${utils.escapeHtml(name)}</button>`;
+            });
+
+            tabsDiv.innerHTML = html;
+        }
+
+        function filterByStaff(name) {
+            currentStaffFilter = name;
+            renderStaffTabs();
+            renderPipeline();
+            filterPipeline();
+        }
+
+        document.addEventListener('DOMContentLoaded', loadPipeline);
+
+        async function loadPipeline() {
+            try {
+                // 定期案件の自動生成（期限が来ているものを scheduled に移行）
+                try {
+                    await RyubeeAPI.generateRecurringJobs();
+                } catch (e) {
+                    console.warn("自動定期案件生成エラー:", e);
+                }
+
+                const [pData, cData] = await Promise.all([
+                    RyubeeAPI.fetchPipeline(),
+                    RyubeeAPI.fetchCustomers()
+                ]);
+                pipelineData = pData;
+                allCustomers = cData;
+                renderStaffTabs();
+                renderPipeline();
+            } catch (e) {
+                document.getElementById('pipelineContainer').innerHTML =
+                    `<div class="alert alert-danger" style="width:100%">${e.message}</div>`;
+            }
+        }
+
+        function renderPipeline() {
+            const container = document.getElementById('pipelineContainer');
+            container.innerHTML = '';
+
+            STAGES.forEach(stage => {
+                let jobs = pipelineData[stage.key] || [];
+
+                if (currentStaffFilter !== 'all') {
+                    jobs = jobs.filter(j =>
+                        (j.created_by_name || '').trim() === currentStaffFilter ||
+                        (j.assigned_to_name || '').trim() === currentStaffFilter
+                    );
+                }
+
+                const col = document.createElement('div');
+                col.className = 'pipeline-column';
+                col.dataset.stage = stage.key;
+
+                col.innerHTML = `
+                    <div class="col-header">
+                        <span class="col-title">${stage.emoji} ${stage.label}</span>
+                        <span class="col-count">${jobs.length}</span>
+                    </div>
+                    <div class="drop-zone" data-stage="${stage.key}">
+                        ${jobs.map(j => renderCard(j, stage.key)).join('')}
+                    </div>
+                `;
+                container.appendChild(col);
+            });
+
+            // ドラッグ＆ドロップのセットアップ
+            setupDragDrop();
+            filterBoardVisibility();
+        }
+
+        function filterBoardVisibility() {
+            const hideDone = document.getElementById('toggleHideDone')?.checked;
+            document.querySelectorAll('.pipeline-column').forEach(col => {
+                const stage = col.dataset.stage;
+                if (hideDone && (stage === 'completed' || stage === 'lost')) {
+                    col.style.display = 'none';
+                } else {
+                    col.style.display = '';
+                }
+            });
+        }
+
+        function renderCard(job, currentStage) {
+            const typeClass = job.job_type || 'other';
+            const typeLabel = TYPE_LABELS[job.job_type] || 'その他';
+            const displayPrice = job.final_price || job.estimated_price || job.price_total || 0;
+            const price = displayPrice ? `¥${displayPrice.toLocaleString()}` : '–';
+            const stageIdx = STAGES.findIndex(s => s.key === currentStage);
+            const nextStage = stageIdx < STAGES.length - 1 ? STAGES[stageIdx + 1] : null;
+            const prevStage = stageIdx > 0 ? STAGES[stageIdx - 1] : null;
+
+            const createdText = job.created_at ? new Date(job.created_at).toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+            const updatedText = job.updated_at ? new Date(job.updated_at).toLocaleDateString('ja-JP', { month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
+
+            const cust = allCustomers.find(c => c.id === job.customer_id) || {};
+            let custFd = {};
+            try { custFd = JSON.parse(cust.form_data || "{}"); } catch (e) { }
+            const yamaNum = custFd.yamabun_management_number || '';
+
+            const photoCount = job.photo_count || (Array.isArray(job.photos) ? job.photos.length : 0);
+
+            // 潜在顧客カード — 専用レンダリング
+            if (currentStage === 'prospect') {
+                let jobFd = {};
+                try { jobFd = JSON.parse(job.form_data || "{}"); } catch (e) { }
+                const prospectStatus = jobFd.prospect_status || 'discovered';
+                const psIdx = PROSPECT_STATUSES.findIndex(s => s.key === prospectStatus);
+                const psLabel = PROSPECT_STATUSES[psIdx]?.label || '発見';
+                const psEmoji = PROSPECT_STATUSES[psIdx]?.emoji || '🔍';
+
+                let progressDots = '';
+                PROSPECT_STATUSES.forEach((s, i) => {
+                    progressDots += `<div class="dot ${i <= psIdx ? 'filled' : ''}"></div>`;
+                });
+
+                return `
+                    <div class="pipeline-card" draggable="true" data-job-id="${job.job_id}" data-stage="${currentStage}" onclick="openProspectDetail('${job.job_id}')" style="border-left:3px solid #7C3AED;">
+                        <div class="pc-customer">
+                            ${utils.escapeHtml(job.customer_name || '未設定')}
+                        </div>
+                        <div class="pc-name">
+                            📍 ${utils.escapeHtml(job.job_name || '')}
+                            ${job.comment_count ? `<span class="pc-comments-badge">💬 ${job.comment_count}</span>` : ''}
+                        </div>
+                        ${job.address ? `<div style="font-size:0.72rem;color:var(--text-tertiary);margin-bottom:4px;">📍 ${utils.escapeHtml(job.address)}</div>` : ''}
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:4px;">
+                            <span class="prospect-badge">${psEmoji} ${psLabel}</span>
+                            <span style="font-size:0.68rem;color:var(--text-tertiary);">${psIdx + 1}/${PROSPECT_STATUSES.length}</span>
+                        </div>
+                        <div class="prospect-progress">${progressDots}</div>
+                        ${job.assigned_to_name ? `<div class="pc-assignee">担当: ${utils.escapeHtml(job.assigned_to_name)}</div>` : ''}
+                        <div style="display:flex; justify-content:flex-end; margin-top:8px;">
+                            ${nextStage ? `<button class="stage-btn" onclick="event.stopPropagation();moveJob('${job.job_id}', '${nextStage.key}')">→ ${nextStage.label}</button>` : ''}
+                        </div>
+                    </div>
+                `;
+            }
+
+            // 通常カード
+            return `
+                <div class="pipeline-card" draggable="true" data-job-id="${job.job_id}" data-stage="${currentStage}" onclick="openJobDetail('${job.job_id}')">
+                    <div class="pc-customer">
+                        ${utils.escapeHtml(job.customer_name || '未設定')}
+                    </div>
+                    <div class="pc-name">
+                        🏠 ${utils.escapeHtml(job.job_name || '案件')}
+                        ${job.comment_count ? `<span class="pc-comments-badge">💬 ${job.comment_count}</span>` : ''}
+                        ${photoCount > 0 ? `<span class="pc-comments-badge">📷 ${photoCount}</span>` : ''}
+                    </div>
+                    ${yamaNum ? `<div style="font-size:0.72rem; font-weight:600; color:var(--primary); margin-bottom:4px;">🎫 ${utils.escapeHtml(yamaNum)}</div>` : ''}
+                    <div class="pc-dates">
+                        <span>受付: ${createdText}</span>
+                        <span>更新: ${updatedText}</span>
+                    </div>
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:4px;">
+                        <span style="font-weight:700; color:var(--blue-dark); font-size:0.95rem;">${price}<span style="font-size:0.65rem; font-weight:normal; margin-left:4px;">(税抜)</span></span>
+                        <span style="font-size:0.7rem;font-weight:600;padding:2px 8px;border-radius:10px;" class="pc-type ${typeClass}">${typeLabel}</span>
+                    </div>
+                    ${(job.estimated_price && job.final_price && job.estimated_price !== job.final_price) ? `
+                        <div class="pc-deal-amounts">
+                            <span class="estimated">¥${job.estimated_price.toLocaleString()}</span>
+                            <span>→</span>
+                            <span class="final">¥${job.final_price.toLocaleString()}</span>
+                            ${job.discount_amount ? `<span class="diff-tag diff-discount">-¥${job.discount_amount.toLocaleString()}</span>` : ''}
+                            ${job.surcharge_amount ? `<span class="diff-tag diff-surcharge">+¥${job.surcharge_amount.toLocaleString()}</span>` : ''}
+                        </div>
+                    ` : ''}
+                    ${job.assigned_to_name ? `<div class="pc-assignee">担当: ${utils.escapeHtml(job.assigned_to_name)}</div>` : ''}
+                    <div style="display:flex; justify-content:space-between; margin-top:8px;">
+                        ${prevStage ? `<button class="stage-btn" onclick="event.stopPropagation();moveJob('${job.job_id}', '${prevStage.key}')">← ${prevStage.label}</button>` : '<div></div>'}
+                        ${nextStage ? `<button class="stage-btn" onclick="event.stopPropagation();moveJob('${job.job_id}', '${nextStage.key}')">${nextStage.label} →</button>` : '<div></div>'}
+                    </div>
+                </div>
+            `;
+        }
+
+        function setupDragDrop() {
+            document.querySelectorAll('.pipeline-card').forEach(card => {
+                card.addEventListener('dragstart', e => {
+                    e.dataTransfer.setData('text/plain', card.dataset.jobId);
+                    card.classList.add('dragging');
+                });
+                card.addEventListener('dragend', () => card.classList.remove('dragging'));
+            });
+
+            document.querySelectorAll('.drop-zone').forEach(zone => {
+                zone.addEventListener('dragover', e => {
+                    e.preventDefault();
+                    zone.classList.add('over');
+                });
+                zone.addEventListener('dragleave', () => zone.classList.remove('over'));
+                zone.addEventListener('drop', async e => {
+                    e.preventDefault();
+                    zone.classList.remove('over');
+                    const jobId = e.dataTransfer.getData('text/plain');
+                    const newStage = zone.dataset.stage;
+                    await moveJob(jobId, newStage);
+                });
+            });
+        }
+
+        function filterPipeline() {
+            const q = document.getElementById('plSearch').value.toLowerCase();
+            document.querySelectorAll('.pipeline-card').forEach(card => {
+                const text = card.textContent.toLowerCase();
+                if (text.includes(q)) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
+        }
+
+        async function moveJob(jobId, newStage) {
+            try {
+                if (newStage === 'completed') {
+                    if (confirm('この案件を完了とします。\n定期回収の契約へ移行し、パイプラインから非表示にしますか？\n（[OK]: 定期契約にして非表示 / [キャンセル]: スポット案件完了としてボードに残す）')) {
+                        await RyubeeAPI.archiveAndSubscribeJob(jobId);
+                        await loadPipeline();
+                        showToast('✅ 定期契約へ移行し、案件をアーカイブしました');
+                        return;
+                    }
+                }
+
+                await RyubeeAPI.updateJobStage(jobId, newStage);
+                await loadPipeline();
+                showToast(`✅ ステージを「${STAGES.find(s => s.key === newStage)?.label}」に変更`);
+            } catch (e) { alert('更新エラー: ' + e.message); }
+        }
+
+        function showToast(msg) {
+            const t = document.createElement('div');
+            t.textContent = msg;
+            t.style.cssText = 'position:fixed;bottom:90px;left:50%;transform:translateX(-50%);background:#34C759;color:#fff;padding:10px 20px;border-radius:20px;font-weight:600;z-index:9999;';
+            document.body.appendChild(t);
+            setTimeout(() => t.remove(), 2500);
+        }
+
+        async function submitNewJob() {
+            const name = document.getElementById('njName').value.trim();
+            const companyName = document.getElementById('njCompanyName').value.trim();
+            const contactName = document.getElementById('njContactName').value.trim();
+            const phone = document.getElementById('njPhone').value.trim();
+            const type = document.getElementById('njType').value;
+            const stage = document.getElementById('njStage').value;
+            const amount = document.getElementById('njAmount').value;
+            const assigned_to = document.getElementById('njAssignedTo').value;
+            const address = document.getElementById('njAddress')?.value?.trim() || '';
+
+            if (!name) { alert("案件名を入力してください"); return; }
+
+            try {
+                const isRegular = document.getElementById('njIsRegular').checked;
+                const nextDate = document.getElementById('njNextDate').value;
+
+                if (isRegular && !nextDate) {
+                    alert("定期案件の初回・次回予定日を入力してください");
+                    return;
+                }
+
+                const payload = {
+                    job_name: name,
+                    customer_name: companyName || name,
+                    job_type: type,
+                    pipeline_stage: isRegular ? 'regular_template' : stage,
+                    estimated_price: amount ? parseInt(amount, 10) : 0,
+                    source: 'manual',
+                    address: address,
+                };
+                if (isRegular) {
+                    payload.work_date = nextDate; // テンプレートの予定日
+                }
+                if (assigned_to) {
+                    payload.assigned_to = assigned_to;
+                }
+
+                // form_dataに担当者・電話番号・支払情報を格納
+                const formData = {};
+                if (contactName) formData.contact_name = contactName;
+                if (phone) formData.phone = phone;
+                if (stage === 'prospect') {
+                    formData.prospect_status = 'discovered';
+                }
+                // 支払方法関連
+                const paymentMethod = document.getElementById('njPaymentMethod').value;
+                formData.payment_method = paymentMethod;
+                if (paymentMethod === '自動引落し') {
+                    formData.pre_debit_billing = document.getElementById('njPreDebitBilling').value;
+                    formData.auto_debit_form_sent = document.getElementById('njAutoDebitFormSent').checked;
+                }
+                formData.invoice_delivery = document.getElementById('njInvoiceDelivery').value;
+                const invoiceSendTo = document.getElementById('njInvoiceSendTo').value.trim();
+                if (invoiceSendTo) formData.invoice_send_to = invoiceSendTo;
+
+                if (isRegular) {
+                    formData.regular_category = document.getElementById('njRegularCategory').value;
+                    formData.recurrence = 'monthly'; // 固定
+                }
+
+                payload.form_data = JSON.stringify(formData);
+
+                await RyubeeAPI.createJob(payload);
+                document.getElementById('newJobModal').classList.remove('show');
+                showToast("✅ 新規案件を手動追加しました");
+                loadPipeline();
+                // フォームリセット
+                document.getElementById('njName').value = '';
+                document.getElementById('njCompanyName').value = '';
+                document.getElementById('njContactName').value = '';
+                document.getElementById('njPhone').value = '';
+                document.getElementById('njAmount').value = '';
+                document.getElementById('njAddress').value = '';
+                document.getElementById('njAssignedTo').value = '';
+                document.getElementById('njGpsAccuracy').innerHTML = '';
+                document.getElementById('njPaymentMethod').value = '振込';
+                document.getElementById('njPreDebitBilling').value = '振込';
+                document.getElementById('njAutoDebitFormSent').checked = false;
+                document.getElementById('njInvoiceDelivery').value = '郵送';
+                document.getElementById('njInvoiceSendTo').value = '';
+                document.getElementById('njAutoDebitFields').style.display = 'none';
+                
+                const cb = document.getElementById('njIsRegular');
+                if (cb) {
+                    cb.checked = false;
+                    document.getElementById('njNextDate').value = '';
+                    toggleNjRegularFields();
+                }
+            } catch (e) {
+                alert("追加エラー: " + e.message);
+            }
+        }
+
+        async function openNewJobDrawer() {
+            const drawer = document.getElementById('drawerOverlay');
+            const body = document.getElementById('drawerBody');
+            document.body.style.overflow = 'hidden';
+
+            let job = { status: 'estimated', pipeline_stage: 'inquiry', job_type: 'general_waste' };
+            let fd = {};
+
+            body.innerHTML = `
+                <!-- 2-column Job Editor for New Job -->
+                <div class="card" style="padding: 16px; margin-bottom: 20px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                        <h3 class="card-title" id="job-edit-title" style="margin:0;">✨ 新規案件登録</h3>
+                    </div>
+                    <div class="edit-grid">
+                    
+                    <!-- 左カラム: 基本情報 -->
+                    <div class="edit-col">
+                        <h4 class="section-title">🏢 基本情報</h4>
+                        
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                        <div class="form-group"><label>📁 ステータス</label>
+                            <select id="status">
+                            <option value="estimated" selected>見積済</option>
+                            <option value="scheduled">作業予定</option>
+                            <option value="completed">作業完了</option>
+                            <option value="lost">不成約（失注）</option>
+                            </select>
+                        </div>
+                        <div class="form-group"><label>🎯 パイプラインステージ</label>
+                            <select id="pipeline_stage">
+                            <option value="prospect">🎯 潜在顧客</option>
+                            <option value="inquiry" selected>問合せ</option>
+                            <option value="estimate">見積</option>
+                            <option value="negotiation">商談</option>
+                            <option value="contract">契約</option>
+                            <option value="scheduled">作業予定</option>
+                            <option value="waiting_manifest">マニフェスト待ち</option>
+                            <option value="completed">完了</option>
+                            <option value="lost">不成約</option>
+                            </select>
+                        </div>
+                        </div>
+
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                        <div class="form-group"><label>🏢 案件タイプ</label>
+                            <select id="job_type">
+                            <option value="general_waste" selected>一般ゴミ収集</option>
+                            <option value="industrial_waste">産業廃棄物</option>
+                            <option value="store_removal">店舗残置物撤去</option>
+                            <option value="estate">遺品整理</option>
+                            <option value="welfare">福祉残置物撤去</option>
+                            <option value="large_waste">大型ゴミ等</option>
+                            <option value="other">その他</option>
+                            </select>
+                        </div>
+                        <div class="form-group"><label>🚚 業務種別 (ドライバー指示用)</label>
+                            <select id="yamabun_work_type_select">
+                            <option value="" selected>未設定</option>
+                            <option value="引上げ">引上げ</option>
+                            <option value="交換">交換</option>
+                            <option value="積込み">積込み</option>
+                            <option value="定期回収">定期回収</option>
+                            </select>
+                        </div>
+                        </div>
+
+                        <div class="form-group"><label>📝 現場名（案件名）</label><input type="text" id="job_name" value=""></div>
+                        
+                        <!-- 顧客選択 -->
+                        <div class="form-group">
+                        <label>👤 お客様選択 <button type="button" onclick="clearCustomerSelection()" style="font-size:0.65rem;padding:2px 6px;border-radius:4px;border:1px solid var(--border);background:#FEF2F2;color:#DC2626;cursor:pointer;margin-left:4px;">新規に入力</button></label>
+                        <select id="customer_select" onchange="onCustomerSelected(this.value)">
+                            <option value="">-- 既存顧客から選択 --</option>
+                        </select>
+                        <input type="hidden" id="original_customer_id" value="">
+                        </div>
+                        <div class="form-group"><label>お客様名（顧客マスター）</label><input type="text" id="customer_name" value=""></div>
+
+                        <div class="form-group"><label>📍 住所</label><input type="text" id="address" value=""></div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                        <div class="form-group"><label>担当者名</label><input type="text" id="fd_contact_name" value=""></div>
+                        <div class="form-group"><label>メールアドレス</label><input type="email" id="fd_email" value=""></div>
+                        </div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                        <div class="form-group"><label>電話番号</label><input type="tel" id="fd_phone" value=""></div>
+                        <div class="form-group"><label>携帯番号</label><input type="tel" id="fd_mobile" value=""></div>
+                        </div>
+
+                    </div>
+
+                    <!-- 右カラム: 請求・作業情報 -->
+                    <div class="edit-col">
+                        <h4 class="section-title">💰 請求・作業情報</h4>
+                        
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                        <div class="form-group"><label>支払方法</label>
+                            <select id="fd_payment_method">
+                            <option value="" selected>未設定</option>
+                            <option value="振込">振込</option>
+                            <option value="自動引落し">自動引落し</option>
+                            <option value="集金">集金</option>
+                            </select>
+                        </div>
+                        <div class="form-group"><label>📄 請求書送付方法</label>
+                            <select id="fd_invoice_delivery">
+                            <option value="" selected>未設定</option>
+                            <option value="郵送代行">郵送代行</option>
+                            <option value="郵送">郵送</option>
+                            <option value="メール">メール</option>
+                            <option value="その他電子メール">その他電子メール</option>
+                            <option value="FAX">FAX</option>
+                            <option value="手渡し">手渡し</option>
+                            <option value="不要">不要</option>
+                            </select>
+                        </div>
+                        </div>
+                        <div class="form-group"><label>📮 送付先</label><input type="text" id="fd_invoice_send_to" value=""></div>
+
+                        <div style="background:#F0F9FF; border:1px solid #BAE6FD; padding:12px; border-radius:8px; margin:16px 0;">
+                        <label style="font-weight:700; color:#0369A1; margin-bottom:8px;">📋 作業情報</label>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                            <div class="form-group" style="margin-bottom:8px;"><label>作業日</label><input type="date" id="work_date" value=""></div>
+                            <div class="form-group" style="margin-bottom:8px;"><label>時間帯</label><input type="text" id="work_time" value=""></div>
+                        </div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                            <div class="form-group" style="margin-bottom:8px;"><label>見積金額(税抜)</label><input type="number" id="price_total" value=""></div>
+                            <div class="form-group" style="margin-bottom:8px;"><label>作業員数</label><input type="number" id="workers" value=""></div>
+                        </div>
+                        <div style="display:grid;grid-template-columns:1fr;gap:8px;">
+                            <div class="form-group" style="margin-bottom:8px;"><label>立米 (m³)</label><input type="number" id="total_volume_m3" step="0.1" value=""></div>
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;"><label>備考</label><textarea id="notes"></textarea></div>
+                        </div>
+
+                        <div style="display:flex; gap:12px; margin-top:24px;">
+                        <button class="btn btn-primary" onclick="createJobFromDrawer()" id="create-btn" style="flex:1;">新規登録する</button>
+                        </div>
+                        <p id="sync-notice" style="font-size:0.75rem; color:var(--text-secondary); margin-top:8px; text-align:center;">
+                        ※顧客情報（住所・連絡先等）を入力・変更して保存すると、顧客マスター側にも自動で反映（同期）されます。
+                        </p>
+                    </div>
+                    </div>
+                </div>
+            `;
+            drawer.classList.add('show');
+            populateCustomerDropdown();
+        }
+
+        async function createJobFromDrawer() {
+            const btn = document.getElementById('create-btn');
+            btn.disabled = true;
+            btn.textContent = '登録中...';
+
+            let fd = {};
+            const newStatus = document.getElementById('status').value;
+            const newStage = document.getElementById('pipeline_stage').value;
+            const newType = document.getElementById('job_type').value;
+            const newName = document.getElementById('job_name').value;
+            
+            let custId = document.getElementById('customer_select').value;
+            const custName = document.getElementById('customer_name').value;
+            const address = document.getElementById('address').value;
+            
+            fd.yamabun_work_type = document.getElementById('yamabun_work_type_select').value;
+            fd.contact_name = document.getElementById('fd_contact_name').value;
+            fd.email = document.getElementById('fd_email').value;
+            fd.phone = document.getElementById('fd_phone').value;
+            fd.mobile = document.getElementById('fd_mobile').value;
+            fd.payment_method = document.getElementById('fd_payment_method').value;
+            fd.invoice_delivery = document.getElementById('fd_invoice_delivery').value;
+            fd.invoice_send_to = document.getElementById('fd_invoice_send_to').value;
+
+            const wDate = document.getElementById('work_date').value;
+            const wTime = document.getElementById('work_time').value;
+            const pTotal = document.getElementById('price_total').value;
+            const workers = document.getElementById('workers').value;
+            const vol = document.getElementById('total_volume_m3').value;
+            const notes = document.getElementById('notes').value;
+
+            try {
+                // If no custId but customer details exist, create new customer
+                if (!custId && (custName || address)) {
+                    const cFd = {
+                        contact_name: fd.contact_name,
+                        email: fd.email,
+                        phone: fd.phone,
+                        mobile: fd.mobile,
+                        payment_method: fd.payment_method,
+                        invoice_delivery: fd.invoice_delivery,
+                        invoice_send_to: fd.invoice_send_to
+                    };
+                    const newCust = await RyubeeAPI.createCustomer({
+                        name: custName,
+                        address: address,
+                        form_data: JSON.stringify(cFd)
+                    });
+                    custId = newCust.id;
+                    _cachedCustomers = null; // force reload next time
+                }
+
+                const jobCreate = {
+                    status: newStatus,
+                    pipeline_stage: newStage,
+                    job_type: newType,
+                    job_name: newName,
+                    customer_id: custId || null,
+                    customer_name: custName,
+                    address: address,
+                    work_date: wDate,
+                    work_time: wTime,
+                    price_total: pTotal ? parseInt(pTotal, 10) : null,
+                    workers: workers ? parseInt(workers, 10) : null,
+                    total_volume_m3: vol ? parseFloat(vol) : null,
+                    notes: notes,
+                    form_data: JSON.stringify(fd)
+                };
+
+                await RyubeeAPI.createJob(jobCreate);
+                alert('登録しました！');
+                closeDrawer();
+                fetchPipeline();
+            } catch(e) {
+                alert("登録に失敗しました");
+                console.error(e);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '新規登録する';
+            }
+        }
+
+        // ── Detail Drawer (Comments + Deal Amounts) ───
+        function closeDrawer(e) {
+            if (e && e.target !== document.getElementById('drawerOverlay')) return;
+            document.getElementById('drawerOverlay').classList.remove('show');
+            document.body.style.overflow = '';
+        }
+
+        async function openJobDetail(jobId) {
+            const drawer = document.getElementById('drawerOverlay');
+            const body = document.getElementById('drawerBody');
+            document.body.style.overflow = 'hidden';
+
+            // パイプラインキャッシュからベース情報を取得
+            let job = null;
+            for (const jobs of Object.values(pipelineData)) {
+                const found = jobs.find(j => j.job_id === jobId);
+                if (found) { job = found; break; }
+            }
+            if (!job) return;
+
+            // 個別APIからフルデータ取得（写真含む）
+            try {
+                const fullJob = await RyubeeAPI.fetchJob(jobId);
+                job = { ...job, ...fullJob };
+            } catch (e) {
+                console.warn('Failed to fetch full job data:', e);
+            }
+
+            // Load comments
+            let comments = [];
+            try { comments = await RyubeeAPI.fetchComments(jobId); } catch (e) { }
+
+            const est = job.estimated_price || job.price_total || 0;
+            const fin = job.final_price || 0;
+            const displayPrice = fin || est;
+            const disc = job.discount_amount || 0;
+            const surcharge = job.surcharge_amount || 0;
+
+            // Form Data
+            let fd = {};
+            try { fd = JSON.parse(job.form_data || "{}"); } catch (e) { }
+
+            // Photos parsing — 回収前/回収後 分離
+            let allPhotos = Array.isArray(job.photos) ? job.photos : [];
+            try { if (typeof job.photos === 'string') allPhotos = JSON.parse(job.photos); } catch (e) { }
+            allPhotos = RyubeeAPI.resolvePhotoUrls(allPhotos);
+
+            // form_dataに保存された回収前/回収後のインデックスを使用
+            const beforeCount = fd.photos_before_count || 0;
+            const photosBefore = allPhotos.slice(0, beforeCount);
+            const photosAfter = allPhotos.slice(beforeCount);
+
+            function renderPhotoGrid(photos, category, startIndex) {
+                let html = '';
+                photos.forEach((p, i) => {
+                    const realIndex = startIndex + i;
+                    html += `<div class="photo-thumb">
+                        <img src="${p}" alt="写真">
+                        <button class="photo-del" onclick="deleteJobPhoto('${jobId}', ${realIndex})">✕</button>
+                    </div>`;
+                });
+                html += `<label class="photo-add-btn">
+                    📷<span>追加</span>
+                    <input type="file" style="display:none;" accept="image/*" multiple onchange="uploadCategoryPhotos(event, '${jobId}', '${category}')">
+                </label>`;
+                return html;
+            }
+
+            body.innerHTML = `
+                <!-- 2-column Job Editor -->
+                <div class="card" style="padding: 16px; margin-bottom: 20px;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px;">
+                        <h3 class="card-title" id="job-edit-title" style="margin:0;">基本情報編集</h3>
+                        <a href="jobs.html?id=${jobId}" style="padding:6px 12px;font-size:0.75rem;background:#FEE2E2;color:#DC2626;border:1px solid #FECACA;border-radius:8px;text-decoration:none;font-weight:700;">✏️ 全画面編集モード</a>
+                    </div>
+                    <div class="edit-grid">
+                    
+                    <!-- 左カラム: 基本情報 -->
+                    <div class="edit-col">
+                        <h4 class="section-title">🏢 基本情報</h4>
+                        
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                        <div class="form-group"><label>📁 ステータス</label>
+                            <select id="status">
+                            <option value="estimated" ${job.status==='estimated'?'selected':''}>見積済</option>
+                            <option value="scheduled" ${job.status==='scheduled'?'selected':''}>作業予定</option>
+                            <option value="completed" ${job.status==='completed'?'selected':''}>作業完了</option>
+                            <option value="lost" ${job.status==='lost'?'selected':''}>不成約（失注）</option>
+                            </select>
+                        </div>
+                        <div class="form-group"><label>🎯 パイプラインステージ</label>
+                            <select id="pipeline_stage">
+                            <option value="prospect" ${job.pipeline_stage==='prospect'?'selected':''}>🎯 潜在顧客</option>
+                            <option value="inquiry" ${job.pipeline_stage==='inquiry'?'selected':''}>問合せ</option>
+                            <option value="estimate" ${job.pipeline_stage==='estimate'?'selected':''}>見積</option>
+                            <option value="negotiation" ${job.pipeline_stage==='negotiation'?'selected':''}>商談</option>
+                            <option value="contract" ${job.pipeline_stage==='contract'?'selected':''}>契約</option>
+                            <option value="scheduled" ${job.pipeline_stage==='scheduled'?'selected':''}>作業予定</option>
+                            <option value="waiting_manifest" ${job.pipeline_stage==='waiting_manifest'?'selected':''}>マニフェスト待ち</option>
+                            <option value="completed" ${job.pipeline_stage==='completed'?'selected':''}>完了</option>
+                            <option value="lost" ${job.pipeline_stage==='lost'?'selected':''}>不成約</option>
+                            </select>
+                        </div>
+                        </div>
+
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                        <div class="form-group"><label>🏢 案件タイプ</label>
+                            <select id="job_type">
+                            <option value="general_waste" ${job.job_type==='general_waste'?'selected':''}>一般ゴミ収集</option>
+                            <option value="industrial_waste" ${job.job_type==='industrial_waste'?'selected':''}>産業廃棄物</option>
+                            <option value="store_removal" ${job.job_type==='store_removal'?'selected':''}>店舗残置物撤去</option>
+                            <option value="estate" ${job.job_type==='estate'?'selected':''}>遺品整理</option>
+                            <option value="welfare" ${job.job_type==='welfare'?'selected':''}>福祉残置物撤去</option>
+                            <option value="large_waste" ${job.job_type==='large_waste'?'selected':''}>大型ゴミ等</option>
+                            <option value="other" ${job.job_type==='other'?'selected':''}>その他</option>
+                            </select>
+                        </div>
+                        <div class="form-group"><label>🚚 業務種別 (ドライバー指示用)</label>
+                            <select id="yamabun_work_type_select">
+                            <option value="" ${!fd.yamabun_work_type?'selected':''}>未設定</option>
+                            <option value="引上げ" ${fd.yamabun_work_type==='引上げ'?'selected':''}>引上げ</option>
+                            <option value="交換" ${fd.yamabun_work_type==='交換'?'selected':''}>交換</option>
+                            <option value="積込み" ${fd.yamabun_work_type==='積込み'?'selected':''}>積込み</option>
+                            <option value="定期回収" ${fd.yamabun_work_type==='定期回収'?'selected':''}>定期回収</option>
+                            </select>
+                        </div>
+                        </div>
+
+                        <div class="form-group"><label>📝 現場名（案件名）</label><input type="text" id="job_name" value="${utils.escapeHtml(job.job_name||'')}"></div>
+                        
+                        <!-- 顧客選択 -->
+                        <div class="form-group">
+                        <label>👤 お客様選択 <button type="button" onclick="clearCustomerSelection()" style="font-size:0.65rem;padding:2px 6px;border-radius:4px;border:1px solid var(--border);background:#FEF2F2;color:#DC2626;cursor:pointer;margin-left:4px;">新規に入力</button></label>
+                        <select id="customer_select" onchange="onCustomerSelected(this.value)">
+                            <option value="">-- 既存顧客から選択 --</option>
+                        </select>
+                        <input type="hidden" id="original_customer_id" value="${job.customer_id || ''}">
+                        </div>
+                        <div class="form-group"><label>お客様名（顧客マスター）</label><input type="text" id="customer_name" value="${utils.escapeHtml(job.customer_name||'')}"></div>
+
+                        <div class="form-group"><label>📍 住所</label><input type="text" id="address" value="${utils.escapeHtml(job.address||'')}"></div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                        <div class="form-group"><label>担当者名</label><input type="text" id="fd_contact_name" value="${utils.escapeHtml(fd.contact_name||'')}"></div>
+                        <div class="form-group"><label>メールアドレス</label><input type="email" id="fd_email" value="${utils.escapeHtml(fd.email||'')}"></div>
+                        </div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                        <div class="form-group"><label>電話番号</label><input type="tel" id="fd_phone" value="${utils.escapeHtml(fd.phone||'')}"></div>
+                        <div class="form-group"><label>携帯番号</label><input type="tel" id="fd_mobile" value="${utils.escapeHtml(fd.mobile||'')}"></div>
+                        </div>
+
+                    </div>
+
+                    <!-- 右カラム: 請求・作業情報 -->
+                    <div class="edit-col">
+                        <h4 class="section-title">💰 請求・作業情報</h4>
+                        
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                        <div class="form-group"><label>支払方法</label>
+                            <select id="fd_payment_method">
+                            <option value="" ${!fd.payment_method?'selected':''}>未設定</option>
+                            <option value="振込" ${fd.payment_method==='振込'?'selected':''}>振込</option>
+                            <option value="自動引落し" ${fd.payment_method==='自動引落し'?'selected':''}>自動引落し</option>
+                            <option value="集金" ${fd.payment_method==='集金'?'selected':''}>集金</option>
+                            </select>
+                        </div>
+                        <div class="form-group"><label>📄 請求書送付方法</label>
+                            <select id="fd_invoice_delivery">
+                            <option value="" ${!fd.invoice_delivery?'selected':''}>未設定</option>
+                            <option value="郵送代行" ${fd.invoice_delivery==='郵送代行'?'selected':''}>郵送代行</option>
+                            <option value="郵送" ${fd.invoice_delivery==='郵送'?'selected':''}>郵送</option>
+                            <option value="メール" ${fd.invoice_delivery==='メール'?'selected':''}>メール</option>
+                            <option value="その他電子メール" ${fd.invoice_delivery==='その他電子メール'?'selected':''}>その他電子メール</option>
+                            <option value="FAX" ${fd.invoice_delivery==='FAX'?'selected':''}>FAX</option>
+                            <option value="手渡し" ${fd.invoice_delivery==='手渡し'?'selected':''}>手渡し</option>
+                            <option value="不要" ${fd.invoice_delivery==='不要'?'selected':''}>不要</option>
+                            </select>
+                        </div>
+                        </div>
+                        <div class="form-group"><label>📮 送付先</label><input type="text" id="fd_invoice_send_to" value="${utils.escapeHtml(fd.invoice_send_to||'')}"></div>
+
+                        <div style="background:#F0F9FF; border:1px solid #BAE6FD; padding:12px; border-radius:8px; margin:16px 0;">
+                        <label style="font-weight:700; color:#0369A1; margin-bottom:8px;">📋 作業情報</label>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                            <div class="form-group" style="margin-bottom:8px;"><label>作業日</label><input type="date" id="work_date" value="${utils.escapeHtml(job.work_date||'')}"></div>
+                            <div class="form-group" style="margin-bottom:8px;"><label>時間帯</label><input type="text" id="work_time" value="${utils.escapeHtml(job.work_time||'')}"></div>
+                        </div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                            <div class="form-group" style="margin-bottom:8px;"><label>見積金額(税抜)</label><input type="number" id="price_total" value="${job.price_total||''}"></div>
+                            <div class="form-group" style="margin-bottom:8px;"><label>作業員数</label><input type="number" id="workers" value="${job.workers||''}"></div>
+                        </div>
+                        <div style="display:grid;grid-template-columns:1fr;gap:8px;">
+                            <div class="form-group" style="margin-bottom:8px;"><label>立米 (m³)</label><input type="number" id="total_volume_m3" step="0.1" value="${job.total_volume_m3!=null?job.total_volume_m3:''}"></div>
+                        </div>
+                        <div class="form-group" style="margin-bottom:0;"><label>備考</label><textarea id="notes">${utils.escapeHtml(job.notes||'')}</textarea></div>
+                        </div>
+
+                        <div style="display:flex; gap:12px; margin-top:24px;">
+                        <button class="btn btn-primary" onclick="updateJobDrawer('${jobId}')" id="update-btn" style="flex:1;">更新を保存する</button>
+                        </div>
+                        <p id="sync-notice" style="font-size:0.75rem; color:var(--text-secondary); margin-top:8px; text-align:center;">
+                        ※顧客情報（住所・連絡先等）を変更して保存すると、顧客マスター側にも自動で反映（同期）されます。
+                        </p>
+                    </div>
+                    </div>
+                </div>
+
+                <!-- ② 指示書 -->
+                <div class="drawer-section" style="padding:0;background:transparent;">
+                    <div class="drawer-section-title">📋 指示書</div>
+                    <a href="driver-sheet.html?id=${jobId}" target="_blank" class="instruction-preview">
+                        🚚 ドライバー指示書
+                        <div class="preview-lines">
+                            <div class="preview-line" style="width:100%"></div>
+                            <div class="preview-line" style="width:85%"></div>
+                            <div class="preview-line" style="width:70%"></div>
+                            <div class="preview-line" style="width:90%"></div>
+                        </div>
+                        <span class="preview-hint">タップで詳細 →</span>
+                    </a>
+                </div>
+
+                <!-- 📄 契約書セクション -->
+                ${job.customer_id ? `
+                <div class="drawer-section" style="padding:0; background:transparent;">
+                    <details class="accordion-details" style="background:var(--bg-secondary); border-radius:var(--r-md); border:1px solid var(--border); overflow:hidden;">
+                        <summary style="display:flex; justify-content:space-between; align-items:center; padding:14px; cursor:pointer; font-weight:700; font-size:0.82rem; color:var(--text-secondary); list-style:none; user-select:none;">
+                            <span style="display:flex; align-items:center; gap:6px;">📄 処分先契約</span>
+                            <span class="accordion-chevron" style="transition:transform 0.2s; font-size:0.8rem;">▼</span>
+                        </summary>
+                        <div style="padding: 0 14px 14px; border-top:1px solid var(--border);">
+                            <div id="customerActiveContractors" style="margin-top:12px; margin-bottom:12px; font-size:0.8rem;"></div>
+                            <div id="contractsList">読み込み中...</div>
+                            <button class="contract-add-btn" onclick="openContractModal('${job.customer_id}')" style="margin-top:10px;">➕ 契約を追加</button>
+                            <a href="contract-form.html?id=${job.customer_id}" target="_blank" style="display:block;text-align:center;margin-top:8px;font-size:0.72rem;color:var(--blue);text-decoration:none;font-weight:600;">📝 契約書を作成 →</a>
+                        </div>
+                    </details>
+                </div>
+                ` : ''}
+
+                <!-- ③ 写真（回収前/回収後） -->
+                <div class="drawer-section">
+                    <div class="drawer-section-title">📸 写真</div>
+                    <div class="photo-category-tabs">
+                        <button class="photo-cat-tab active" onclick="switchPhotoTab('before', this)">回収前 (${photosBefore.length})</button>
+                        <button class="photo-cat-tab" onclick="switchPhotoTab('after', this)">回収後 (${photosAfter.length})</button>
+                    </div>
+                    <div id="photosBeforeGrid" class="photo-grid">
+                        ${renderPhotoGrid(photosBefore, 'before', 0)}
+                    </div>
+                    <div id="photosAfterGrid" class="photo-grid" style="display:none;">
+                        ${renderPhotoGrid(photosAfter, 'after', beforeCount)}
+                    </div>
+                </div>
+
+                <!-- ④ 金額 -->
+                <div class="drawer-section" style="padding:0;background:transparent;">
+                    <div class="drawer-section-title">💰 金額</div>
+                    <a href="invoice.html?id=${jobId}" target="_blank" class="amount-card">
+                        <div>
+                            <div class="amount-label">${fin ? '成約金額(税抜)' : '見積金額(税抜)'}</div>
+                            <div class="amount-value">¥${displayPrice.toLocaleString()}</div>
+                            ${disc ? `<span style="font-size:0.72rem;color:var(--red);">調整額 -¥${disc.toLocaleString()}</span>` : ''}
+                            ${surcharge ? `<span style="font-size:0.72rem;color:var(--blue);margin-left:6px;">追加 +¥${surcharge.toLocaleString()}</span>` : ''}
+                        </div>
+                        <div class="amount-tap-hint">見積書 →</div>
+                    </a>
+                </div>
+
+                <!-- ⑤ 見積書 / 請求書発行 / 現金を回収 -->
+                <div class="drawer-actions">
+                    <button class="btn btn-secondary" onclick="window.location.href='invoice.html?id=${jobId}'">📝 見積書を作成</button>
+                    <button class="btn btn-success" onclick="convertToInvoice('${jobId}')">🧾 請求書を発行</button>
+                    <button class="btn btn-warning" onclick="collectCash('${jobId}')">💴 現金を回収</button>
+                </div>
+
+                <!-- 承認ステータス -->
+                <div class="drawer-section" style="padding:12px; background:var(--bg-secondary); border-radius:12px; margin-bottom:20px;">
+                    <div style="font-size:0.8rem; font-weight:700; margin-bottom:8px; color:var(--text-secondary);">✅ 承認ステータス（確認済）</div>
+                    <div style="display:flex; justify-content:space-between; gap:8px;">
+                        <label style="display:flex; flex-direction:column; align-items:center; font-size:0.75rem; cursor:pointer; background:#fff; padding:6px; border-radius:8px; flex:1; border:1px solid var(--border);">
+                            <input type="checkbox" onchange="toggleJobApproval('${jobId}', 'field', this.checked)" ${fd.appr_field ? 'checked' : ''}>
+                            <span style="margin-top:4px;">現場</span>
+                        </label>
+                        <label style="display:flex; flex-direction:column; align-items:center; font-size:0.75rem; cursor:pointer; background:#fff; padding:6px; border-radius:8px; flex:1; border:1px solid var(--border);">
+                            <input type="checkbox" onchange="toggleJobApproval('${jobId}', 'accounting', this.checked)" ${fd.appr_accounting ? 'checked' : ''}>
+                            <span style="margin-top:4px;">経理</span>
+                        </label>
+                        <label style="display:flex; flex-direction:column; align-items:center; font-size:0.75rem; cursor:pointer; background:#fff; padding:6px; border-radius:8px; flex:1; border:1px solid var(--border);">
+                            <input type="checkbox" onchange="toggleJobApproval('${jobId}', 'contract', this.checked)" ${fd.appr_contract ? 'checked' : ''}>
+                            <span style="margin-top:4px;">契約担当</span>
+                        </label>
+                        <label style="display:flex; flex-direction:column; align-items:center; font-size:0.75rem; cursor:pointer; background:#fff; padding:6px; border-radius:8px; flex:1; border:1px solid var(--border);">
+                            <input type="checkbox" onchange="toggleJobApproval('${jobId}', 'director', this.checked)" ${fd.appr_director ? 'checked' : ''}>
+                            <span style="margin-top:4px;">専務</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- ⑥ コメント -->
+                <div class="comment-thread">
+                    <h4 style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:8px;">💬 コメント (${comments.length})</h4>
+                    <div id="commentList">
+                        ${comments.length ? comments.map(c => `
+                            <div class="comment-item">
+                                <div class="comment-meta">${utils.escapeHtml(c.user_name)} ・ ${c.created_at ? new Date(c.created_at).toLocaleString('ja-JP') : ''}</div>
+                                <div class="comment-text">${utils.escapeHtml(c.content)}</div>
+                            </div>
+                        `).join('') : '<p class="small-text">コメントなし</p>'}
+                    </div>
+                    <div class="comment-input-row">
+                        <input type="text" id="commentInput" placeholder="コメントを入力..." onkeypress="if(event.key==='Enter')postJobComment('${jobId}')">
+                        <button class="btn btn-xs btn-primary" onclick="postJobComment('${jobId}')">送信</button>
+                    </div>
+                </div>
+            `;
+            drawer.classList.add('show');
+            if (!job.customer_id) {
+                populateCustomerDropdown();
+            }
+            // 契約一覧をロード
+            if (job.customer_id) {
+                loadCustomerContracts(job.customer_id);
+            }
+        }
+
+        async function toggleJobApproval(jobId, role, isChecked) {
+            const job = pipelineData.find(j => j.id === jobId);
+            if(!job) return;
+            let fd = {};
+            try { fd = JSON.parse(job.form_data || "{}"); } catch(e){}
+            
+            fd[`appr_${role}`] = isChecked;
+            job.form_data = JSON.stringify(fd);
+
+            try {
+                await RyubeeAPI.updateJob(jobId, { form_data: job.form_data });
+                // 成功時は静かに更新
+            } catch(e) {
+                alert("更新に失敗しました");
+                console.error(e);
+            }
+        }
+
+        // 案件と顧客を同時に更新する関数
+        async function updateJobDrawer(jobId) {
+            let job = null;
+            for (const jobs of Object.values(pipelineData)) {
+                const found = jobs.find(j => j.job_id === jobId || j.id === jobId);
+                if (found) { job = found; break; }
+            }
+            if(!job) return;
+
+            const btn = document.getElementById('update-btn');
+            btn.disabled = true;
+            btn.textContent = '保存中...';
+
+            let fd = {};
+            try { fd = JSON.parse(job.form_data || "{}"); } catch(e){}
+
+            // Retrieve form values
+            const newStatus = document.getElementById('status').value;
+            const newStage = document.getElementById('pipeline_stage').value;
+            const newType = document.getElementById('job_type').value;
+            const newName = document.getElementById('job_name').value;
+            
+            // Customer Info Sync
+            const custId = document.getElementById('customer_select').value || document.getElementById('original_customer_id').value;
+            const custName = document.getElementById('customer_name').value;
+            const address = document.getElementById('address').value;
+            
+            // Form Data fields
+            fd.yamabun_work_type = document.getElementById('yamabun_work_type_select').value;
+            fd.contact_name = document.getElementById('fd_contact_name').value;
+            fd.email = document.getElementById('fd_email').value;
+            fd.phone = document.getElementById('fd_phone').value;
+            fd.mobile = document.getElementById('fd_mobile').value;
+            fd.payment_method = document.getElementById('fd_payment_method').value;
+            fd.invoice_delivery = document.getElementById('fd_invoice_delivery').value;
+            fd.invoice_send_to = document.getElementById('fd_invoice_send_to').value;
+
+            // Billing / Work fields
+            const wDate = document.getElementById('work_date').value;
+            const wTime = document.getElementById('work_time').value;
+            const pTotal = document.getElementById('price_total').value;
+            const workers = document.getElementById('workers').value;
+            const vol = document.getElementById('total_volume_m3').value;
+            const notes = document.getElementById('notes').value;
+
+            const jobUpdate = {
+                status: newStatus,
+                pipeline_stage: newStage,
+                job_type: newType,
+                job_name: newName,
+                customer_id: custId || null,
+                customer_name: custName,
+                address: address,
+                work_date: wDate,
+                work_time: wTime,
+                price_total: pTotal ? parseInt(pTotal, 10) : null,
+                workers: workers ? parseInt(workers, 10) : null,
+                total_volume_m3: vol ? parseFloat(vol) : null,
+                notes: notes,
+                form_data: JSON.stringify(fd)
+            };
+
+            try {
+                // Update Job
+                await RyubeeAPI.updateJob(jobId, jobUpdate);
+
+                // If customer is linked, Sync to Customer Master
+                if (custId) {
+                    const custUpdate = {
+                        name: custName,
+                        address: address
+                    };
+                    const cFd = {
+                        contact_name: fd.contact_name,
+                        email: fd.email,
+                        phone: fd.phone,
+                        mobile: fd.mobile,
+                        payment_method: fd.payment_method,
+                        invoice_delivery: fd.invoice_delivery,
+                        invoice_send_to: fd.invoice_send_to
+                    };
+                    // Fetch existing customer to merge form_data
+                    let existingCust = _cachedCustomers ? _cachedCustomers.find(c => c.id === custId) : null;
+                    if (!existingCust) {
+                        try {
+                            const allC = await RyubeeAPI.fetchCustomers();
+                            existingCust = allC.find(c => c.id === custId);
+                        } catch(e) {}
+                    }
+                    if (existingCust) {
+                        let eFd = {};
+                        try { eFd = JSON.parse(existingCust.form_data || "{}"); } catch(e){}
+                        custUpdate.form_data = JSON.stringify({ ...eFd, ...cFd });
+                        await RyubeeAPI.updateCustomer(custId, custUpdate);
+                    }
+                }
+
+                alert('保存・同期しました！');
+                closeDrawer();
+                fetchPipeline(); // reload pipeline
+            } catch(e) {
+                alert("保存に失敗しました");
+                console.error(e);
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '更新を保存する';
+            }
+        }
+
+        async function updateDrawerField(jobId, fieldName, value) {
+
+        async function updateDrawerDate(jobId, value) {
+            const job = pipelineData.find(j => j.id === jobId);
+            if(!job) return;
+            job.work_date = value;
+            try {
+                await RyubeeAPI.updateJob(jobId, { work_date: value });
+            } catch(e) {
+                alert("更新に失敗しました");
+                console.error(e);
+            }
+        }
+
+        async function updateDrawerVolume(jobId, value) {
+            const job = pipelineData.find(j => j.id === jobId);
+            if(!job) return;
+            const vol = value ? parseFloat(value) : null;
+            job.total_volume_m3 = vol;
+            try {
+                await RyubeeAPI.updateJob(jobId, { total_volume_m3: vol });
+            } catch(e) {
+                alert("更新に失敗しました");
+                console.error(e);
+            }
+        }
+
+        async function registerCustomerFromPipeline(jobId, custName) {
+            // Legacy fallback — now handled by linkCustomerToJob
+            await linkCustomerToJob(jobId);
+        }
+
+        let _cachedCustomers = null;
+        async function populateCustomerDropdown() {
+            const sel = document.getElementById('customer_select');
+            if (!sel) return;
+            if (!_cachedCustomers) {
+                try { _cachedCustomers = await RyubeeAPI.fetchCustomers(); } catch (e) { _cachedCustomers = []; }
+            }
+            let html = '<option value="">-- 既存顧客から選択 --</option>';
+            _cachedCustomers.forEach(c => {
+                let cFd = {};
+                try { cFd = JSON.parse(c.form_data || '{}'); } catch(e){}
+                const yama = cFd.yamabun_management_number ? ` [${cFd.yamabun_management_number}]` : '';
+                html += `<option value="${c.id}">${utils.escapeHtml(c.name)}${yama}</option>`;
+            });
+            sel.innerHTML = html;
+            const originalId = document.getElementById('original_customer_id')?.value;
+            if(originalId) {
+                sel.value = originalId;
+            }
+        }
+
+        function onCustomerSelected(custId) {
+            if(!custId) { clearCustomerSelection(); return; }
+            const c = _cachedCustomers.find(x => x.id === custId);
+            if(!c) return;
+            document.getElementById('customer_name').value = c.name || '';
+            document.getElementById('address').value = c.address || '';
+            let fd = {};
+            try { fd = JSON.parse(c.form_data || "{}"); } catch(e){}
+            document.getElementById('fd_contact_name').value = fd.contact_name || '';
+            document.getElementById('fd_email').value = fd.email || '';
+            document.getElementById('fd_phone').value = fd.phone || '';
+            document.getElementById('fd_mobile').value = fd.mobile || '';
+            document.getElementById('fd_payment_method').value = fd.payment_method || '';
+            document.getElementById('fd_invoice_delivery').value = fd.invoice_delivery || '';
+            document.getElementById('fd_invoice_send_to').value = fd.invoice_send_to || '';
+        }
+
+        function clearCustomerSelection() {
+            document.getElementById('customer_select').value = '';
+            document.getElementById('original_customer_id').value = '';
+            document.getElementById('customer_name').value = '';
+            document.getElementById('address').value = '';
+            document.getElementById('fd_contact_name').value = '';
+            document.getElementById('fd_email').value = '';
+            document.getElementById('fd_phone').value = '';
+            document.getElementById('fd_mobile').value = '';
+            document.getElementById('fd_payment_method').value = '';
+            document.getElementById('fd_invoice_delivery').value = '';
+            document.getElementById('fd_invoice_send_to').value = '';
+            document.getElementById('customer_name').focus();
+        }
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            const section = document.getElementById('customerLinkSection');
+            if (section && !section.contains(e.target)) {
+                const list = document.getElementById('customerDropdownList');
+                if (list) list.style.display = 'none';
+            }
+        });
+
+        async function linkCustomerToJob(jobId) {
+            const sel = document.getElementById('customerLinkSelect');
+            let val = sel ? sel.value : '';
+
+            // フォールバック: hidden inputが空でも検索テキストから顧客を探す
+            if (!val) {
+                const searchInput = document.getElementById('customerSearchInput');
+                const searchText = (searchInput?.value || '').trim();
+                if (searchText && _cachedCustomers) {
+                    const match = _cachedCustomers.find(c => c.name === searchText);
+                    if (match) {
+                        val = match.id;
+                    }
+                }
+            }
+
+            if (!val) {
+                alert('顧客を選択してください。\nドロップダウンからお客様名を選択するか、「➕ 新規顧客として登録」を選んでください。');
+                return;
+            }
+
+            // ボタンの多重タップ防止
+            const btn = event?.target;
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = '処理中...';
+            }
+
+            try {
+                if (val === '__new__') {
+                    let job = null;
+                    for (const jobs of Object.values(pipelineData)) {
+                        job = jobs.find(j => j.job_id === jobId);
+                        if (job) break;
+                    }
+                    const custName = job ? job.customer_name : '';
+                    const name = prompt('新規顧客の「お客様名 / 法人名」を入力してください:', custName);
+                    if (!name) {
+                        if (btn) { btn.disabled = false; btn.textContent = '紐づけ'; }
+                        return;
+                    }
+
+                    const cPayload = {
+                        name: name,
+                        address: '',
+                        phone: '',
+                        email: '',
+                        form_data: JSON.stringify({ source: 'パイプラインからの本登録' })
+                    };
+                    const newCus = await RyubeeAPI.createCustomer(cPayload);
+                    if (!newCus || !newCus.id) throw new Error('顧客作成に失敗しました');
+
+                    await RyubeeAPI.updateJob(jobId, { customer_id: newCus.id, customer_name: name });
+                    showToast(`✅ "${name}" 様を登録して紐づけました`);
+                } else {
+                    // 既存顧客に紐づけ → 顧客データを自動コピー
+                    const cust = _cachedCustomers ? _cachedCustomers.find(c => String(c.id) === String(val)) : null;
+                    const custName = cust ? cust.name : '';
+
+                    // 顧客詳細を取得して案件に自動入力
+                    let custDetail = null;
+                    try { custDetail = await RyubeeAPI.fetchCustomer(val); } catch (e) { console.warn('顧客詳細取得失敗:', e); }
+
+                    const updatePayload = { customer_id: String(val), customer_name: custName };
+
+                    if (custDetail) {
+                        // 住所をコピー
+                        if (custDetail.address) updatePayload.address = custDetail.address;
+
+                        // form_data にコピーするフィールド
+                        const job = await RyubeeAPI.fetchJob(jobId);
+                        let fd = {};
+                        try { fd = JSON.parse(job.form_data || '{}'); } catch (e) {}
+
+                        let custFd = {};
+                        try { custFd = JSON.parse(custDetail.form_data || '{}'); } catch (e) {}
+
+                        if (custDetail.contact_person) fd.contact_name = custDetail.contact_person;
+                        if (custDetail.phone) fd.phone = custDetail.phone;
+                        if (custDetail.email) fd.email = custDetail.email;
+                        if (custFd.mobile) fd.mobile = custFd.mobile;
+                        if (custFd.payment_method) fd.payment_method = custFd.payment_method;
+                        if (custFd.invoice_delivery) fd.invoice_delivery = custFd.invoice_delivery;
+                        if (custFd.invoice_send_to) fd.invoice_send_to = custFd.invoice_send_to;
+                        if (custFd.yamabun_management_number) fd.yamabun_management_number = custFd.yamabun_management_number;
+                        if (custDetail.assigned_user_id) updatePayload.assigned_to = custDetail.assigned_user_id;
+
+                        updatePayload.form_data = JSON.stringify(fd);
+                    }
+
+                    await RyubeeAPI.updateJob(jobId, updatePayload);
+                    showToast(`✅ "${custName}" 様を紐づけました（住所・連絡先を自動入力しました）`);
+                }
+
+                _cachedCustomers = null;
+                document.getElementById('drawerOverlay').classList.remove('show');
+                document.body.style.overflow = '';
+                loadPipeline();
+            } catch (e) {
+                console.error('紐づけエラー:', e);
+                alert('紐づけエラーが発生しました:\n' + e.message);
+                if (btn) { btn.disabled = false; btn.textContent = '紐づけ'; }
+            }
+        }
+
+        async function postJobComment(jobId) {
+            const input = document.getElementById('commentInput');
+            const content = input.value.trim();
+            if (!content) return;
+            try {
+                await RyubeeAPI.postComment(jobId, content);
+                input.value = '';
+                openJobDetail(jobId);
+                showToast('✅ コメントを投稿しました');
+            } catch (e) { alert('エラー: ' + e.message); }
+        }
+
+        async function convertToInvoice(jobId) {
+            let job = null;
+            for (const jobs of Object.values(pipelineData)) {
+                job = jobs.find(j => j.job_id === jobId);
+                if (job) break;
+            }
+            if (!job) return;
+
+            const currentPrice = job.final_price || job.estimated_price || job.price_total || 0;
+            const newPriceStr = prompt('発行する請求書の最終金額(税抜)を入力してください。変更がない場合はそのままOKを押してください。', currentPrice);
+            if (newPriceStr === null) return; // cancelled
+
+            const newPrice = parseInt(newPriceStr, 10);
+            if (isNaN(newPrice)) { alert('正しい数値を入力してください'); return; }
+
+            if (!confirm(`請求金額を ${newPrice.toLocaleString()}円 で発行してよろしいですか？\n（業者の締め払い設定に基づいて支払期限が自動設定されます）`)) return;
+
+            try {
+                // Update final price on Job if changed
+                if (newPrice !== currentPrice) {
+                    job.final_price = newPrice;
+                    await RyubeeAPI.updateJob(jobId, { final_price: newPrice });
+                }
+
+                const inv = await RyubeeAPI.createInvoiceFromEstimate(jobId);
+                showToast(`✅ 請求書を発行しました (税込¥${inv.total_amount.toLocaleString()})`);
+                document.getElementById('drawerOverlay').classList.remove('show');
+                document.body.style.overflow = '';
+                setTimeout(() => { window.location.href = 'billing.html'; }, 1500);
+            } catch (e) { alert('エラー: ' + e.message); }
+        }
+
+        async function collectCash(jobId) {
+            let job = null;
+            for (const jobs of Object.values(pipelineData)) {
+                job = jobs.find(j => j.job_id === jobId);
+                if (job) break;
+            }
+            if (!job) return;
+
+            const currentPrice = job.final_price || job.estimated_price || job.price_total || 0;
+            const newPriceStr = prompt('現金で受け取る最終金額(税抜)を入力してください。変更がない場合はそのままOKを押してください。', currentPrice);
+            if (newPriceStr === null) return;
+
+            const newPrice = parseInt(newPriceStr, 10);
+            if (isNaN(newPrice)) { alert('正しい数値を入力してください'); return; }
+
+            if (!confirm(`現金 ${newPrice.toLocaleString()}円(税抜) を受け取りましたか？\n（請求書が自動生成され、入金済みとして処理されます）`)) return;
+
+            try {
+                if (newPrice !== currentPrice) {
+                    await RyubeeAPI.updateJob(jobId, { final_price: newPrice });
+                }
+
+                const inv = await RyubeeAPI.createInvoiceAndCollectCash(jobId);
+                showToast(`✅ 現金回収を記録しました (税込¥${inv.total_amount.toLocaleString()})`);
+                document.getElementById('drawerOverlay').classList.remove('show');
+                document.body.style.overflow = '';
+                loadPipeline();
+            } catch (e) { alert('エラー: ' + e.message); }
+        }
+
+        async function updateJobFormData(jobId) {
+            let job = null;
+            for (const jobs of Object.values(pipelineData)) {
+                job = jobs.find(j => j.job_id === jobId);
+                if (job) break;
+            }
+            if (!job) return;
+
+            let fd = {};
+            try { fd = JSON.parse(job.form_data || "{}"); } catch (e) { }
+
+            fd.subcontractor_name = document.getElementById('jobSubcontractor').value.trim();
+            fd.vehicle_number = document.getElementById('jobVehicleNum').value.trim();
+            const newFormData = JSON.stringify(fd);
+            job.form_data = newFormData;
+
+            try {
+                await RyubeeAPI.updateJob(jobId, { form_data: newFormData });
+                showToast("✅ 配車情報を保存しました");
+            } catch (e) { alert("保存エラー"); }
+        }
+
+        // 回収前/回収後タブ切替
+        function switchPhotoTab(tab, btn) {
+            document.querySelectorAll('.photo-cat-tab').forEach(t => t.classList.remove('active'));
+            btn.classList.add('active');
+            document.getElementById('photosBeforeGrid').style.display = tab === 'before' ? 'flex' : 'none';
+            document.getElementById('photosAfterGrid').style.display = tab === 'after' ? 'flex' : 'none';
+        }
+
+        // カテゴリ別写真アップロード
+        async function uploadCategoryPhotos(event, jobId, category) {
+            const files = Array.from(event.target.files);
+            if (!files.length) return;
+
+            showToast(`📸 ${files.length}枚の写真をアップロード中...`);
+
+            try {
+                // 先にフルデータ取得
+                const job = await RyubeeAPI.fetchJob(jobId);
+                let fd = {};
+                try { fd = JSON.parse(job.form_data || "{}"); } catch (e) { }
+                let currentBeforeCount = fd.photos_before_count || 0;
+
+                // アップロード
+                const result = await RyubeeAPI.uploadJobPhotos(jobId, files);
+
+                // 回収前の場合、beforeCountを更新
+                if (category === 'before') {
+                    currentBeforeCount += files.length;
+                }
+                // 回収後の場合はそのまま（末尾に追加される）
+
+                fd.photos_before_count = currentBeforeCount;
+                await RyubeeAPI.updateJob(jobId, { form_data: JSON.stringify(fd) });
+
+                showToast(`📸 ${result.uploaded}枚の写真を保存しました`);
+                await loadPipeline();
+                openJobDetail(jobId);
+            } catch (err) { alert("アップロード失敗: " + err.message); }
+        }
+
+        // 旧互換用
+        async function uploadJobPhotos(event, jobId) {
+            return uploadCategoryPhotos(event, jobId, 'after');
+        }
+
+        async function deleteJobPhoto(jobId, index) {
+            if (!confirm("この写真を削除しますか？")) return;
+
+            try {
+                const job = await RyubeeAPI.fetchJob(jobId);
+                let pArr = Array.isArray(job.photos) ? [...job.photos] : [];
+                try { if (typeof job.photos === 'string') pArr = JSON.parse(job.photos); } catch (e) { }
+
+                // form_dataのbeforeCountも調整
+                let fd = {};
+                try { fd = JSON.parse(job.form_data || "{}"); } catch (e) { }
+                let beforeCount = fd.photos_before_count || 0;
+
+                // 削除対象が回収前写真の範囲内ならbeforeCountを減らす
+                if (index < beforeCount) {
+                    fd.photos_before_count = beforeCount - 1;
+                    await RyubeeAPI.updateJob(jobId, { form_data: JSON.stringify(fd) });
+                }
+
+                pArr.splice(index, 1);
+                await RyubeeAPI.updateJob(jobId, { photos: JSON.stringify(pArr) });
+                await loadPipeline();
+                openJobDetail(jobId);
+            } catch (err) { alert("削除失敗: " + err.message); }
+        }
+
+        // ── 潜在顧客専用ドロワー ───────────────────
+        async function openProspectDetail(jobId) {
+            const drawer = document.getElementById('drawerOverlay');
+            const body = document.getElementById('drawerBody');
+            document.body.style.overflow = 'hidden';
+
+            let job = null;
+            for (const jobs of Object.values(pipelineData)) {
+                const found = jobs.find(j => j.job_id === jobId);
+                if (found) { job = found; break; }
+            }
+            if (!job) return;
+
+            try {
+                const fullJob = await RyubeeAPI.fetchJob(jobId);
+                job = { ...job, ...fullJob };
+            } catch (e) {
+                console.warn('Failed to fetch full job data:', e);
+            }
+
+            let comments = [];
+            try { comments = await RyubeeAPI.fetchComments(jobId); } catch (e) { }
+
+            let fd = {};
+            try { fd = JSON.parse(job.form_data || "{}"); } catch (e) { }
+
+            const prospectStatus = fd.prospect_status || 'discovered';
+            const currentIdx = PROSPECT_STATUSES.findIndex(s => s.key === prospectStatus);
+
+            // ステッパーUI生成
+            let stepperHtml = '';
+            PROSPECT_STATUSES.forEach((s, i) => {
+                let cls = '';
+                if (i < currentIdx) cls = 'completed';
+                else if (i === currentIdx) cls = 'current';
+                stepperHtml += `
+                    <div class="stepper-item ${cls}" onclick="updateProspectStatus('${jobId}', '${s.key}')">
+                        <div class="stepper-dot">${i < currentIdx ? '✓' : (i + 1)}</div>
+                        <div class="stepper-label">${s.emoji} ${s.label}</div>
+                    </div>
+                `;
+            });
+
+            body.innerHTML = `
+                <!-- お客様名 / 物件名 -->
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:4px;">
+                    <div style="flex:1;">
+                        <div class="drawer-customer-name" style="color:#7C3AED;">${utils.escapeHtml(job.customer_name || '未設定')}</div>
+                    </div>
+                    <a href="jobs.html?id=${jobId}" style="flex-shrink:0;margin-left:8px;padding:4px 10px;font-size:0.72rem;background:#EDE9FE;color:#7C3AED;border:1px solid #C4B5FD;border-radius:8px;text-decoration:none;font-weight:700;white-space:nowrap;">✏️ 編集</a>
+                </div>
+
+                <!-- 住所（メイン情報） -->
+                <div class="drawer-section">
+                    <div class="drawer-section-title">📍 現場住所</div>
+                    <div style="display:flex;gap:6px;align-items:flex-start;">
+                        <input type="text" id="pAddress" placeholder="住所を入力..." value="${utils.escapeHtml(job.address || '')}" onchange="saveProspectAddress('${jobId}')" style="flex:1;padding:10px;border-radius:8px;border:1px solid var(--border);font-size:0.9rem;">
+                        <button type="button" class="gps-btn" onclick="fillCurrentLocation('pAddress', 'pGpsAccuracy')">📍 現在地</button>
+                    </div>
+                    <div id="pGpsAccuracy" class="gps-accuracy"></div>
+                    ${job.address ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(job.address)}" target="_blank" style="display:inline-block;margin-top:6px;text-decoration:none;font-size:0.75rem;background:#E2E8F0;padding:3px 8px;border-radius:4px;color:var(--text-primary);">🗺 マップで確認</a>` : ''}
+                </div>
+
+                <!-- 進捗ステッパー -->
+                <div class="drawer-section">
+                    <div class="drawer-section-title" style="color:#7C3AED;">🎯 アプローチ進捗</div>
+                    <div class="stepper">
+                        ${stepperHtml}
+                    </div>
+                </div>
+
+                <!-- 情報入力 -->
+                <div class="drawer-section">
+                    <div class="drawer-section-title">📋 リード情報</div>
+                    <div class="prospect-info-grid">
+                        <div>
+                            <label>🔍 発見経緯</label>
+                            <input type="text" id="pSource" placeholder="例: 車で通りかかり発見" value="${utils.escapeHtml(fd.prospect_source || '')}" onchange="saveProspectInfo('${jobId}')">
+                        </div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                            <div>
+                                <label>👤 オーナー名</label>
+                                <input type="text" id="pOwnerName" placeholder="例: 田中太郎" value="${utils.escapeHtml(fd.prospect_owner_name || '')}" onchange="saveProspectInfo('${jobId}')">
+                            </div>
+                            <div>
+                                <label>📞 オーナー連絡先</label>
+                                <input type="tel" id="pOwnerPhone" placeholder="090-xxxx-xxxx" value="${utils.escapeHtml(fd.prospect_owner_phone || '')}" onchange="saveProspectInfo('${jobId}')">
+                            </div>
+                        </div>
+                        <div>
+                            <label>📝 メモ</label>
+                            <textarea id="pNotes" placeholder="工期や備考を記入..." onchange="saveProspectInfo('${jobId}')">${utils.escapeHtml(fd.prospect_notes || '')}</textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 商談に進むボタン -->
+                <button class="advance-btn" onclick="advanceToNegotiation('${jobId}')">
+                    🤝 商談に進む →
+                </button>
+
+                <!-- コメント -->
+                <div class="comment-thread">
+                    <h4 style="font-size:0.85rem;color:var(--text-secondary);margin-bottom:8px;">💬 コメント (${comments.length})</h4>
+                    <div id="commentList">
+                        ${comments.length ? comments.map(c => `
+                            <div class="comment-item">
+                                <div class="comment-meta">${utils.escapeHtml(c.user_name)} ・ ${c.created_at ? new Date(c.created_at).toLocaleString('ja-JP') : ''}</div>
+                                <div class="comment-text">${utils.escapeHtml(c.content)}</div>
+                            </div>
+                        `).join('') : '<p class="small-text">コメントなし</p>'}
+                    </div>
+                    <div class="comment-input-row">
+                        <input type="text" id="commentInput" placeholder="コメントを入力..." onkeypress="if(event.key==='Enter')postJobComment('${jobId}')">
+                        <button class="btn btn-xs btn-primary" onclick="postJobComment('${jobId}')">送信</button>
+                    </div>
+                </div>
+            `;
+            drawer.classList.add('show');
+        }
+
+        async function updateProspectStatus(jobId, newStatus) {
+            try {
+                const job = await RyubeeAPI.fetchJob(jobId);
+                let fd = {};
+                try { fd = JSON.parse(job.form_data || "{}"); } catch (e) { }
+                fd.prospect_status = newStatus;
+                await RyubeeAPI.updateJob(jobId, { form_data: JSON.stringify(fd) });
+                await loadPipeline();
+                const statusLabel = PROSPECT_STATUSES.find(s => s.key === newStatus)?.label || '';
+                showToast(`✅ 進捗を「${statusLabel}」に更新しました`);
+                openProspectDetail(jobId);
+            } catch (e) { alert('更新エラー: ' + e.message); }
+        }
+
+        async function saveProspectInfo(jobId) {
+            try {
+                const job = await RyubeeAPI.fetchJob(jobId);
+                let fd = {};
+                try { fd = JSON.parse(job.form_data || "{}"); } catch (e) { }
+
+                fd.prospect_source = document.getElementById('pSource')?.value?.trim() || '';
+                fd.prospect_owner_name = document.getElementById('pOwnerName')?.value?.trim() || '';
+                fd.prospect_owner_phone = document.getElementById('pOwnerPhone')?.value?.trim() || '';
+                fd.prospect_notes = document.getElementById('pNotes')?.value?.trim() || '';
+
+                await RyubeeAPI.updateJob(jobId, { form_data: JSON.stringify(fd) });
+                showToast('✅ リード情報を保存しました');
+            } catch (e) { alert('保存エラー: ' + e.message); }
+        }
+
+        async function saveProspectAddress(jobId) {
+            const address = document.getElementById('pAddress')?.value?.trim() || '';
+            try {
+                await RyubeeAPI.updateJob(jobId, { address: address });
+                showToast('✅ 住所を保存しました');
+            } catch (e) { alert('保存エラー: ' + e.message); }
+        }
+
+        async function advanceToNegotiation(jobId) {
+            if (!confirm('この潜在顧客を「商談」ステージに移動しますか？')) return;
+            try {
+                await RyubeeAPI.updateJobStage(jobId, 'negotiation');
+                document.getElementById('drawerOverlay').classList.remove('show');
+                document.body.style.overflow = '';
+                await loadPipeline();
+                showToast('✅ 商談ステージに移動しました！');
+            } catch (e) { alert('エラー: ' + e.message); }
+        }
+
+        // GPS 現在地取得
+        function fillCurrentLocation(inputId, accuracyId) {
+            const btn = event.target.closest('.gps-btn');
+            const accEl = document.getElementById(accuracyId);
+            if (!navigator.geolocation) {
+                alert('このブラウザでは位置情報を利用できません');
+                return;
+            }
+            btn.classList.add('loading');
+            btn.textContent = '📍 取得中...';
+            navigator.geolocation.getCurrentPosition(
+                async (pos) => {
+                    const lat = pos.coords.latitude;
+                    const lng = pos.coords.longitude;
+                    const acc = Math.round(pos.coords.accuracy);
+                    // 逆ジオコーディング（Google不要、Nominatim使用）
+                    try {
+                        const res = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=ja`);
+                        const data = await res.json();
+                        const address = data.display_name || `${lat}, ${lng}`;
+                        document.getElementById(inputId).value = address;
+                        // 精度表示
+                        let accClass = 'good';
+                        let accLabel = '高精度';
+                        if (acc > 100) { accClass = 'poor'; accLabel = '低精度'; }
+                        else if (acc > 30) { accClass = 'ok'; accLabel = '中精度'; }
+                        accEl.innerHTML = `📡 精度: 約${acc}m（${accLabel}）`;
+                        accEl.className = `gps-accuracy ${accClass}`;
+                    } catch (e) {
+                        document.getElementById(inputId).value = `${lat}, ${lng}`;
+                        accEl.innerHTML = `📡 精度: 約${Math.round(pos.coords.accuracy)}m（住所変換失敗、座標のみ）`;
+                        accEl.className = 'gps-accuracy ok';
+                    }
+                    // input の onchange をトリガー
+                    document.getElementById(inputId).dispatchEvent(new Event('change'));
+                    btn.classList.remove('loading');
+                    btn.textContent = '📍 現在地';
+                },
+                (err) => {
+                    btn.classList.remove('loading');
+                    btn.textContent = '📍 現在地';
+                    if (err.code === 1) alert('位置情報の使用が拒否されました。\nブラウザの設定から位置情報を許可してください。');
+                    else alert('位置情報の取得に失敗しました: ' + err.message);
+                },
+                { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 }
+            );
+        }
+
+        function fillCurrentLocationNew() {
+            fillCurrentLocation('njAddress', 'njGpsAccuracy');
+        }
+
+        // 新規追加モーダルのステージ切替
+        document.getElementById('njStage')?.addEventListener('change', function() {
+            const isProspect = this.value === 'prospect';
+            document.getElementById('njAddressGroup').style.display = isProspect ? 'block' : 'none';
+            document.getElementById('njAmountGroup').style.display = isProspect ? 'none' : 'block';
+        });
+
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+        //  顧客別処分先契約
+        // ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+        // 処分先 → デフォルト廃棄物種類マッピング（配列で複数品目対応）
+        const DISPOSAL_WASTE_MAP = {
+            '公社': [],
+            '光アスコン': ['廃プラ・発泡', 'がれき類', 'ガラス・陶磁器', 'コンクリート'],
+            '木材開発': ['木くず'],
+            '旭興産業': ['蛍光灯', '乾電池', '電池類', 'スプレー缶', '消火器'],
+            '厳本金属': ['金属くず'],
+            'HIRAYAMA': ['廃プラ', '木くず', '金属くず', 'ガラ・陶', 'ゴムくず', '繊維くず', '紙くず'],
+            '西山環境サービス': ['廃プラ', '木くず', '金属くず', 'ガラ・陶', 'ゴムくず', '繊維くず', '紙くず'],
+            '京都有機資源': ['残渣', '動植物性残渣'],
+            'ホームケルン': ['廃プラ', '木くず', '金属くず', 'ガラ・陶', '繊維くず', '紙くず', 'がれき類'],
+            '大剛': ['廃プラ', '木くず', '金属くず'],
+            '京都環境保全公社': ['燃え殻', '汚泥', '廃油', '廃酸', '廃アルカリ', '廃プラ', '紙くず', '木くず', '繊維くず', '動植物性残渣', 'ゴムくず', '金属くず', 'ガラス・陶磁器', '鉱さい', 'がれき類', 'ばいじん'],
+            '家電リサイクル': ['家電4品目'],
+        };
+
+        let _selectedWasteTypes = new Set();
+
+        let _contractsMaster = null;
+        let _editingContractId = null;
+        let _currentContractCustomerId = null;
+
+        async function getContractorsMaster() {
+            if (_contractsMaster) return _contractsMaster;
+            try {
+                const settings = await RyubeeAPI.fetchSettings();
+                _contractsMaster = JSON.parse(settings.contractors_master || '[]');
+            } catch (e) {
+                _contractsMaster = Object.keys(DISPOSAL_WASTE_MAP);
+            }
+            return _contractsMaster;
+        }
+
+        async function loadCustomerContracts(customerId) {
+            const activeEl = document.getElementById('customerActiveContractors');
+            const el = document.getElementById('contractsList');
+            if (activeEl) {
+                activeEl.innerHTML = '<p style="font-size:0.8rem;color:var(--text-tertiary);">読み込み中...</p>';
+            }
+            if (el) {
+                el.innerHTML = '<p style="font-size:0.8rem;color:var(--text-tertiary);">読み込み中...</p>';
+            }
+
+            try {
+                // Fetch customer details to get active contractors & contractor items
+                const customer = await RyubeeAPI.fetchCustomer(customerId);
+                let activeHtml = '';
+                if (customer && customer.form_data) {
+                    let fd = {};
+                    try { fd = JSON.parse(customer.form_data); } catch(e){}
+                    const activeContractors = fd.active_contractors || [];
+                    const contractorItems = fd.contractor_items || {};
+                    if (activeContractors.length > 0) {
+                        activeHtml = `
+                            <div style="margin-bottom: 12px; padding: 10px; background: #F0F9FF; border-left: 4px solid var(--blue); border-radius: 4px;">
+                                <div style="font-weight: 700; font-size: 0.78rem; color: #0369A1; margin-bottom: 6px;">📋 顧客設定の処分先</div>
+                                <div style="display:flex; flex-direction:column; gap: 6px;">
+                        `;
+                        activeContractors.forEach(ct => {
+                            const items = contractorItems[ct] || [];
+                            activeHtml += `
+                                <div style="font-size: 0.78rem; color: var(--text-primary);">
+                                    <strong>🏭 ${utils.escapeHtml(ct)}</strong>
+                                    ${items.length > 0 ? `<div style="display:flex; flex-wrap:wrap; gap:4px; margin-top:2px;">${items.map(it => `<span style="background:#fff; border:1px solid #BAE6FD; color:#0369A1; border-radius:3px; padding:1px 4px; font-size:0.7rem;">${utils.escapeHtml(it)}</span>`).join('')}</div>` : '<div style="color:var(--text-tertiary); font-size:0.7rem; margin-top:2px;">(項目未選択)</div>'}
+                                </div>
+                            `;
+                        });
+                        activeHtml += `
+                                </div>
+                            </div>
+                        `;
+                    } else {
+                        activeHtml = '<p style="font-size:0.78rem;color:var(--text-tertiary);margin:0 0 8px;">顧客設定の処分先なし</p>';
+                    }
+                } else {
+                    activeHtml = '<p style="font-size:0.78rem;color:var(--text-tertiary);margin:0 0 8px;">顧客情報が取得できません</p>';
+                }
+                if (activeEl) activeEl.innerHTML = activeHtml;
+            } catch (e) {
+                console.error("Failed to load customer settings:", e);
+                if (activeEl) activeEl.innerHTML = '<p style="font-size:0.78rem;color:var(--red);margin:0 0 8px;">顧客設定 読込失敗</p>';
+            }
+
+            // Load 3-party contracts
+            try {
+                const contracts = await RyubeeAPI.fetchCustomerContracts(customerId);
+                if (!contracts.length) {
+                    el.innerHTML = '<p style="font-size:0.82rem;color:var(--text-tertiary);text-align:center;margin:8px 0;">3社契約なし</p>';
+                    return;
+                }
+                
+                // Sort by contract_date DESC, then created_at DESC
+                const sortedContracts = [...contracts].sort((a, b) => {
+                    const dateA = a.contract_date || a.created_at;
+                    const dateB = b.contract_date || b.created_at;
+                    return new Date(dateB) - new Date(dateA);
+                });
+
+                el.innerHTML = sortedContracts.map(c => {
+                    const statusLabels = { pending: '未送付', sent: '送付済', returned: '返却済', completed: '完了' };
+                    const statusClass = c.status || 'pending';
+                    // 日付トラッキング表示
+                    let tracking = '';
+                    if (c.sent_date) tracking += `<span class="cc-track">📤 ${c.sent_date}</span>`;
+                    if (c.returned_date) tracking += `<span class="cc-track">📥 ${c.returned_date}</span>`;
+                    if (c.accepted) tracking += `<span class="cc-track cc-ok">✅ 排受OK</span>`;
+                    if (c.manifest_registered) tracking += `<span class="cc-track cc-ok">📋 マニ登録</span>`;
+                    if (c.completion_date) tracking += `<span class="cc-track">🏁 ${c.completion_date}</span>`;
+
+                    // 単価・備考表示
+                    let priceHtml = '';
+                    if (c.unit_price != null) {
+                        priceHtml = `<span style="font-size:0.72rem; color:var(--text-secondary); background:#eef2f6; padding:2px 6px; border-radius:4px; margin-left:6px; font-weight:700;">¥${c.unit_price.toLocaleString()}/${c.unit || 'kg'}</span>`;
+                    }
+                    let notesHtml = '';
+                    if (c.notes) {
+                        notesHtml = `<div style="font-size:0.75rem; color:var(--text-tertiary); margin-top:4px; border-top:1px dashed #eee; padding-top:4px; white-space:pre-wrap;">📝 ${utils.escapeHtml(c.notes)}</div>`;
+                    }
+
+                    return `
+                        <div class="contract-card" onclick="openContractModal('${customerId}', '${c.id}')" style="display:block; padding:12px; height:auto;">
+                            <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                                <div class="cc-company" style="font-weight:700; font-size:0.85rem;">🏭 ${utils.escapeHtml(c.disposal_company || '–')}</div>
+                                <span class="cc-status ${statusClass}" style="margin:0;">${statusLabels[statusClass] || '未送付'}</span>
+                            </div>
+                            <div class="cc-waste" style="margin-top:4px; margin-bottom:4px; font-size:0.8rem;">
+                                ♻️ ${utils.escapeHtml(c.waste_type || '–')}
+                                ${priceHtml}
+                            </div>
+                            ${tracking ? `<div class="cc-tracking" style="margin-top:6px; margin-bottom:4px;">${tracking}</div>` : ''}
+                            ${notesHtml}
+                        </div>
+                    `;
+                }).join('');
+            } catch (e) {
+                el.innerHTML = '<p style="font-size:0.82rem;color:var(--red);text-align:center;">3社契約 読込失敗</p>';
+            }
+        }
+
+        async function openContractModal(customerId, contractId = null) {
+            _currentContractCustomerId = customerId;
+            _editingContractId = contractId;
+            _selectedWasteTypes.clear();
+
+            let overlay = document.getElementById('contractModalOverlay');
+            if (overlay) overlay.remove();
+
+            overlay = document.createElement('div');
+            overlay.id = 'contractModalOverlay';
+            overlay.className = 'contract-modal-overlay';
+            overlay.onclick = (e) => { if (e.target === overlay) overlay.classList.remove('show'); };
+
+            if (contractId) {
+                // ── 編集モード（1件） ──
+                overlay.innerHTML = `
+                    <div class="contract-modal">
+                        <h3>📄 処分先契約 編集</h3>
+                        <div class="contract-form-group">
+                            <label>処分先</label>
+                            <input type="text" id="ccEditDisposal" placeholder="処分先名">
+                        </div>
+                        <div class="contract-form-group">
+                            <label>廃棄物種類</label>
+                            <input type="text" id="ccEditWaste" placeholder="例: 廃プラ・発泡">
+                        </div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                            <div class="contract-form-group">
+                                <label>契約単価</label>
+                                <input type="number" id="ccEditPrice" placeholder="30">
+                            </div>
+                            <div class="contract-form-group">
+                                <label>単位</label>
+                                <select id="ccEditUnit">
+                                    <option value="kg">/kg</option>
+                                    <option value="m³">/m³</option>
+                                    <option value="式">/式</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div style="border-top:1px solid var(--border);margin:14px 0 10px;padding-top:12px;">
+                            <div style="font-size:0.82rem;font-weight:700;color:var(--text-secondary);margin-bottom:8px;">📋 契約書追跡</div>
+                        </div>
+                        <div class="contract-form-group">
+                            <label>ステータス</label>
+                            <select id="ccEditStatus">
+                                <option value="pending">📝 未送付</option>
+                                <option value="sent">📤 送付済</option>
+                                <option value="returned">📥 返却済</option>
+                                <option value="completed">✅ 完了</option>
+                            </select>
+                        </div>
+                        <div class="contract-form-group">
+                            <label>送付方法</label>
+                            <select id="ccEditDelivery">
+                                <option value="">-- 未選択 --</option>
+                                <option value="郵送">📮 郵送</option>
+                                <option value="持参">🚗 持参</option>
+                            </select>
+                        </div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                            <div class="contract-form-group">
+                                <label>📤 送付日</label>
+                                <input type="date" id="ccEditSentDate">
+                            </div>
+                            <div class="contract-form-group">
+                                <label>📥 返却日</label>
+                                <input type="date" id="ccEditReturnedDate">
+                            </div>
+                        </div>
+                        <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:10px;">
+                            <label class="cc-checkbox-label">
+                                <input type="checkbox" id="ccEditAccepted"> ✅ 排受OK
+                            </label>
+                            <label class="cc-checkbox-label">
+                                <input type="checkbox" id="ccEditManifest"> 📋 マニ登録済
+                            </label>
+                        </div>
+                        <div class="contract-form-group">
+                            <label>🏁 完了日</label>
+                            <input type="date" id="ccEditCompletionDate">
+                        </div>
+                        <div class="contract-form-group">
+                            <label>備考</label>
+                            <textarea id="ccEditNotes" rows="2" placeholder="任意"></textarea>
+                        </div>
+                        <button class="btn btn-primary" onclick="saveContractEdit()" style="width:100%;">保存する</button>
+                        <button class="btn btn-secondary mt-1" onclick="document.getElementById('contractModalOverlay').classList.remove('show')" style="width:100%;">キャンセル</button>
+                        <button class="btn btn-danger mt-1" onclick="deleteContract()" style="width:100%;">削除する</button>
+                    </div>
+                `;
+                document.body.appendChild(overlay);
+
+                // 既存データ読み込み
+                try {
+                    const contracts = await RyubeeAPI.fetchCustomerContracts(customerId);
+                    const c = contracts.find(x => x.id === contractId);
+                    if (c) {
+                        document.getElementById('ccEditDisposal').value = c.disposal_company || '';
+                        document.getElementById('ccEditWaste').value = c.waste_type || '';
+                        document.getElementById('ccEditPrice').value = c.unit_price || '';
+                        document.getElementById('ccEditUnit').value = c.unit || 'kg';
+                        document.getElementById('ccEditStatus').value = c.status || 'pending';
+                        document.getElementById('ccEditDelivery').value = c.delivery_method || '';
+                        document.getElementById('ccEditSentDate').value = c.sent_date || '';
+                        document.getElementById('ccEditReturnedDate').value = c.returned_date || '';
+                        document.getElementById('ccEditAccepted').checked = !!c.accepted;
+                        document.getElementById('ccEditManifest').checked = !!c.manifest_registered;
+                        document.getElementById('ccEditCompletionDate').value = c.completion_date || '';
+                        document.getElementById('ccEditNotes').value = c.notes || '';
+                    }
+                } catch (e) { console.error(e); }
+            } else {
+                // ── 一括追加モード ──
+                const master = await getContractorsMaster();
+                let listHtml = '';
+                master.forEach(company => {
+                    const wasteTypes = DISPOSAL_WASTE_MAP[company] || [];
+                    const chipsHtml = wasteTypes.length > 0
+                        ? wasteTypes.map(w => `<button type="button" class="cc-waste-chip" data-company="${utils.escapeHtml(company)}" data-waste="${utils.escapeHtml(w)}" onclick="toggleBatchWaste(this)">${utils.escapeHtml(w)}</button>`).join('')
+                        : `<input type="text" class="cc-custom-waste" data-company="${utils.escapeHtml(company)}" placeholder="品目を入力..." style="padding:4px 8px;font-size:0.75rem;border-radius:8px;border:1px solid var(--border);width:120px;">`;
+                    listHtml += `
+                        <div class="cc-batch-row" data-company="${utils.escapeHtml(company)}">
+                            <label class="cc-batch-company">
+                                <input type="checkbox" class="cc-company-check" data-company="${utils.escapeHtml(company)}" onchange="toggleBatchCompany(this)">
+                                <span>🏭 ${utils.escapeHtml(company)}</span>
+                            </label>
+                            <div class="cc-batch-chips" style="display:none;">
+                                ${chipsHtml}
+                                ${wasteTypes.length > 1 ? `<button type="button" class="cc-waste-chip cc-all-btn" onclick="selectAllWaste(this, '${utils.escapeHtml(company)}')">✅ 全選択</button>` : ''}
+                            </div>
+                        </div>
+                    `;
+                });
+
+                overlay.innerHTML = `
+                    <div class="contract-modal">
+                        <h3>📄 契約先を一括追加</h3>
+                        <p style="font-size:0.78rem;color:var(--text-tertiary);margin-bottom:12px;">処分先にチェック → 品目をタップで選択</p>
+                        <div id="ccBatchList" style="max-height:50vh;overflow-y:auto;margin-bottom:12px;">
+                            ${listHtml}
+                        </div>
+                        <div id="ccBatchSummary" style="font-size:0.78rem;color:var(--text-secondary);margin-bottom:8px;font-weight:600;"></div>
+                        <button class="btn btn-primary" onclick="saveContractBatch()" style="width:100%;">一括保存する</button>
+                        <button class="btn btn-secondary mt-1" onclick="document.getElementById('contractModalOverlay').classList.remove('show')" style="width:100%;">キャンセル</button>
+                    </div>
+                `;
+                document.body.appendChild(overlay);
+            }
+
+            overlay.classList.add('show');
+        }
+
+        // 処分先チェックボックスのトグル
+        function toggleBatchCompany(checkbox) {
+            const company = checkbox.dataset.company;
+            const row = checkbox.closest('.cc-batch-row');
+            const chipsDiv = row.querySelector('.cc-batch-chips');
+            chipsDiv.style.display = checkbox.checked ? 'flex' : 'none';
+            if (!checkbox.checked) {
+                // チェック外したら品目選択もクリア
+                row.querySelectorAll('.cc-waste-chip.selected').forEach(c => c.classList.remove('selected'));
+                row.querySelectorAll('.cc-custom-waste').forEach(i => i.value = '');
+            }
+            updateBatchSummary();
+        }
+
+        // 品目チップのトグル
+        function toggleBatchWaste(chip) {
+            chip.classList.toggle('selected');
+            updateBatchSummary();
+        }
+
+        // 全選択
+        function selectAllWaste(btn, company) {
+            const row = btn.closest('.cc-batch-row');
+            const chips = row.querySelectorAll('.cc-waste-chip:not(.cc-all-btn)');
+            const allSelected = Array.from(chips).every(c => c.classList.contains('selected'));
+            chips.forEach(c => {
+                if (allSelected) c.classList.remove('selected');
+                else c.classList.add('selected');
+            });
+            updateBatchSummary();
+        }
+
+        // サマリー更新
+        function updateBatchSummary() {
+            const pairs = getBatchSelections();
+            const el = document.getElementById('ccBatchSummary');
+            if (el) {
+                el.textContent = pairs.length > 0 ? `📋 ${pairs.length}件の契約を追加します` : '';
+            }
+        }
+
+        // 選択中の処分先×品目ペアを取得
+        function getBatchSelections() {
+            const pairs = [];
+            document.querySelectorAll('.cc-company-check:checked').forEach(cb => {
+                const company = cb.dataset.company;
+                const row = cb.closest('.cc-batch-row');
+                const selectedChips = row.querySelectorAll('.cc-waste-chip.selected:not(.cc-all-btn)');
+                const customInput = row.querySelector('.cc-custom-waste');
+                if (selectedChips.length > 0) {
+                    selectedChips.forEach(c => pairs.push({ company, waste: c.dataset.waste }));
+                } else if (customInput && customInput.value.trim()) {
+                    pairs.push({ company, waste: customInput.value.trim() });
+                } else {
+                    // 品目未選択でもチェックあり → 空品目で1件
+                    pairs.push({ company, waste: '' });
+                }
+            });
+            return pairs;
+        }
+
+        // 一括保存
+        async function saveContractBatch() {
+            const pairs = getBatchSelections();
+            if (pairs.length === 0) {
+                alert('処分先を選択してください');
+                return;
+            }
+
+            if (!_currentContractCustomerId) {
+                alert('顧客IDが未設定です。ドロワーを開き直してください。');
+                return;
+            }
+
+            const btn = event?.target;
+            if (btn) { btn.disabled = true; btn.textContent = '保存中...'; }
+
+            try {
+                let created = 0;
+                for (const { company, waste } of pairs) {
+                    console.log(`Creating contract: customer=${_currentContractCustomerId}, company=${company}, waste=${waste}`);
+                    await RyubeeAPI.createCustomerContract(_currentContractCustomerId, {
+                        disposal_company: company,
+                        waste_type: waste,
+                        status: 'pending',
+                    });
+                    created++;
+                }
+                showToast(`✅ ${created}件の契約を追加しました`);
+                document.getElementById('contractModalOverlay').classList.remove('show');
+                loadCustomerContracts(_currentContractCustomerId);
+            } catch (e) {
+                console.error('Contract save error:', e);
+                alert(`エラー: ${e.message}\n\n顧客ID: ${_currentContractCustomerId}\n件数: ${pairs.length}`);
+                if (btn) { btn.disabled = false; btn.textContent = '一括保存する'; }
+            }
+        }
+
+        // 単体編集の保存
+        async function saveContractEdit() {
+            const body = {
+                disposal_company: document.getElementById('ccEditDisposal').value.trim(),
+                waste_type: document.getElementById('ccEditWaste').value.trim(),
+                unit_price: parseFloat(document.getElementById('ccEditPrice').value) || null,
+                unit: document.getElementById('ccEditUnit').value,
+                status: document.getElementById('ccEditStatus').value,
+                delivery_method: document.getElementById('ccEditDelivery').value,
+                sent_date: document.getElementById('ccEditSentDate').value || null,
+                returned_date: document.getElementById('ccEditReturnedDate').value || null,
+                accepted: document.getElementById('ccEditAccepted').checked,
+                manifest_registered: document.getElementById('ccEditManifest').checked,
+                completion_date: document.getElementById('ccEditCompletionDate').value || null,
+                notes: document.getElementById('ccEditNotes').value.trim(),
+            };
+            if (!body.disposal_company) { alert('処分先を入力してください'); return; }
+            try {
+                await RyubeeAPI.updateCustomerContract(_currentContractCustomerId, _editingContractId, body);
+                showToast('✅ 契約を更新しました');
+                document.getElementById('contractModalOverlay').classList.remove('show');
+                loadCustomerContracts(_currentContractCustomerId);
+            } catch (e) { alert('エラー: ' + e.message); }
+        }
+
+        async function deleteContract() {
+            if (!confirm('この契約を削除しますか？')) return;
+            try {
+                await RyubeeAPI.deleteCustomerContract(_currentContractCustomerId, _editingContractId);
+                showToast('🗑️ 契約を削除しました');
+                document.getElementById('contractModalOverlay').classList.remove('show');
+                loadCustomerContracts(_currentContractCustomerId);
+            } catch (e) {
+                alert('エラー: ' + e.message);
+            }
+        }
+    
