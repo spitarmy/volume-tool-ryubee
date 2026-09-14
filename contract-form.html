@@ -73,7 +73,7 @@
         h1 {
             text-align: center;
             font-size: 20px;
-            margin-bottom: 40px;
+            margin-bottom: 15px;
             letter-spacing: 2px;
         }
         .stamp-box {
@@ -88,13 +88,13 @@
             line-height: 60px;
             color: #999;
         }
-        .contract-parties { margin-bottom: 30px; }
-        .party-line { display: flex; align-items: baseline; margin-bottom: 10px; }
+        .contract-parties { margin-bottom: 15px; }
+        .party-line { display: flex; align-items: baseline; margin-bottom: 5px; }
         .party-role { width: 120px; }
         .party-name { flex: 1; border-bottom: 1px solid #000; padding: 0 10px; font-weight: bold; }
         .party-suffix { margin-left: 10px; }
-        h2 { font-size: 16px; margin-top: 30px; margin-bottom: 10px; }
-        .clause-content { padding-left: 20px; margin-bottom: 20px; }
+        h2 { font-size: 16px; margin-top: 15px; margin-bottom: 5px; }
+        .clause-content { padding-left: 20px; margin-bottom: 10px; }
         .permit-info { margin-left: 20px; margin-bottom: 20px; }
         .permit-row { display: flex; margin-bottom: 5px; }
         .permit-label { width: 200px; }
@@ -148,31 +148,17 @@
             1（乙の事業範囲）<br>
             乙の事業範囲は以下のとおりであり、乙はこの事業範囲を証するものとして、許可証の写しを甲に提出する。なお、許可事項に変更があったときは、乙は速やかにその旨を甲に通知するとともに、変更後の許可証の写しを甲に提出する。
             
-            <div style="text-align:center; margin-top:10px; margin-bottom:10px;">【産廃】</div>
+            <div style="text-align:center; margin-top:4px; margin-bottom:4px;">【産廃】</div>
             
-            <div class="permit-info">
-                <div class="permit-row"><div class="permit-label">許可都道府県・政令市：</div><div class="permit-value">京都府</div></div>
-                <div class="permit-row"><div class="permit-label">許可の有効期限：</div><div class="permit-value">許可証に記載の通り</div></div>
-                <div class="permit-row"><div class="permit-label">事業の範囲：</div><div class="permit-value">許可証に記載の通り</div></div>
-                <div class="permit-row"><div class="permit-label">許可の条件：</div><div class="permit-value">許可証に記載の通り</div></div>
-                <div class="permit-row"><div class="permit-label">許可番号：</div><div class="permit-value">第 02600002617 号</div></div>
-            </div>
-            
-            <div class="permit-info">
-                <div class="permit-row"><div class="permit-label">許可都道府県・政令市：</div><div class="permit-value">京都市</div></div>
-                <div class="permit-row"><div class="permit-label">許可の有効期限：</div><div class="permit-value">許可証に記載の通り</div></div>
-                <div class="permit-row"><div class="permit-label">事業の範囲：</div><div class="permit-value">許可証に記載の通り</div></div>
-                <div class="permit-row"><div class="permit-label">許可の条件：</div><div class="permit-value">許可証に記載の通り</div></div>
-                <div class="permit-row"><div class="permit-label">許可番号：</div><div class="permit-value">第 06511002617 号</div></div>
-            </div>
-            
-            <div class="permit-info">
-                <div class="permit-row"><div class="permit-label">許可都道府県・政令市：</div><div class="permit-value">兵庫県</div></div>
-                <div class="permit-row"><div class="permit-label">許可の有効期限：</div><div class="permit-value">許可証に記載の通り</div></div>
-                <div class="permit-row"><div class="permit-label">事業の範囲：</div><div class="permit-value">許可証に記載の通り</div></div>
-                <div class="permit-row"><div class="permit-label">許可の条件：</div><div class="permit-value">許可証に記載の通り</div></div>
-                <div class="permit-row"><div class="permit-label">許可番号：</div><div class="permit-value">第 02803002617 号</div></div>
-            </div>
+            <table class="permit-table" style="font-size:12px;">
+                <thead><tr><th></th><th>京都府</th><th>京都市</th><th>兵庫県</th></tr></thead>
+                <tbody>
+                    <tr><td style="text-align:left;">許可の有効期限</td><td colspan="3">許可証に記載の通り</td></tr>
+                    <tr><td style="text-align:left;">事業の範囲</td><td colspan="3">許可証に記載の通り</td></tr>
+                    <tr><td style="text-align:left;">許可の条件</td><td colspan="3">許可証に記載の通り</td></tr>
+                    <tr><td style="text-align:left;">許可番号</td><td>第 02600002617 号</td><td>第 06511002617 号</td><td>第 02803002617 号</td></tr>
+                </tbody>
+            </table>
 
             2（委託する産業廃棄物の種類、数量及び単価）<br>
             甲が、乙に収集・運搬を委託する産業廃棄物の種類、数量及び単価は、次のとおりとする。<br>
