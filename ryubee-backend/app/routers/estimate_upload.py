@@ -138,7 +138,7 @@ async def parse_estimate(
 
     # GPT-4o Vision APIリクエスト
     user_content = [
-        {"type": "text", "text": "この見積書の画像から情報を抽出してJSON形式で出力してください。"}
+        {"type": "text", "text": "これは業務用の見積書帳票です。画像に写っている顧客名、現場住所、品目明細、単価、数量、金額等の各項目を読み取り、指定のJSON形式で出力してください。"}
     ]
     for b64 in base64_images:
         user_content.append({
@@ -153,6 +153,7 @@ async def parse_estimate(
                 {"role": "system", "content": PARSE_ESTIMATE_PROMPT},
                 {"role": "user", "content": user_content},
             ],
+            response_format={"type": "json_object"},
             max_tokens=2000,
             temperature=0.1,
         )
