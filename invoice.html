@@ -277,39 +277,144 @@
 
         @media print {
             @page {
-                size: A4;
-                margin: 15mm;
+                size: A4 portrait;
+                margin: 4mm 6mm;
             }
 
             body {
-                background: #fff;
-                margin: 0;
-                padding: 0;
+                background: #fff !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                -webkit-print-color-adjust: exact !important;
+                print-color-adjust: exact !important;
             }
 
+            .no-print,
             .app-header,
             .action-buttons,
-            .bottom-nav {
+            .bottom-nav,
+            .row-delete-btn,
+            .add-row-bar,
+            .empty-filler-row {
                 display: none !important;
             }
 
             .invoice-container {
-                box-shadow: none;
-                margin: 0;
-                padding: 0;
-                max-width: none;
-                width: 100%;
+                box-shadow: none !important;
+                margin: 0 !important;
+                padding: 2mm 4mm !important;
+                max-width: 100% !important;
+                width: 100% !important;
+                font-size: 8.5pt !important;
+                line-height: 1.25 !important;
+            }
+
+            .title {
+                font-size: 14pt !important;
+                letter-spacing: 8px !important;
+                margin-bottom: 6px !important;
+            }
+
+            .top-section {
+                margin-bottom: 6px !important;
+            }
+
+            .customer-name {
+                font-size: 12pt !important;
+                margin-bottom: 4px !important;
+                padding-bottom: 2px !important;
+                width: 95% !important;
+            }
+
+            .meta-table {
+                font-size: 7.5pt !important;
+                margin-bottom: 4px !important;
+            }
+
+            .meta-table td {
+                padding: 1px 2px !important;
+            }
+
+            .company-box {
+                font-size: 7.5pt !important;
+                line-height: 1.25 !important;
+                margin-left: 0 !important;
+            }
+
+            .company-name {
+                font-size: 10pt !important;
+                margin-bottom: 2px !important;
+            }
+
+            .middle-section {
+                margin-bottom: 4px !important;
+            }
+
+            #totalPriceBox, #unitPriceBox {
+                font-size: 12pt !important;
+                padding: 4px 8px !important;
+                margin-bottom: 4px !important;
+            }
+
+            .elephant-box img {
+                max-height: 40px !important;
+            }
+
+            #out-company-stamp {
+                max-width: 50px !important;
+                max-height: 50px !important;
+            }
+
+            .items-table {
+                margin-bottom: 4px !important;
+                font-size: 8pt !important;
+            }
+
+            .items-table th {
+                font-size: 7.5pt !important;
+                padding: 3px 4px !important;
+                background-color: #f0f0f0 !important;
+            }
+
+            .items-table td {
+                font-size: 8pt !important;
+                padding: 3px 4px !important;
+                line-height: 1.2 !important;
+            }
+
+            .items-table tr {
+                height: auto !important;
+                min-height: 0 !important;
             }
 
             .items-table input {
-                border: none;
-                background: transparent;
-                padding: 0;
+                border: none !important;
+                background: transparent !important;
+                padding: 0 !important;
+                font-size: 8pt !important;
+                height: auto !important;
             }
 
-            .row-delete-btn,
-            .add-row-bar {
-                display: none !important;
+            .totals-table {
+                margin-top: 2px !important;
+                border-width: 1px !important;
+            }
+
+            .totals-table td {
+                padding: 2px 8px !important;
+                font-size: 8pt !important;
+            }
+
+            .totals-table .num {
+                font-size: 8.5pt !important;
+            }
+
+            #sig-container {
+                margin-top: 6px !important;
+            }
+
+            #out-signature {
+                max-height: 50px !important;
             }
         }
 
