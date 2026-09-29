@@ -552,6 +552,25 @@
 
                     <h4 class="section-title">📍 事業所・回収情報 <span id="branchCount" style="font-size:0.75rem;font-weight:400;color:var(--text-tertiary);"></span></h4>
                     <p style="font-size:0.72rem;color:var(--text-secondary);margin-bottom:6px;">回収場所ごとに情報を登録（複数可）</p>
+                    <div id="editGeneralWasteSummary" style="display:none;margin-bottom:12px;"></div>
+                    <datalist id="industrialMasterList">
+                        <option value="産業廃棄物処理費 持込分"></option>
+                        <option value="収集運搬費 廃プラ"></option>
+                        <option value="産業廃棄物処理費（別分）"></option>
+                        <option value="産業廃棄物処理費 廃プラ"></option>
+                        <option value="産業廃棄物処理費 発泡"></option>
+                        <option value="産業廃棄物 動植物性残渣"></option>
+                        <option value="産業廃棄物 資源ごみ"></option>
+                        <option value="産業廃棄物処理費 蛍光灯"></option>
+                        <option value="産業廃棄物処理費 ウエス"></option>
+                        <option value="産業廃棄物処理費 廃プラ シール"></option>
+                        <option value="産業廃棄物処理費 廃プラ クロス"></option>
+                        <option value="産業廃棄物処理費 廃プラ（混別）"></option>
+                        <option value="産業廃棄物処理費 廃プラ（RPF）"></option>
+                        <option value="産業廃棄物処理費 廃プラ 木くず"></option>
+                        <option value="産業廃棄物処理費 金属くず"></option>
+                        <option value="産業廃棄物処理費 ガラス・陶磁器類"></option>
+                    </datalist>
                     <div id="branchesContainer"></div>
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
                         <button class="btn btn-secondary btn-sm mt-1" style="width:100%;background:#EFF6FF;color:#1D4ED8;border:1px solid #93C5FD;" onclick="addBranchCard({branch_name:document.getElementById('custName').value,branch_address:document.getElementById('custAddress').value,branch_phone:document.getElementById('custPhone').value,is_headquarters:true}, 0)">🏢 本社を追加</button>
@@ -787,7 +806,15 @@
             if (anyOpen) lockBodyScroll();
             else unlockBodyScroll();
         }).observe(document.body, { subtree: true, attributes: true, attributeFilter: ['class'], childList: true });
-        document.addEventListener('DOMContentLoaded', loadCustomers);
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadCustomers();
+            const bc = document.getElementById('branchesContainer');
+            if (bc) {
+                bc.addEventListener('input', () => updateEditModalGeneralWasteSummary());
+                bc.addEventListener('change', () => updateEditModalGeneralWasteSummary());
+            }
+        });
 
         let allDisposalCompaniesMaster = [];
 
@@ -1022,7 +1049,15 @@
                             const branches = c.parsed_form?.branches || [];
                             const branchList = branches.length > 0 ? branches : (c.parsed_form?.collection_general || c.parsed_form?.collection_canbottle || c.parsed_form?.collection_recycle) ? [c.parsed_form] : [];
                             if (branchList.length === 0) return '';
+                            const custGw = calculateCustomerGeneralWasteTotal(branchList);
+                            const gwTotalBadge = custGw.subtotal > 0 ? `
+                                <div style="margin-bottom:6px; background:#EFF6FF; border:1px solid #93C5FD; border-radius:6px; padding:4px 8px; display:flex; justify-content:space-between; align-items:center;">
+                                    <span style="font-weight:700; color:#1E40AF; font-size:11px;">📊 一般サブスク合計 (${branchList.length}件):</span>
+                                    <span style="font-size:12px;">税抜 <strong style="color:#1D4ED8;">¥${custGw.subtotal.toLocaleString()}</strong> <span style="color:#059669; font-weight:700;">(税込 ¥${custGw.total.toLocaleString()})</span></span>
+                                </div>
+                            ` : '';
                             return `<div style="margin-top:8px; padding-top:8px; border-top:1px dashed var(--border); font-size:12px; color:var(--text-secondary);">
+                                ${gwTotalBadge}
                                 ${branchList.map(b => {
                                     const bName = b.branch_name ? `<div style="font-weight:700;color:var(--text-primary);margin-bottom:2px;">📍 ${utils.escapeHtml(b.branch_name)}</div>` : '';
                                     const genVehicle = b.vehicle_general || b.vehicle_number || '';
@@ -1221,6 +1256,7 @@
                 addBranchCard();
             }
             updateBranchCount();
+            updateEditModalGeneralWasteSummary();
 
             // 単価リストの展開
             document.getElementById('pricingListContainer').innerHTML = '';
@@ -1320,7 +1356,7 @@
                 <div class="branch-header" onclick="toggleBranch(this)" style="display:flex;justify-content:space-between;align-items:center;padding:10px 14px;background:var(--bg-secondary);cursor:pointer;font-weight:700;font-size:0.88rem;">
                     <span class="branch-label">📍 ${headerLabel}</span>
                     <div style="display:flex;gap:6px;align-items:center;">
-                        <button type="button" onclick="event.stopPropagation();this.closest('.branch-card').remove();updateBranchCount()" style="background:var(--danger);color:#fff;border:none;border-radius:6px;padding:2px 10px;cursor:pointer;font-size:0.75rem;">削除</button>
+                        <button type="button" onclick="event.stopPropagation();this.closest('.branch-card').remove();updateBranchCount();updateEditModalGeneralWasteSummary();" style="background:var(--danger);color:#fff;border:none;border-radius:6px;padding:2px 10px;cursor:pointer;font-size:0.75rem;">削除</button>
                         <span class="branch-chevron" style="font-size:0.8rem;">▶</span>
                     </div>
                 </div>
@@ -1403,7 +1439,7 @@
                                     <input type="text" class="gc-vehicle" value="${utils.escapeHtml(item.vehicle || '')}" placeholder="号車">
                                     <input type="text" class="gc-unitprice" value="${utils.escapeHtml(item.unitprice || '')}" placeholder="単価">
                                     <select class="gc-unit"><option value="円/月" ${(item.unit||'円/月')==='円/月'?'selected':''}>円/月</option><option value="円/回" ${item.unit==='円/回'?'selected':''}>円/回</option><option value="kg" ${item.unit==='kg'?'selected':''}>kg</option></select>
-                                    <div style="display:flex;gap:2px;align-items:center;"><input type="text" class="gc-notes" value="${utils.escapeHtml(item.notes || '')}" placeholder="備考" style="flex:1;"><button type="button" onclick="this.closest('.collect-row').remove()" style="background:var(--danger);color:#fff;border:none;border-radius:4px;padding:2px 6px;cursor:pointer;font-size:0.7rem;">✕</button></div>
+                                    <div style="display:flex;gap:2px;align-items:center;"><input type="text" class="gc-notes" value="${utils.escapeHtml(item.notes || '')}" placeholder="備考" style="flex:1;"><button type="button" onclick="this.closest('.collect-row').remove();updateEditModalGeneralWasteSummary();" style="background:var(--danger);color:#fff;border:none;border-radius:4px;padding:2px 6px;cursor:pointer;font-size:0.7rem;">✕</button></div>
                                 </div>
                             `).join('')}
                         </div>
@@ -1418,10 +1454,7 @@
                         <div class="industrial-items">
                             ${(data.industrial_items || []).map(item => `
                                 <div class="industrial-row">
-                                    <select class="ind-item-name" style="font-size:0.75rem!important;">
-                                        <option value="">-- 選択 --</option>
-                                        ${getIndustrialMasterOptions(item.item_name)}
-                                    </select>
+                                    <input type="text" class="ind-item-name" list="industrialMasterList" value="${utils.escapeHtml(item.item_name || '')}" placeholder="品目名を選択または入力" style="font-size:0.75rem;" autocomplete="off">
                                     <input type="text" class="ind-freq" value="${utils.escapeHtml(item.freq || '')}" placeholder="週1回">
                                     <input type="text" class="ind-vehicle" value="${utils.escapeHtml(item.vehicle || '')}" placeholder="E">
                                     <input type="text" class="ind-unitprice" value="${utils.escapeHtml(item.unitprice || '')}" placeholder="160">
@@ -1447,6 +1480,7 @@
                 container.appendChild(card);
             }
             updateBranchCount();
+            updateEditModalGeneralWasteSummary();
         }
 
 
@@ -1492,10 +1526,7 @@
             const row = document.createElement('div');
             row.className = 'industrial-row';
             row.innerHTML = `
-                <select class="ind-item-name" style="font-size:0.75rem!important;">
-                    <option value="">-- 選択 --</option>
-                    ${getIndustrialMasterOptions(item.item_name || '')}
-                </select>
+                <input type="text" class="ind-item-name" list="industrialMasterList" value="${utils.escapeHtml(item.item_name || '')}" placeholder="品目名を選択または入力" style="font-size:0.75rem;" autocomplete="off">
                 <input type="text" class="ind-freq" value="${utils.escapeHtml(item.freq || '')}" placeholder="週1回">
                 <input type="text" class="ind-vehicle" value="${utils.escapeHtml(item.vehicle || '')}" placeholder="E">
                 <input type="text" class="ind-unitprice" value="${utils.escapeHtml(item.unitprice || '')}" placeholder="160">
@@ -1515,9 +1546,114 @@
                 <input type="text" class="gc-vehicle" value="${utils.escapeHtml(item.vehicle || '')}" placeholder="号車">
                 <input type="text" class="gc-unitprice" value="${utils.escapeHtml(item.unitprice || '')}" placeholder="単価">
                 <select class="gc-unit"><option value="円/月" ${(item.unit||'円/月')==='円/月'?'selected':''}>円/月</option><option value="円/回" ${item.unit==='円/回'?'selected':''}>円/回</option><option value="kg" ${item.unit==='kg'?'selected':''}>kg</option></select>
-                <div style="display:flex;gap:2px;align-items:center;"><input type="text" class="gc-notes" value="${utils.escapeHtml(item.notes || '')}" placeholder="備考" style="flex:1;"><button type="button" onclick="this.closest('.collect-row').remove()" style="background:var(--danger);color:#fff;border:none;border-radius:4px;padding:2px 6px;cursor:pointer;font-size:0.7rem;">✕</button></div>
+                <div style="display:flex;gap:2px;align-items:center;"><input type="text" class="gc-notes" value="${utils.escapeHtml(item.notes || '')}" placeholder="備考" style="flex:1;"><button type="button" onclick="this.closest('.collect-row').remove();updateEditModalGeneralWasteSummary();" style="background:var(--danger);color:#fff;border:none;border-radius:4px;padding:2px 6px;cursor:pointer;font-size:0.7rem;">✕</button></div>
             `;
             container.appendChild(row);
+            updateEditModalGeneralWasteSummary();
+        }
+
+        // ── 一般廃棄物サブスク合計 計算ヘルパー ──
+        function parseCleanAmount(val) {
+            if (!val) return 0;
+            const num = parseInt(String(val).replace(/[^0-9]/g, ''), 10);
+            return isNaN(num) ? 0 : num;
+        }
+
+        function calculateBranchGeneralWasteSub(b) {
+            if (!b) return 0;
+            let subtotal = 0;
+            
+            // マンション戸数計算
+            const mansionTotal = (b.industry_type === 'マンション' && b.household_count && b.unit_price_per_household)
+                ? (Number(b.household_count) * Number(b.unit_price_per_household))
+                : 0;
+
+            const genPrice = parseCleanAmount(b.unitprice_general || b.price_general);
+            if (genPrice > 0) {
+                subtotal += genPrice;
+            } else if (mansionTotal > 0) {
+                subtotal += mansionTotal;
+            }
+
+            // 缶ビンペット (単位が円/月、または未指定の場合)
+            const canUnit = b.unit_canbottle || '円/月';
+            if (canUnit === '円/月') {
+                subtotal += parseCleanAmount(b.unitprice_canbottle || b.price_canbottle || b.price_recycle);
+            }
+
+            // プラ包装容器
+            const plaUnit = b.unit_plastic || '円/月';
+            if (plaUnit === '円/月') {
+                subtotal += parseCleanAmount(b.unitprice_plastic || b.price_plastic);
+            }
+
+            // 段ボール
+            const cbUnit = b.unit_cardboard || '円/月';
+            if (cbUnit === '円/月') {
+                subtotal += parseCleanAmount(b.unitprice_cardboard || b.price_cardboard || b.price_paper);
+            }
+
+            // その他
+            const othUnit = b.unit_other || '円/月';
+            if (othUnit === '円/月') {
+                subtotal += parseCleanAmount(b.unitprice_other || b.price_other);
+            }
+
+            // 一般カスタム品目
+            (b.general_custom_items || []).forEach(ci => {
+                const u = ci.unit || '円/月';
+                if (u === '円/月') {
+                    subtotal += parseCleanAmount(ci.unitprice);
+                }
+            });
+
+            return subtotal;
+        }
+
+        function calculateCustomerGeneralWasteTotal(branches) {
+            if (!branches || !Array.isArray(branches)) return { subtotal: 0, tax: 0, total: 0, count: 0 };
+            let subtotal = 0;
+            branches.forEach(b => {
+                subtotal += calculateBranchGeneralWasteSub(b);
+            });
+            const tax = Math.floor(subtotal * 0.1);
+            const total = subtotal + tax;
+            return {
+                subtotal, // 税抜
+                tax,      // 消費税 (10%)
+                total,    // 税込
+                count: branches.length
+            };
+        }
+
+        function updateEditModalGeneralWasteSummary() {
+            const container = document.getElementById('editGeneralWasteSummary');
+            if (!container) return;
+            const branches = collectBranches();
+            const res = calculateCustomerGeneralWasteTotal(branches);
+            if (res.subtotal > 0) {
+                container.style.display = 'block';
+                container.innerHTML = `
+                    <div style="background:linear-gradient(135deg,#EFF6FF 0%,#DBEAFE 100%);border:1.5px solid #93C5FD;border-radius:10px;padding:10px 14px;box-shadow:0 2px 4px rgba(30,64,175,0.06);">
+                        <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:6px;">
+                            <span style="font-size:0.82rem;font-weight:800;color:#1E40AF;">
+                                📊 一般廃棄物 サブスク合計 (${branches.length}件の事業所)
+                            </span>
+                            <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;">
+                                <span style="font-size:0.82rem;color:#1E3A5F;">
+                                    税抜: <strong style="font-size:1.05rem;color:#1D4ED8;">¥${res.subtotal.toLocaleString()}</strong>
+                                </span>
+                                <span style="font-size:0.82rem;color:#1E3A5F;">
+                                    税込 (10%): <strong style="font-size:1.15rem;color:#059669;">¥${res.total.toLocaleString()}</strong>
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                container.style.display = 'none';
+                container.innerHTML = '';
+            }
         }
 
         // ── 事業所データ収集 ──
@@ -1849,11 +1985,34 @@
                         if (!exists) branches.push(jb);
                     });
 
+                    const gwTotal = calculateCustomerGeneralWasteTotal(branches);
+                    const summaryCardHtml = gwTotal.subtotal > 0 ? `
+                        <div style="background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%); border: 1.5px solid #93C5FD; border-radius: 12px; padding: 14px 18px; margin-bottom: 16px; box-shadow: 0 2px 4px rgba(30, 64, 175, 0.06);">
+                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                                <span style="font-size:0.92rem; font-weight:800; color:#1E40AF;">
+                                    📊 一般廃棄物 サブスク月額合計 (${gwTotal.count}件の事業所合算)
+                                </span>
+                                <span style="font-size:0.75rem; background:#2563EB; color:#fff; font-weight:700; padding:2px 8px; border-radius:12px;">定期月額</span>
+                            </div>
+                            <div style="display:flex; gap:20px; align-items:baseline; flex-wrap:wrap;">
+                                <div>
+                                    <span style="font-size:0.8rem; color:#4B5563; font-weight:600;">税抜合計:</span>
+                                    <span style="font-size:1.4rem; font-weight:800; color:#1D4ED8; margin-left:4px;">¥${gwTotal.subtotal.toLocaleString()}</span>
+                                </div>
+                                <div>
+                                    <span style="font-size:0.8rem; color:#4B5563; font-weight:600;">税込合計 (10%):</span>
+                                    <span style="font-size:1.4rem; font-weight:800; color:#059669; margin-left:4px;">¥${gwTotal.total.toLocaleString()}</span>
+                                </div>
+                                <div style="font-size:0.8rem; color:#6B7280;">
+                                    (消費税額: ¥${gwTotal.tax.toLocaleString()})
+                                </div>
+                            </div>
+                        </div>
+                    ` : '';
+
                     if (branches.length === 0) return '<div style="background:var(--bg-secondary);padding:12px;border-radius:12px;margin-bottom:16px;font-size:0.85rem;color:var(--text-tertiary);text-align:center;">物件・事業所未登録</div>';
-                    
 
-
-                    return branches.map((b, i) => {
+                    const branchCardsHtml = branches.map((b, i) => {
                         console.log('[Preview] Branch', i, b.branch_name, 'fields:', JSON.stringify({g:b.collection_general,cb:b.collection_canbottle,p:b.collection_plastic,cd:b.collection_cardboard,o:b.collection_other,ind:b.industrial_items?.length||0}));
                         const genV = b.vehicle_general || b.vehicle_number || '';
                         function fmtP(p) { if(!p) return '-'; const n=parseInt(String(p).replace(/[^0-9]/g,'')); return isNaN(n)?utils.escapeHtml(p):'¥'+n.toLocaleString(); }
@@ -1897,9 +2056,12 @@
                                 🏢 入居者 <strong>${b.household_count}</strong>戸${b.unit_price_per_household ? ' × ¥'+Number(b.unit_price_per_household).toLocaleString()+' = <strong style="color:#9A3412;">¥'+(b.household_count * b.unit_price_per_household).toLocaleString()+'/月</strong>' : ''}
                             </div>` : '';
                         
+                        const branchGwSub = calculateBranchGeneralWasteSub(b);
+                        const branchGwBadge = branchGwSub > 0 ? `<span style="font-size:0.75rem;background:#EFF6FF;color:#1D4ED8;font-weight:700;padding:2px 8px;border-radius:6px;margin-left:8px;border:1px solid #BFDBFE;">月額小計: ¥${branchGwSub.toLocaleString()}</span>` : '';
+
                         return `
                         <div style="background:var(--bg-secondary); padding:14px; border-radius:12px; margin-bottom:10px; font-size:0.9rem; line-height:1.6; ${b.is_job_property ? 'border:1px dashed #93C5FD;' : ''}">
-                            📍 <strong style="margin-left:4px;">${utils.escapeHtml(b.branch_name || '物件・事業所 #'+(i+1))}</strong> ${b.is_job_property ? '<span style="font-size:0.7rem;background:#EFF6FF;color:#1D4ED8;padding:2px 6px;border-radius:4px;margin-left:8px;">案件から自動追加</span>' : ''} ${b.industry_type ? '<span style="font-size:0.7rem;background:#F3E8FF;color:#7C3AED;padding:2px 6px;border-radius:4px;margin-left:4px;">'+utils.escapeHtml(b.industry_type)+'</span>' : ''}
+                            📍 <strong style="margin-left:4px;">${utils.escapeHtml(b.branch_name || '物件・事業所 #'+(i+1))}</strong> ${branchGwBadge} ${b.is_job_property ? '<span style="font-size:0.7rem;background:#EFF6FF;color:#1D4ED8;padding:2px 6px;border-radius:4px;margin-left:8px;">案件から自動追加</span>' : ''} ${b.industry_type ? '<span style="font-size:0.7rem;background:#F3E8FF;color:#7C3AED;padding:2px 6px;border-radius:4px;margin-left:4px;">'+utils.escapeHtml(b.industry_type)+'</span>' : ''}
                             ${b.branch_address ? '<br><span style="color:var(--text-tertiary);font-size:0.82rem;">住所:</span> '+utils.escapeHtml(b.branch_address)+' '+(b.branch_address ? '<a href="https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(b.branch_address)+'" target="_blank" style="font-size:0.75rem;text-decoration:none;background:#E2E8F0;padding:1px 6px;border-radius:4px;">🗺</a>' : '') : ''}
                             ${b.branch_phone ? '<br><span style="color:var(--text-tertiary);font-size:0.82rem;">📞 TEL:</span> '+utils.escapeHtml(b.branch_phone) : ''}
                             ${b.subcontractor ? '<br><span style="color:var(--text-tertiary);font-size:0.82rem;">👥 下請:</span> '+utils.escapeHtml(b.subcontractor) : ''}
@@ -1909,6 +2071,8 @@
                             ${b.collection_start_date ? '<br><span style="color:var(--text-tertiary);font-size:0.82rem;">開始:</span> '+b.collection_start_date : ''} ${b.collection_end_date ? '<span style="margin-left:8px;color:var(--danger);font-size:0.82rem;">解約: '+b.collection_end_date+'</span>' : ''}
                         </div>`;
                     }).join('');
+
+                    return summaryCardHtml + branchCardsHtml;
                 })()}
 
                 <div style="background:var(--bg-secondary); padding:12px; border-radius:12px; margin-bottom:16px; font-size:0.88rem; line-height:1.5;">
