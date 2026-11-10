@@ -1,20 +1,24 @@
-// Ryu兵衛 for 山文 — Service Worker
-const CACHE_NAME = 'ryubee-yamabun-v11';
+// Ryu兵衛 for 山文 — Service Worker (v12: キャッシュ不整合・白画面防止強化)
+const CACHE_NAME = 'ryubee-yamabun-v12';
 const PRECACHE_URLS = [
-    '/volume-tool-ryubee/',
-    '/volume-tool-ryubee/index.html',
-    '/volume-tool-ryubee/assets/css/style.css',
-    '/volume-tool-ryubee/assets/js/api.js',
-    '/volume-tool-ryubee/assets/js/utils.js',
-    '/volume-tool-ryubee/assets/icons/icon-192.png',
-    '/volume-tool-ryubee/assets/icons/icon-512.png'
+    './',
+    './index.html',
+    './assets/css/style.css',
+    './assets/js/api.js',
+    './assets/js/utils.js',
+    './assets/icons/icon-192.png',
+    './assets/icons/icon-512.png'
 ];
 
-// インストール時にキャッシュ
+// インストール時にキャッシュ（失敗しても停止しない安全設計）
 self.addEventListener('install', event => {
     event.waitUntil(
         caches.open(CACHE_NAME)
-            .then(cache => cache.addAll(PRECACHE_URLS))
+            .then(cache => {
+                return Promise.allSettled(
+                    PRECACHE_URLS.map(url => cache.add(url).catch(() => {}))
+                );
+            })
             .then(() => self.skipWaiting())
     );
 });
@@ -28,22 +32,26 @@ self.addEventListener('activate', event => {
     );
 });
 
-// ネットワーク優先、フォールバックでキャッシュ
+// ネットワーク優先、フォールバックでキャッシュ（白画面防止）
 self.addEventListener('fetch', event => {
-    // API呼び出しはキャッシュしない
+    // API呼び出しはキャッシュしない（常にネットワーク通信）
     if (event.request.url.includes('/v1/')) return;
 
     event.respondWith(
         fetch(event.request)
             .then(response => {
-                // 成功したらキャッシュを更新
-                if (response.ok) {
+                if (response.ok && event.request.method === 'GET') {
                     const clone = response.clone();
                     caches.open(CACHE_NAME).then(cache => cache.put(event.request, clone));
                 }
                 return response;
             })
-            .catch(() => caches.match(event.request))
+            .catch(async () => {
+                const cached = await caches.match(event.request);
+                if (cached) return cached;
+                // キャッシュもない場合は再度通常フェッチを試みる（白画面エラーの回避）
+                return fetch(event.request);
+            })
     );
 });
 

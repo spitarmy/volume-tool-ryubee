@@ -17,6 +17,28 @@ const API_BASE = (() => {
   return "https://ryubee-api-v2.onrender.com";
 })();
 
+// ── 接続状態インジケータ（リトライ時に表示） ──
+function showReconnectingNotice(msg) {
+  let el = document.getElementById("ryubee-reconnecting-toast");
+  if (!el) {
+    el = document.createElement("div");
+    el.id = "ryubee-reconnecting-toast";
+    el.style.cssText = "position:fixed;top:12px;left:50%;transform:translateX(-50%);background:rgba(30,41,59,0.92);color:#fff;padding:8px 18px;border-radius:24px;font-size:0.8rem;font-weight:600;z-index:99999;box-shadow:0 4px 16px rgba(0,0,0,0.25);display:flex;align-items:center;gap:8px;backdrop-filter:blur(8px);transition:opacity 0.3s;";
+    document.body.appendChild(el);
+  }
+  el.innerHTML = `<span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:#F59E0B;animation:pulse 1.2s infinite;"></span> ${msg || "☁️ サーバー通信を確認中..."}`;
+  el.style.display = "flex";
+  el.style.opacity = "1";
+}
+
+function hideReconnectingNotice() {
+  const el = document.getElementById("ryubee-reconnecting-toast");
+  if (el) {
+    el.style.opacity = "0";
+    setTimeout(() => { if (el) el.style.display = "none"; }, 300);
+  }
+}
+
 // ── 共通フェッチラッパー ──────────────────────────────────────
 async function apiFetch(path, options = {}) {
   const token = localStorage.getItem("ryubee_token");
@@ -31,21 +53,52 @@ async function apiFetch(path, options = {}) {
     delete headers["Content-Type"];
   }
 
+  const maxAttempts = 4;
+  const retryDelays = [1500, 3000, 5000, 8000]; // バックオフ待機
+
   let res;
-  for (let attempt = 0; attempt < 3; attempt++) {
+  let lastError;
+
+  for (let attempt = 0; attempt < maxAttempts; attempt++) {
+    // タイムアウト設定 (各回18秒)
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 18000);
+
     try {
-      res = await fetch(`${API_BASE}${path}`, { ...options, headers });
-      break; // 成功したらループを抜ける
+      res = await fetch(`${API_BASE}${path}`, {
+        ...options,
+        headers,
+        signal: controller.signal,
+      });
+      clearTimeout(timeoutId);
+
+      // 502, 503, 504（Render再起動・過負荷）は一時的エラーとしてリトライ
+      if ([502, 503, 504].includes(res.status) && attempt < maxAttempts - 1) {
+        console.warn(`[Ryubee API] Server busy/restarting (${res.status}) on ${path}. Retrying attempt ${attempt + 1}...`);
+        showReconnectingNotice("☁️ サーバー通信を維持中（自動復帰します）...");
+        await new Promise(r => setTimeout(r, retryDelays[attempt]));
+        continue;
+      }
+
+      hideReconnectingNotice();
+      break; // 正常または通常のHTTPエラー（400番台等）ならループを抜ける
+
     } catch (fetchErr) {
-      // ネットワークエラー（Load failed等）
-      console.warn(`Fetch attempt ${attempt + 1} failed:`, fetchErr.message, path);
-      if (attempt === 2) {
+      clearTimeout(timeoutId);
+      lastError = fetchErr;
+      console.warn(`[Ryubee API] Fetch attempt ${attempt + 1} failed on ${path}:`, fetchErr.message);
+
+      if (attempt < maxAttempts - 1) {
+        showReconnectingNotice("☁️ サーバーに再接続しています...");
+        await new Promise(r => setTimeout(r, retryDelays[attempt]));
+      } else {
+        hideReconnectingNotice();
         throw new Error(`ネットワークエラー: サーバーに接続できません（${fetchErr.message}）`);
       }
-      // 2秒待ってリトライ
-      await new Promise(r => setTimeout(r, 2000));
     }
   }
+
+  hideReconnectingNotice();
 
   if (res.status === 401) {
     // トークン期限切れ → 強制ログアウト

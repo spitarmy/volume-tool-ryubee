@@ -75,6 +75,7 @@ class JobOut(BaseModel):
     assigned_to: str | None
     assigned_to_name: str = ""
     photos: Any  # JSON array
+    photo_count: int = 0
     estimated_price: int | None = None
     final_price: int | None = None
     discount_amount: int = 0
@@ -88,7 +89,7 @@ class JobOut(BaseModel):
     model_config = {"from_attributes": True}
 
     @classmethod
-    def from_orm_job(cls, j: models.Job) -> "JobOut":
+    def from_orm_job(cls, j: models.Job, include_photos: bool = True) -> "JobOut":
         ai = j.ai_result
         if ai:
             try:
@@ -97,9 +98,14 @@ class JobOut(BaseModel):
                 pass
 
         photos = []
+        photo_count = 0
         if j.photos:
             try:
-                photos = json.loads(j.photos)
+                parsed_photos = json.loads(j.photos)
+                if isinstance(parsed_photos, list):
+                    photo_count = len(parsed_photos)
+                    if include_photos:
+                        photos = parsed_photos
             except Exception:
                 pass
 
@@ -127,6 +133,7 @@ class JobOut(BaseModel):
             assigned_to=j.assigned_to,
             assigned_to_name=assignee_name,
             photos=photos,
+            photo_count=photo_count,
             estimated_price=j.estimated_price,
             final_price=j.final_price,
             discount_amount=j.discount_amount,
@@ -166,7 +173,7 @@ def list_jobs(
             models.Job.job_name.ilike(like) | models.Job.customer_name.ilike(like)
         )
     jobs = query.order_by(models.Job.created_at.desc()).all()
-    return [JobOut.from_orm_job(j) for j in jobs]
+    return [JobOut.from_orm_job(j, include_photos=False) for j in jobs]
 
 
 @router.get("/pipeline")
@@ -185,11 +192,7 @@ def pipeline_view(
         pipeline[stage] = []
     for j in jobs:
         stage = j.pipeline_stage if j.pipeline_stage in stages else "inquiry"
-        d = JobOut.from_orm_job(j).model_dump()
-        # パイプライン一覧では写真はカウントだけ返す（レスポンス軽量化）
-        photo_list = d.get("photos", [])
-        d["photo_count"] = len(photo_list) if isinstance(photo_list, list) else 0
-        d["photos"] = []  # 一覧ではデータを送らない
+        d = JobOut.from_orm_job(j, include_photos=False).model_dump()
         pipeline[stage].append(d)
 
     return pipeline
