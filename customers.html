@@ -140,37 +140,74 @@
         }
         .collect-header {
             display: grid;
-            grid-template-columns: 100px 1fr 50px 70px 50px 1fr;
+            grid-template-columns: 110px 55px 70px 50px 75px 75px 1fr 28px;
             gap: 4px;
             padding: 0 8px 2px;
-            font-size: 0.65rem;
+            font-size: 0.68rem;
             font-weight: 700;
             color: var(--text-tertiary);
+            align-items: center;
         }
         .industrial-row {
             display: grid;
-            grid-template-columns: 1fr 70px 50px 70px 50px 1fr;
-            gap: 4px;
+            grid-template-columns: 24px minmax(200px, 2.5fr) 55px 70px 50px 85px 80px minmax(100px, 1.2fr) 28px;
+            gap: 5px;
             align-items: center;
-            padding: 5px 8px;
+            padding: 6px 8px;
             border-radius: 6px;
-            margin-bottom: 3px;
+            margin-bottom: 4px;
             background: #FDF4FF;
+            border: 1px solid #F0ABFC;
+            transition: all 0.15s;
+        }
+        .industrial-row.dragging {
+            opacity: 0.4;
+            background: #E9D5FF;
+            border-style: dashed;
         }
         .industrial-row input, .industrial-row select {
             padding: 5px 6px !important;
-            font-size: 0.78rem !important;
+            font-size: 0.8rem !important;
             border-radius: 6px !important;
             min-width: 0;
         }
         .industrial-header {
             display: grid;
-            grid-template-columns: 1fr 70px 50px 70px 50px 1fr;
-            gap: 4px;
-            padding: 0 8px 2px;
-            font-size: 0.65rem;
+            grid-template-columns: 24px minmax(200px, 2.5fr) 55px 70px 50px 85px 80px minmax(100px, 1.2fr) 28px;
+            gap: 5px;
+            padding: 0 8px 3px;
+            font-size: 0.68rem;
             font-weight: 700;
             color: var(--text-tertiary);
+            align-items: center;
+        }
+        .industrial-items, .general-custom-items {
+            overflow-x: auto;
+            padding-bottom: 4px;
+        }
+        .drag-handle {
+            cursor: grab;
+            user-select: none;
+            color: #A855F7;
+            font-size: 1.1rem;
+            text-align: center;
+            line-height: 1;
+        }
+        .drag-handle:active {
+            cursor: grabbing;
+        }
+        .spot-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 2px;
+            font-size: 0.68rem;
+            font-weight: 700;
+            color: #B45309;
+            background: #FEF3C7;
+            border: 1px solid #FCD34D;
+            padding: 1px 6px;
+            border-radius: 4px;
+            white-space: nowrap;
         }
 
         /* ── Customer Contract Styles ── */
@@ -412,9 +449,20 @@
 
 <body>
 
-    <header class="customers-header">
-        <h1>🏢 顧客管理</h1>
-        <p style="color: var(--text-secondary); font-size: 0.9rem;">顧客の登録・編集・契約管理</p>
+    <header class="customers-header" style="display:flex; justify-content:space-between; align-items:flex-start; flex-wrap:wrap; gap:10px;">
+        <div>
+            <h1>🏢 顧客管理</h1>
+            <p style="color: var(--text-secondary); font-size: 0.9rem;">顧客の登録・編集・契約管理</p>
+        </div>
+        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+            <button class="btn btn-secondary btn-sm" onclick="exportCustomerMasterCSV()" style="background:#fff; border:1.5px solid #10B981; color:#047857; font-weight:700; border-radius:8px; padding:6px 12px; font-size:0.82rem; cursor:pointer; box-shadow:0 1px 2px rgba(0,0,0,0.05);">
+                📥 顧客マスタCSV出力
+            </button>
+            <button class="btn btn-secondary btn-sm" onclick="document.getElementById('custCsvFileInput').click()" style="background:#fff; border:1.5px solid #6366F1; color:#4338CA; font-weight:700; border-radius:8px; padding:6px 12px; font-size:0.82rem; cursor:pointer; box-shadow:0 1px 2px rgba(0,0,0,0.05);">
+                📤 CSV一括取込 (吸い上げ)
+            </button>
+            <input type="file" id="custCsvFileInput" accept=".csv" style="display:none;" onchange="handleCustomerMasterCSVImport(event)">
+        </div>
     </header>
 
     <div class="search-wrap">
@@ -531,12 +579,26 @@
                         <div class="form-group"><label>担当営業</label>
                             <select id="custAssignedUser"><option value="">未設定</option></select>
                         </div>
-                        <div class="form-group"><label>廃棄物カテゴリ</label>
-                            <div id="custWasteCategoryGroup" style="display:flex;gap:10px;flex-wrap:wrap;padding:4px 0;">
-                                <label style="display:flex;align-items:center;gap:4px;font-size:0.85rem;cursor:pointer;"><input type="checkbox" class="waste-cat-cb" value="general"> 🗑 一般ゴミ</label>
-                                <label style="display:flex;align-items:center;gap:4px;font-size:0.85rem;cursor:pointer;"><input type="checkbox" class="waste-cat-cb" value="industrial"> ♻️ 産業廃棄物</label>
-                                <label style="display:flex;align-items:center;gap:4px;font-size:0.85rem;cursor:pointer;"><input type="checkbox" class="waste-cat-cb" value="large"> 🛋 大型ゴミ等</label>
-                            </div>
+                        <div class="form-group"><label>業種</label>
+                            <select id="custIndustry">
+                                <option value="">未選択</option>
+                                <option value="飲食店">飲食店</option>
+                                <option value="オフィス・事務所">オフィス・事務所</option>
+                                <option value="マンション・集合住宅">マンション・集合住宅</option>
+                                <option value="医療・介護施設">医療・介護施設</option>
+                                <option value="製造業・工場">製造業・工場</option>
+                                <option value="小売・商業施設">小売・商業施設</option>
+                                <option value="建設・解体業">建設・解体業</option>
+                                <option value="寺社・仏閣">寺社・仏閣</option>
+                                <option value="その他">その他</option>
+                            </select>
+                        </div>
+                    </div>
+                    <div class="form-group"><label>廃棄物カテゴリ</label>
+                        <div id="custWasteCategoryGroup" style="display:flex;gap:10px;flex-wrap:wrap;padding:4px 0;">
+                            <label style="display:flex;align-items:center;gap:4px;font-size:0.85rem;cursor:pointer;"><input type="checkbox" class="waste-cat-cb" value="general"> 🗑 一般ゴミ</label>
+                            <label style="display:flex;align-items:center;gap:4px;font-size:0.85rem;cursor:pointer;"><input type="checkbox" class="waste-cat-cb" value="industrial"> ♻️ 産業廃棄物</label>
+                            <label style="display:flex;align-items:center;gap:4px;font-size:0.85rem;cursor:pointer;"><input type="checkbox" class="waste-cat-cb" value="large"> 🛋 大型ゴミ等</label>
                         </div>
                     </div>
                     <div class="form-group"><label>ご住所</label><textarea id="custAddress" placeholder="京都市..." rows="2" style="resize:vertical;"></textarea></div>
@@ -602,6 +664,20 @@
                         <option value="段ボール" label="[123] 段ボール"></option>
                         <option value="産業廃棄物処理費 電池" label="[124] 産業廃棄物処理費 電池 (kg)"></option>
                     </datalist>
+                    <datalist id="wasteUnitsList">
+                        <option value="円/月"></option>
+                        <option value="円/回"></option>
+                        <option value="kg"></option>
+                        <option value="円/袋"></option>
+                        <option value="円/個"></option>
+                        <option value="回"></option>
+                        <option value="m³"></option>
+                        <option value="ケース"></option>
+                        <option value="枚"></option>
+                        <option value="本"></option>
+                        <option value="台"></option>
+                        <option value="ヶ所"></option>
+                    </datalist>
                     <div id="branchesContainer"></div>
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
                         <button class="btn btn-secondary btn-sm mt-1" style="width:100%;background:#EFF6FF;color:#1D4ED8;border:1px solid #93C5FD;" onclick="addBranchCard({branch_name:document.getElementById('custName').value,branch_address:document.getElementById('custAddress').value,branch_phone:document.getElementById('custPhone').value,is_headquarters:true}, 0)">🏢 本社を追加</button>
@@ -657,6 +733,10 @@
                                     <option value="15">15日</option>
                                     <option value="10">10日</option>
                                 </select>
+                            </div>
+                            <div class="form-group" style="grid-column: span 2; margin-top:6px;">
+                                <label style="font-size:0.75rem; font-weight:700;">🏦 振込者名（振込名義人・カナ）</label>
+                                <input type="text" id="custTransferName" placeholder="通帳記帳名義 例: カ) ヤマブン または ヤマダ タロウ">
                             </div>
                         </div>
                         <!-- 自動振替関連 -->
@@ -1025,6 +1105,31 @@
             renderCustomersChunk(true);
         }
 
+        // ── 営業担当者ごとのカラーパレット ──
+        const USER_PALETTE = [
+            { text: '#1E40AF', bg: '#EFF6FF', border: '#93C5FD' }, // Blue
+            { text: '#065F46', bg: '#ECFDF5', border: '#6EE7B7' }, // Emerald
+            { text: '#6B21A8', bg: '#FAF5FF', border: '#D8B4FE' }, // Purple
+            { text: '#B45309', bg: '#FFFBEB', border: '#FCD34D' }, // Amber
+            { text: '#9F1239', bg: '#FFF1F2', border: '#FDA4AF' }, // Rose
+            { text: '#0E7490', bg: '#ECFEFF', border: '#67E8F9' }, // Cyan
+            { text: '#4338CA', bg: '#EEF2FF', border: '#A5B4FC' }, // Indigo
+            { text: '#374151', bg: '#F3F4F6', border: '#D1D5DB' }, // Slate
+        ];
+
+        function getUserColorStyle(userName) {
+            if (!userName || userName === '未設定') {
+                return { text: '#64748B', bg: '#F1F5F9', border: '#E2E8F0' };
+            }
+            let hash = 0;
+            for (let i = 0; i < userName.length; i++) {
+                hash = (hash << 5) - hash + userName.charCodeAt(i);
+                hash |= 0;
+            }
+            const idx = Math.abs(hash) % USER_PALETTE.length;
+            return USER_PALETTE[idx];
+        }
+
         function renderCustomersChunk(reset = false) {
             const list = document.getElementById('customerList');
             if (reset) {
@@ -1060,18 +1165,39 @@
 
                 const expiry = c.contract_expiry_date
                     ? `<div class="cc-expiry">📋 契約期限: ${c.contract_expiry_date}</div>` : '';
+
+                const uc = getUserColorStyle(c.assigned_user_name);
+                const userTag = `<span style="display:inline-block; font-size:11px; font-weight:700; color:${uc.text}; background:${uc.bg}; border:1px solid ${uc.border}; padding:2px 8px; border-radius:12px;">👥 営業担当: ${utils.escapeHtml(c.assigned_user_name || '未設定')}</span>`;
+
+                const transferTag = c.parsed_form?.transfer_name
+                    ? `<div class="cc-meta" style="font-size:12px; color:#1E40AF; background:#F0FDF4; border:1px solid #BBF7D0; padding:2px 8px; border-radius:6px; display:inline-block; margin-top:2px;">🏦 振込名義: <strong>${utils.escapeHtml(c.parsed_form.transfer_name)}</strong></div>`
+                    : '';
+
                 return `
                     <div class="customer-card" onclick="openPreview('${c.id}')">
-                        <div class="cc-top">
-                            <div style="display:flex; align-items:center;">
-                                <input type="checkbox" class="cust-sel-cb" value="${c.id}" onclick="event.stopPropagation(); checkCustSelection()" style="margin-right:12px; transform:scale(1.3);">
-                                <span class="cc-name">${utils.escapeHtml(c.name)}</span>
+                        <div class="cc-top" style="display:flex; justify-content:space-between; align-items:flex-start; gap:10px;">
+                            <div style="display:flex; align-items:flex-start; gap:10px; flex:1; min-width:0;">
+                                <input type="checkbox" class="cust-sel-cb" value="${c.id}" onclick="event.stopPropagation(); checkCustSelection()" style="margin-top:4px; transform:scale(1.3); cursor:pointer;">
+                                <div style="min-width:0;">
+                                    <div class="cc-name" style="font-size:1.15rem; font-weight:800; word-break:break-word;">${utils.escapeHtml(c.name)}</div>
+                                    <div style="display:inline-flex; flex-wrap:wrap; gap:4px; margin-top:3px;">
+                                        ${c.parsed_form?.industry ? `<span class="badge" style="background:#E2E8F0; color:#334155; font-weight:700;">🏷 ${utils.escapeHtml(c.parsed_form.industry)}</span>` : ''}
+                                        ${newBadge} ${quitBadge} ${deliveryBadge} ${wasteBadge} ${typeBadge}
+                                    </div>
+                                </div>
                             </div>
-                            <div style="display:flex; flex-wrap:wrap; gap:4px;">${newBadge} ${quitBadge} ${deliveryBadge} ${wasteBadge} ${typeBadge}</div>
+                            ${c.parsed_form?.yamabun_management_number ? `
+                                <div style="display:flex; flex-direction:column; align-items:flex-end; flex-shrink:0;">
+                                    <div style="font-size:0.68rem; color:var(--text-tertiary); font-weight:700;">山文管理番号</div>
+                                    <div style="font-size:1.25rem; font-weight:900; color:#1D4ED8; background:#EFF6FF; border:1.5px solid #93C5FD; border-radius:8px; padding:2px 10px; letter-spacing:0.5px; box-shadow:0 1px 3px rgba(29,78,216,0.12);">
+                                        No. ${utils.escapeHtml(c.parsed_form.yamabun_management_number)}
+                                    </div>
+                                </div>
+                            ` : ''}
                         </div>
-                        ${c.parsed_form?.yamabun_management_number ? `<div class="cc-meta" style="font-weight:700; color:var(--primary); margin-top:2px; font-size:13px;">🎫 山文管理番号: ${utils.escapeHtml(c.parsed_form.yamabun_management_number)}</div>` : ''}
-                        <div class="cc-meta" style="font-size:12px; color:var(--text-tertiary); margin-bottom:8px;">📅 締め日: ${c.billing_closing_day === 31 ? '月末' : c.billing_closing_day + '日'}締め</div>
-                        <div class="cc-meta">👥 営業担当: <strong style="color:var(--text-primary);">${utils.escapeHtml(c.assigned_user_name || '未設定')}</strong></div>
+                        <div class="cc-meta" style="font-size:12px; color:var(--text-tertiary); margin:6px 0 4px;">📅 締め日: ${c.billing_closing_day === 31 ? '月末' : c.billing_closing_day + '日'}締め</div>
+                        <div class="cc-meta" style="margin-bottom:4px;">${userTag}</div>
+                        ${transferTag ? `<div>${transferTag}</div>` : ''}
                         ${c.contact_person ? `<div class="cc-meta">👤 先方担当: ${utils.escapeHtml(c.contact_person)}</div>` : ''}
                         <div class="cc-meta">📍 ${utils.escapeHtml(c.address || '未設定')}</div>
                         <div class="cc-meta">📞 ${utils.escapeHtml(c.phone || '未設定')}</div>
@@ -1083,7 +1209,7 @@
                             const custGw = calculateCustomerGeneralWasteTotal(branchList);
                             const gwTotalBadge = custGw.subtotal > 0 ? `
                                 <div style="margin-bottom:6px; background:#EFF6FF; border:1px solid #93C5FD; border-radius:6px; padding:4px 8px; display:flex; justify-content:space-between; align-items:center;">
-                                    <span style="font-weight:700; color:#1E40AF; font-size:11px;">📊 一般サブスク合計 (${branchList.length}件):</span>
+                                    <span style="font-weight:700; color:#1E40AF; font-size:11px;">📊 一般サブスク月額合計 (${branchList.length}件):</span>
                                     <span style="font-size:12px;">税抜 <strong style="color:#1D4ED8;">¥${custGw.subtotal.toLocaleString()}</strong> <span style="color:#059669; font-weight:700;">(税込 ¥${custGw.total.toLocaleString()})</span></span>
                                 </div>
                             ` : '';
@@ -1091,15 +1217,15 @@
                                 ${gwTotalBadge}
                                 ${branchList.map(b => {
                                     const bName = b.branch_name ? `<div style="font-weight:700;color:var(--text-primary);margin-bottom:2px;">📍 ${utils.escapeHtml(b.branch_name)}</div>` : '';
-                                    const genVehicle = b.vehicle_general || b.vehicle_number || '';
-                                    const genLine = (b.collection_general||genVehicle||b.unitprice_general||b.price_general) ? `<div>🟢 一般 ${utils.escapeHtml(b.collection_general||'')}${genVehicle ? ' <strong>'+utils.escapeHtml(genVehicle)+'号車</strong>' : ''}${(b.unitprice_general||b.price_general) ? ' <span style="color:#1e40af;font-weight:700;">'+utils.escapeHtml(b.unitprice_general||b.price_general)+'</span>' : ''}</div>` : '';
-                                    const canLine = (b.collection_canbottle||b.collection_recycle||b.vehicle_canbottle||b.unitprice_canbottle||b.price_canbottle) ? `<div>🔵 缶ビンペット ${utils.escapeHtml(b.collection_canbottle||b.collection_recycle||'')}${(b.vehicle_canbottle||b.vehicle_recycle) ? ' <strong>'+utils.escapeHtml(b.vehicle_canbottle||b.vehicle_recycle)+'号車</strong>' : ''}${(b.unitprice_canbottle||b.price_canbottle||b.price_recycle) ? ' <span style="color:#166534;font-weight:700;">'+utils.escapeHtml(b.unitprice_canbottle||b.price_canbottle||b.price_recycle)+'</span>' : ''}</div>` : '';
-                                    const plaLine = (b.collection_plastic||b.vehicle_plastic||b.unitprice_plastic||b.price_plastic) ? `<div>♻️ プラ包装 ${utils.escapeHtml(b.collection_plastic||'')}${b.vehicle_plastic ? ' <strong>'+utils.escapeHtml(b.vehicle_plastic)+'号車</strong>' : ''}${(b.unitprice_plastic||b.price_plastic) ? ' <span style="color:#065F46;font-weight:700;">'+utils.escapeHtml(b.unitprice_plastic||b.price_plastic)+'</span>' : ''}</div>` : '';
-                                    const cbLine = (b.collection_cardboard||b.collection_paper||b.vehicle_cardboard||b.unitprice_cardboard||b.price_cardboard) ? `<div>📦 段ボール ${utils.escapeHtml(b.collection_cardboard||b.collection_paper||'')}${(b.vehicle_cardboard||b.vehicle_paper) ? ' <strong>'+utils.escapeHtml(b.vehicle_cardboard||b.vehicle_paper)+'号車</strong>' : ''}${(b.unitprice_cardboard||b.price_cardboard||b.price_paper) ? ' <span style="color:#92400e;font-weight:700;">'+utils.escapeHtml(b.unitprice_cardboard||b.price_cardboard||b.price_paper)+'</span>' : ''}</div>` : '';
-                                    const otherLine = (b.collection_other||b.vehicle_other||b.unitprice_other) ? `<div>🔸 その他 ${utils.escapeHtml(b.collection_other||'')}</div>` : '';
+                                    const genV = b.vehicle_general || b.vehicle_number || '';
+                                    const genLine = (b.collection_general||genV||b.unitprice_general||b.price_general) ? `<div>🟢 一般 ${utils.escapeHtml(b.collection_general||'')}${genV ? ' <strong>'+utils.escapeHtml(genV)+'号車</strong>' : ''}${(b.unitprice_general||b.price_general) ? ' <span style="color:#1e40af;font-weight:700;">'+utils.escapeHtml(b.unitprice_general||b.price_general)+'</span>' : ''}${b.is_spot_general ? ' <span class="spot-badge">⚡️ スポット</span>' : ''}</div>` : '';
+                                    const canLine = (b.collection_canbottle||b.collection_recycle||b.vehicle_canbottle||b.unitprice_canbottle||b.price_canbottle) ? `<div>🔵 缶ビンペット ${utils.escapeHtml(b.collection_canbottle||b.collection_recycle||'')}${(b.vehicle_canbottle||b.vehicle_recycle) ? ' <strong>'+utils.escapeHtml(b.vehicle_canbottle||b.vehicle_recycle)+'号車</strong>' : ''}${(b.unitprice_canbottle||b.price_canbottle||b.price_recycle) ? ' <span style="color:#166534;font-weight:700;">'+utils.escapeHtml(b.unitprice_canbottle||b.price_canbottle||b.price_recycle)+'</span>' : ''}${b.is_spot_canbottle ? ' <span class="spot-badge">⚡️ スポット</span>' : ''}</div>` : '';
+                                    const plaLine = (b.collection_plastic||b.vehicle_plastic||b.unitprice_plastic||b.price_plastic) ? `<div>♻️ プラ包装 ${utils.escapeHtml(b.collection_plastic||'')}${b.vehicle_plastic ? ' <strong>'+utils.escapeHtml(b.vehicle_plastic)+'号車</strong>' : ''}${(b.unitprice_plastic||b.price_plastic) ? ' <span style="color:#065F46;font-weight:700;">'+utils.escapeHtml(b.unitprice_plastic||b.price_plastic)+'</span>' : ''}${b.is_spot_plastic ? ' <span class="spot-badge">⚡️ スポット</span>' : ''}</div>` : '';
+                                    const cbLine = (b.collection_cardboard||b.collection_paper||b.vehicle_cardboard||b.unitprice_cardboard||b.price_cardboard) ? `<div>📦 段ボール ${utils.escapeHtml(b.collection_cardboard||b.collection_paper||'')}${(b.vehicle_cardboard||b.vehicle_paper) ? ' <strong>'+utils.escapeHtml(b.vehicle_cardboard||b.vehicle_paper)+'号車</strong>' : ''}${(b.unitprice_cardboard||b.price_cardboard||b.price_paper) ? ' <span style="color:#92400e;font-weight:700;">'+utils.escapeHtml(b.unitprice_cardboard||b.price_cardboard||b.price_paper)+'</span>' : ''}${b.is_spot_cardboard ? ' <span class="spot-badge">⚡️ スポット</span>' : ''}</div>` : '';
+                                    const otherLine = (b.collection_other||b.vehicle_other||b.unitprice_other) ? `<div>🔸 その他 ${utils.escapeHtml(b.collection_other||'')}${b.is_spot_other ? ' <span class="spot-badge">⚡️ スポット</span>' : ''}</div>` : '';
                                     const indLine = (b.collection_industrial||b.vehicle_industrial||b.unitprice_industrial) ? `<div>🟣 産廃 ${utils.escapeHtml(b.collection_industrial||'')}</div>` : '';
                                     const indItemsLine = (b.industrial_items?.length > 0) ? `<div>🟣 産廃 ${b.industrial_items.length}品目</div>` : '';
-                                    const gcLine = (b.general_custom_items?.length > 0) ? b.general_custom_items.map(ci => `<div>📌 ${utils.escapeHtml(ci.item_name)}${ci.freq ? ' '+utils.escapeHtml(ci.freq) : ''}${ci.unitprice ? ' <span style="color:#334155;font-weight:700;">'+utils.escapeHtml(ci.unitprice)+'</span>' : ''}</div>`).join('') : '';
+                                    const gcLine = (b.general_custom_items?.length > 0) ? b.general_custom_items.map(ci => `<div>📌 ${utils.escapeHtml(ci.item_name)}${ci.freq ? ' '+utils.escapeHtml(ci.freq) : ''}${ci.unitprice ? ' <span style="color:#334155;font-weight:700;">'+utils.escapeHtml(ci.unitprice)+'</span>' : ''}${ci.is_spot ? ' <span class="spot-badge">⚡️ スポット</span>' : ''}</div>`).join('') : '';
                                     return bName + genLine + canLine + plaLine + cbLine + otherLine + indLine + indItemsLine + gcLine;
                                 }).join('<div style="margin:4px 0;border-top:1px dotted #ddd;"></div>')}
                             </div>`;
@@ -1236,6 +1362,7 @@
             
             document.getElementById('custHonorific').value = fd.honorific || '御中';
             document.getElementById('custYamabunNumber').value = fd.yamabun_management_number || '';
+            document.getElementById('custIndustry').value = fd.industry || '';
             // 廃棄物カテゴリ（チェックボックス）
             document.querySelectorAll('.waste-cat-cb').forEach(cb => cb.checked = false);
             const cats = fd.waste_categories || (fd.waste_category ? (Array.isArray(fd.waste_category) ? fd.waste_category : fd.waste_category.split(',')) : ['general']);
@@ -1243,6 +1370,7 @@
             document.getElementById('custMobile').value = fd.mobile || '';
             document.getElementById('custFax').value = fd.fax || '';
             document.getElementById('custPaymentMethod').value = fd.payment_method || '振込';
+            document.getElementById('custTransferName').value = fd.transfer_name || '';
             document.getElementById('custBillingName').value = fd.billing_name || '';
             document.getElementById('custBillingAddress').value = fd.billing_address || '';
             document.getElementById('custBillingEmail').value = fd.billing_email || '';
@@ -1421,76 +1549,91 @@
                     <div class="form-group"><label>👥 下請け業者</label><input type="text" class="br-subcontractor" value="${utils.escapeHtml(data.subcontractor || '')}" placeholder="業者名"></div>
                     <div style="background:#f0f4ff;padding:8px;border-radius:8px;margin:8px 0;border:1px solid #d0d8f0;">
                         <div style="font-size:0.78rem;font-weight:800;color:#1e3a5f;margin-bottom:4px;">📋 回収情報 — 一般廃棄物</div>
-                        <div class="collect-header"><span></span><span>頻度</span><span>号車</span><span>単価</span><span>単位</span><span>備考</span></div>
+                        <div class="collect-header"><span>品目</span><span>区分</span><span>頻度</span><span>号車</span><span>単価</span><span>単位</span><span>備考</span><span></span></div>
                         <div class="collect-row" style="background:#EFF6FF;">
                             <span class="cr-label" style="color:#1e40af;">🟢 燃えるゴミ</span>
+                            <label class="spot-label" style="font-size:0.68rem; display:flex; align-items:center; gap:2px; cursor:pointer;" title="チェックでスポット"><input type="checkbox" class="br-spot-general" ${data.is_spot_general ? 'checked' : ''} onchange="updateEditModalGeneralWasteSummary()"> スポット</label>
                             <input type="text" class="br-freq-general" value="${utils.escapeHtml(data.collection_general || '')}" placeholder="週2回">
                             <input type="text" class="br-vehicle-general" value="${utils.escapeHtml(data.vehicle_general || data.vehicle_number || '')}" placeholder="A">
-                            <input type="text" class="br-unitprice-general" value="${utils.escapeHtml(data.unitprice_general || data.price_general || '')}" placeholder="5,000">
-                            <select class="br-unit-general"><option value="円/月" ${(data.unit_general||'円/月')==='円/月'?'selected':''}>円/月</option><option value="円/回" ${data.unit_general==='円/回'?'selected':''}>円/回</option><option value="kg" ${data.unit_general==='kg'?'selected':''}>kg</option></select>
-                            <input type="text" class="br-notes-general" value="${utils.escapeHtml(data.notes_general || '')}" placeholder="">
+                            <input type="text" class="br-unitprice-general" value="${utils.escapeHtml(data.unitprice_general || data.price_general || '')}" placeholder="5,000" oninput="updateEditModalGeneralWasteSummary()">
+                            <input type="text" list="wasteUnitsList" class="br-unit-general" value="${utils.escapeHtml(data.unit_general||'円/月')}" placeholder="単位" onchange="updateEditModalGeneralWasteSummary()">
+                            <input type="text" class="br-notes-general" value="${utils.escapeHtml(data.notes_general || '')}" placeholder="備考">
+                            <span></span>
                         </div>
                         <div class="collect-row" style="background:#F0FDF4;">
                             <span class="cr-label" style="color:#166534;">🔵 缶ビンペット</span>
+                            <label class="spot-label" style="font-size:0.68rem; display:flex; align-items:center; gap:2px; cursor:pointer;" title="チェックでスポット"><input type="checkbox" class="br-spot-canbottle" ${data.is_spot_canbottle ? 'checked' : ''} onchange="updateEditModalGeneralWasteSummary()"> スポット</label>
                             <input type="text" class="br-freq-canbottle" value="${utils.escapeHtml(data.collection_canbottle || data.collection_recycle || '')}" placeholder="週1回">
                             <input type="text" class="br-vehicle-canbottle" value="${utils.escapeHtml(data.vehicle_canbottle || data.vehicle_recycle || '')}" placeholder="B">
-                            <input type="text" class="br-unitprice-canbottle" value="${utils.escapeHtml(data.unitprice_canbottle || data.price_canbottle || data.price_recycle || '')}" placeholder="3,000">
-                            <select class="br-unit-canbottle"><option value="円/月" ${(data.unit_canbottle||'円/月')==='円/月'?'selected':''}>円/月</option><option value="円/回" ${data.unit_canbottle==='円/回'?'selected':''}>円/回</option><option value="kg" ${data.unit_canbottle==='kg'?'selected':''}>kg</option></select>
-                            <input type="text" class="br-notes-canbottle" value="${utils.escapeHtml(data.notes_canbottle || '')}" placeholder="">
+                            <input type="text" class="br-unitprice-canbottle" value="${utils.escapeHtml(data.unitprice_canbottle || data.price_canbottle || data.price_recycle || '')}" placeholder="3,000" oninput="updateEditModalGeneralWasteSummary()">
+                            <input type="text" list="wasteUnitsList" class="br-unit-canbottle" value="${utils.escapeHtml(data.unit_canbottle||'円/月')}" placeholder="単位" onchange="updateEditModalGeneralWasteSummary()">
+                            <input type="text" class="br-notes-canbottle" value="${utils.escapeHtml(data.notes_canbottle || '')}" placeholder="備考">
+                            <span></span>
                         </div>
                         <div class="collect-row" style="background:#ECFDF5;">
                             <span class="cr-label" style="color:#065F46;">♻️ プラ包装容器</span>
+                            <label class="spot-label" style="font-size:0.68rem; display:flex; align-items:center; gap:2px; cursor:pointer;" title="チェックでスポット"><input type="checkbox" class="br-spot-plastic" ${data.is_spot_plastic ? 'checked' : ''} onchange="updateEditModalGeneralWasteSummary()"> スポット</label>
                             <input type="text" class="br-freq-plastic" value="${utils.escapeHtml(data.collection_plastic || '')}" placeholder="週1回">
                             <input type="text" class="br-vehicle-plastic" value="${utils.escapeHtml(data.vehicle_plastic || '')}" placeholder="C">
-                            <input type="text" class="br-unitprice-plastic" value="${utils.escapeHtml(data.unitprice_plastic || data.price_plastic || '')}" placeholder="2,000">
-                            <select class="br-unit-plastic"><option value="円/月" ${(data.unit_plastic||'円/月')==='円/月'?'selected':''}>円/月</option><option value="円/回" ${data.unit_plastic==='円/回'?'selected':''}>円/回</option><option value="kg" ${data.unit_plastic==='kg'?'selected':''}>kg</option></select>
-                            <input type="text" class="br-notes-plastic" value="${utils.escapeHtml(data.notes_plastic || '')}" placeholder="">
+                            <input type="text" class="br-unitprice-plastic" value="${utils.escapeHtml(data.unitprice_plastic || data.price_plastic || '')}" placeholder="2,000" oninput="updateEditModalGeneralWasteSummary()">
+                            <input type="text" list="wasteUnitsList" class="br-unit-plastic" value="${utils.escapeHtml(data.unit_plastic||'円/月')}" placeholder="単位" onchange="updateEditModalGeneralWasteSummary()">
+                            <input type="text" class="br-notes-plastic" value="${utils.escapeHtml(data.notes_plastic || '')}" placeholder="備考">
+                            <span></span>
                         </div>
                         <div class="collect-row" style="background:#FFFBEB;">
                             <span class="cr-label" style="color:#92400e;">📦 段ボール</span>
+                            <label class="spot-label" style="font-size:0.68rem; display:flex; align-items:center; gap:2px; cursor:pointer;" title="チェックでスポット"><input type="checkbox" class="br-spot-cardboard" ${data.is_spot_cardboard ? 'checked' : ''} onchange="updateEditModalGeneralWasteSummary()"> スポット</label>
                             <input type="text" class="br-freq-cardboard" value="${utils.escapeHtml(data.collection_cardboard || data.collection_paper || '')}" placeholder="月2回">
                             <input type="text" class="br-vehicle-cardboard" value="${utils.escapeHtml(data.vehicle_cardboard || data.vehicle_paper || '')}" placeholder="D">
-                            <input type="text" class="br-unitprice-cardboard" value="${utils.escapeHtml(data.unitprice_cardboard || data.price_cardboard || data.price_paper || '')}" placeholder="2,000">
-                            <select class="br-unit-cardboard"><option value="円/月" ${(data.unit_cardboard||'円/月')==='円/月'?'selected':''}>円/月</option><option value="円/回" ${data.unit_cardboard==='円/回'?'selected':''}>円/回</option><option value="kg" ${data.unit_cardboard==='kg'?'selected':''}>kg</option></select>
-                            <input type="text" class="br-notes-cardboard" value="${utils.escapeHtml(data.notes_cardboard || '')}" placeholder="">
+                            <input type="text" class="br-unitprice-cardboard" value="${utils.escapeHtml(data.unitprice_cardboard || data.price_cardboard || data.price_paper || '')}" placeholder="2,000" oninput="updateEditModalGeneralWasteSummary()">
+                            <input type="text" list="wasteUnitsList" class="br-unit-cardboard" value="${utils.escapeHtml(data.unit_cardboard||'円/月')}" placeholder="単位" onchange="updateEditModalGeneralWasteSummary()">
+                            <input type="text" class="br-notes-cardboard" value="${utils.escapeHtml(data.notes_cardboard || '')}" placeholder="備考">
+                            <span></span>
                         </div>
                         <div class="collect-row" style="background:#FEF2F2;">
                             <span class="cr-label" style="color:#991B1B;">🔸 その他</span>
+                            <label class="spot-label" style="font-size:0.68rem; display:flex; align-items:center; gap:2px; cursor:pointer;" title="チェックでスポット"><input type="checkbox" class="br-spot-other" ${data.is_spot_other ? 'checked' : ''} onchange="updateEditModalGeneralWasteSummary()"> スポット</label>
                             <input type="text" class="br-freq-other" value="${utils.escapeHtml(data.collection_other || '')}" placeholder="随時">
                             <input type="text" class="br-vehicle-other" value="${utils.escapeHtml(data.vehicle_other || '')}" placeholder="">
-                            <input type="text" class="br-unitprice-other" value="${utils.escapeHtml(data.unitprice_other || data.price_other || '')}" placeholder="">
-                            <select class="br-unit-other"><option value="円/月" ${(data.unit_other||'円/月')==='円/月'?'selected':''}>円/月</option><option value="円/回" ${data.unit_other==='円/回'?'selected':''}>円/回</option><option value="kg" ${data.unit_other==='kg'?'selected':''}>kg</option></select>
+                            <input type="text" class="br-unitprice-other" value="${utils.escapeHtml(data.unitprice_other || data.price_other || '')}" placeholder="" oninput="updateEditModalGeneralWasteSummary()">
+                            <input type="text" list="wasteUnitsList" class="br-unit-other" value="${utils.escapeHtml(data.unit_other||'円/月')}" placeholder="単位" onchange="updateEditModalGeneralWasteSummary()">
                             <input type="text" class="br-notes-other" value="${utils.escapeHtml(data.notes_other || '')}" placeholder="一斗缶・大型等">
+                            <span></span>
                         </div>
                         <div class="general-custom-items">
                             ${(data.general_custom_items || []).map(item => `
                                 <div class="collect-row" style="background:#F8FAFC;">
-                                    <input type="text" class="gc-item-name" value="${utils.escapeHtml(item.item_name || '')}" placeholder="品目名" style="font-size:0.75rem;">
+                                    <input type="text" class="gc-item-name" value="${utils.escapeHtml(item.item_name || '')}" placeholder="品目名" style="font-size:0.78rem;">
+                                    <label class="spot-label" style="font-size:0.68rem; display:flex; align-items:center; gap:2px; cursor:pointer;" title="チェックでスポット"><input type="checkbox" class="gc-is-spot" ${item.is_spot ? 'checked' : ''} onchange="updateEditModalGeneralWasteSummary()"> スポット</label>
                                     <input type="text" class="gc-freq" value="${utils.escapeHtml(item.freq || '')}" placeholder="頻度">
                                     <input type="text" class="gc-vehicle" value="${utils.escapeHtml(item.vehicle || '')}" placeholder="号車">
-                                    <input type="text" class="gc-unitprice" value="${utils.escapeHtml(item.unitprice || '')}" placeholder="単価">
-                                    <select class="gc-unit"><option value="円/月" ${(item.unit||'円/月')==='円/月'?'selected':''}>円/月</option><option value="円/回" ${item.unit==='円/回'?'selected':''}>円/回</option><option value="kg" ${item.unit==='kg'?'selected':''}>kg</option></select>
-                                    <div style="display:flex;gap:2px;align-items:center;"><input type="text" class="gc-notes" value="${utils.escapeHtml(item.notes || '')}" placeholder="備考" style="flex:1;"><button type="button" onclick="this.closest('.collect-row').remove();updateEditModalGeneralWasteSummary();" style="background:var(--danger);color:#fff;border:none;border-radius:4px;padding:2px 6px;cursor:pointer;font-size:0.7rem;">✕</button></div>
+                                    <input type="text" class="gc-unitprice" value="${utils.escapeHtml(item.unitprice || '')}" placeholder="単価" oninput="updateEditModalGeneralWasteSummary()">
+                                    <input type="text" list="wasteUnitsList" class="gc-unit" value="${utils.escapeHtml(item.unit || '円/月')}" placeholder="単位" onchange="updateEditModalGeneralWasteSummary()">
+                                    <input type="text" class="gc-notes" value="${utils.escapeHtml(item.notes || '')}" placeholder="備考">
+                                    <button type="button" onclick="this.closest('.collect-row').remove();updateEditModalGeneralWasteSummary();" style="background:var(--danger);color:#fff;border:none;border-radius:4px;padding:3px 6px;cursor:pointer;font-size:0.75rem;font-weight:700;" title="削除">✕</button>
                                 </div>
                             `).join('')}
                         </div>
-                        <button type="button" onclick="addGeneralCustomRow(this.closest('.branch-card').querySelector('.general-custom-items'))" style="font-size:0.7rem;padding:2px 10px;border-radius:4px;border:1px solid #d0d8f0;background:#f0f4ff;color:#1e3a5f;cursor:pointer;font-weight:700;margin-top:4px;width:100%;">＋ 一般品目を追加</button>
+                        <button type="button" onclick="addGeneralCustomRow(this.closest('.branch-card').querySelector('.general-custom-items'))" style="font-size:0.72rem;padding:4px 10px;border-radius:6px;border:1px solid #d0d8f0;background:#f0f4ff;color:#1e3a5f;cursor:pointer;font-weight:700;margin-top:6px;width:100%;">＋ 一般品目を追加</button>
                     </div>
                     <div style="background:#faf0ff;padding:8px;border-radius:8px;margin:8px 0;border:1px solid #d8b4fe;">
-                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:4px;">
+                        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
                             <div style="font-size:0.78rem;font-weight:800;color:#7e22ce;">♻️ 回収情報 — 産業廃棄物</div>
-                            <button type="button" class="btn-add-industrial" onclick="addIndustrialRow(this.closest('.branch-card').querySelector('.industrial-items'))" style="font-size:0.7rem;padding:2px 10px;border-radius:4px;border:1px solid #d8b4fe;background:#F3E8FF;color:#7e22ce;cursor:pointer;font-weight:700;">＋ 品目追加</button>
+                            <button type="button" class="btn-add-industrial" onclick="addIndustrialRow(this.closest('.branch-card').querySelector('.industrial-items'))" style="font-size:0.72rem;padding:3px 10px;border-radius:6px;border:1px solid #d8b4fe;background:#F3E8FF;color:#7e22ce;cursor:pointer;font-weight:700;">＋ 品目追加</button>
                         </div>
-                        <div class="industrial-header"><span>品目</span><span>頻度</span><span>号車</span><span>単価</span><span>単位</span><span>備考</span></div>
+                        <div class="industrial-header"><span></span><span>品目</span><span>区分</span><span>頻度</span><span>号車</span><span>単価</span><span>単位</span><span>備考</span><span></span></div>
                         <div class="industrial-items">
                             ${(data.industrial_items || []).map(item => `
                                 <div class="industrial-row">
-                                    <input type="text" class="ind-item-name" list="industrialMasterList" value="${utils.escapeHtml(item.item_name || '')}" placeholder="品目名を選択または入力" style="font-size:0.75rem;" autocomplete="off" oninput="autoSetIndustrialUnit(this)" onchange="autoSetIndustrialUnit(this)">
+                                    <div class="drag-handle" title="ドラッグして並び替え">⋮⋮</div>
+                                    <input type="text" class="ind-item-name" list="industrialMasterList" value="${utils.escapeHtml(item.item_name || '')}" placeholder="品目名を選択または入力" style="font-size:0.78rem;" autocomplete="off" oninput="autoSetIndustrialUnit(this)" onchange="autoSetIndustrialUnit(this)">
+                                    <label class="spot-label" style="font-size:0.68rem; display:flex; align-items:center; gap:2px; cursor:pointer;" title="チェックでスポット"><input type="checkbox" class="ind-is-spot" ${item.is_spot ? 'checked' : ''}> スポット</label>
                                     <input type="text" class="ind-freq" value="${utils.escapeHtml(item.freq || '')}" placeholder="週1回">
                                     <input type="text" class="ind-vehicle" value="${utils.escapeHtml(item.vehicle || '')}" placeholder="E">
                                     <input type="text" class="ind-unitprice" value="${utils.escapeHtml(item.unitprice || '')}" placeholder="160">
                                     <select class="ind-unit">${getIndustrialUnitOptions(item.unit)}</select>
-                                    <div style="display:flex;gap:2px;align-items:center;"><input type="text" class="ind-notes" value="${utils.escapeHtml(item.notes || '')}" placeholder="備考" style="flex:1;"><button type="button" onclick="this.closest('.industrial-row').remove()" style="background:var(--danger);color:#fff;border:none;border-radius:4px;padding:2px 6px;cursor:pointer;font-size:0.7rem;">✕</button></div>
+                                    <input type="text" class="ind-notes" value="${utils.escapeHtml(item.notes || '')}" placeholder="備考">
+                                    <button type="button" onclick="this.closest('.industrial-row').remove()" style="background:var(--danger);color:#fff;border:none;border-radius:4px;padding:3px 6px;cursor:pointer;font-size:0.75rem;font-weight:700;" title="削除">✕</button>
                                 </div>
                             `).join('')}
                         </div>
@@ -1498,6 +1641,10 @@
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
                         <div class="form-group"><label>営業時間</label><input type="text" class="br-hours" value="${utils.escapeHtml(data.business_hours || '')}" placeholder="9:00-18:00"></div>
                         <div class="form-group"><label>定休日</label><input type="text" class="br-holiday" value="${utils.escapeHtml(data.regular_holiday || '')}" placeholder="土日祝"></div>
+                    </div>
+                    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
+                        <div class="form-group"><label>契約更新日</label><input type="date" class="br-renewal" value="${data.contract_renewal_date || ''}"></div>
+                        <div class="form-group"><label>料金改定日</label><input type="date" class="br-price-revised" value="${data.price_revised_date || ''}"></div>
                     </div>
                     <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;">
                         <div class="form-group"><label>回収開始日</label><input type="date" class="br-start" value="${data.collection_start_date || ''}"></div>
@@ -1510,6 +1657,7 @@
             } else {
                 container.appendChild(card);
             }
+            makeIndustrialSortable(card.querySelector('.industrial-items'));
             updateBranchCount();
             updateEditModalGeneralWasteSummary();
         }
@@ -1623,18 +1771,57 @@
             }
         }
 
+        function makeIndustrialSortable(container) {
+            if (!container || container.dataset.sortableInitialized === 'true') return;
+            container.dataset.sortableInitialized = 'true';
+
+            let draggedItem = null;
+
+            container.addEventListener('dragstart', (e) => {
+                const targetRow = e.target.closest('.industrial-row');
+                if (!targetRow) return;
+                draggedItem = targetRow;
+                targetRow.classList.add('dragging');
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/plain', '');
+            });
+
+            container.addEventListener('dragend', (e) => {
+                const targetRow = e.target.closest('.industrial-row') || draggedItem;
+                if (targetRow) targetRow.classList.remove('dragging');
+                draggedItem = null;
+            });
+
+            container.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                if (!draggedItem) return;
+                const targetRow = e.target.closest('.industrial-row');
+                if (targetRow && targetRow !== draggedItem && targetRow.parentElement === container) {
+                    const rect = targetRow.getBoundingClientRect();
+                    const next = (e.clientY - rect.top) / (rect.bottom - rect.top) > 0.5;
+                    container.insertBefore(draggedItem, next ? targetRow.nextSibling : targetRow);
+                }
+            });
+        }
+
         function addIndustrialRow(container, item = {}) {
             const row = document.createElement('div');
             row.className = 'industrial-row';
+            row.draggable = true;
             row.innerHTML = `
-                <input type="text" class="ind-item-name" list="industrialMasterList" value="${utils.escapeHtml(item.item_name || '')}" placeholder="品目名を選択または入力" style="font-size:0.75rem;" autocomplete="off" oninput="autoSetIndustrialUnit(this)" onchange="autoSetIndustrialUnit(this)">
+                <div class="drag-handle" title="ドラッグして並び替え">⋮⋮</div>
+                <input type="text" class="ind-item-name" list="industrialMasterList" value="${utils.escapeHtml(item.item_name || '')}" placeholder="品目名を選択または入力" style="font-size:0.78rem;" autocomplete="off" oninput="autoSetIndustrialUnit(this)" onchange="autoSetIndustrialUnit(this)">
+                <label class="spot-label" style="font-size:0.68rem; display:flex; align-items:center; gap:2px; cursor:pointer;" title="チェックでスポット"><input type="checkbox" class="ind-is-spot" ${item.is_spot ? 'checked' : ''}> スポット</label>
                 <input type="text" class="ind-freq" value="${utils.escapeHtml(item.freq || '')}" placeholder="週1回">
                 <input type="text" class="ind-vehicle" value="${utils.escapeHtml(item.vehicle || '')}" placeholder="E">
                 <input type="text" class="ind-unitprice" value="${utils.escapeHtml(item.unitprice || '')}" placeholder="160">
                 <select class="ind-unit">${getIndustrialUnitOptions(item.unit)}</select>
-                <div style="display:flex;gap:2px;align-items:center;"><input type="text" class="ind-notes" value="${utils.escapeHtml(item.notes || '')}" placeholder="備考" style="flex:1;"><button type="button" onclick="this.closest('.industrial-row').remove()" style="background:var(--danger);color:#fff;border:none;border-radius:4px;padding:2px 6px;cursor:pointer;font-size:0.7rem;">✕</button></div>
+                <input type="text" class="ind-notes" value="${utils.escapeHtml(item.notes || '')}" placeholder="備考">
+                <button type="button" onclick="this.closest('.industrial-row').remove()" style="background:var(--danger);color:#fff;border:none;border-radius:4px;padding:3px 6px;cursor:pointer;font-size:0.75rem;font-weight:700;" title="削除">✕</button>
             `;
             container.appendChild(row);
+            makeIndustrialSortable(container);
         }
 
         function addGeneralCustomRow(container, item = {}) {
@@ -1642,12 +1829,14 @@
             row.className = 'collect-row';
             row.style.background = '#F8FAFC';
             row.innerHTML = `
-                <input type="text" class="gc-item-name" value="${utils.escapeHtml(item.item_name || '')}" placeholder="品目名" style="font-size:0.75rem;">
+                <input type="text" class="gc-item-name" value="${utils.escapeHtml(item.item_name || '')}" placeholder="品目名" style="font-size:0.78rem;">
+                <label class="spot-label" style="font-size:0.68rem; display:flex; align-items:center; gap:2px; cursor:pointer;" title="チェックでスポット"><input type="checkbox" class="gc-is-spot" ${item.is_spot ? 'checked' : ''} onchange="updateEditModalGeneralWasteSummary()"> スポット</label>
                 <input type="text" class="gc-freq" value="${utils.escapeHtml(item.freq || '')}" placeholder="頻度">
                 <input type="text" class="gc-vehicle" value="${utils.escapeHtml(item.vehicle || '')}" placeholder="号車">
-                <input type="text" class="gc-unitprice" value="${utils.escapeHtml(item.unitprice || '')}" placeholder="単価">
-                <select class="gc-unit"><option value="円/月" ${(item.unit||'円/月')==='円/月'?'selected':''}>円/月</option><option value="円/回" ${item.unit==='円/回'?'selected':''}>円/回</option><option value="kg" ${item.unit==='kg'?'selected':''}>kg</option></select>
-                <div style="display:flex;gap:2px;align-items:center;"><input type="text" class="gc-notes" value="${utils.escapeHtml(item.notes || '')}" placeholder="備考" style="flex:1;"><button type="button" onclick="this.closest('.collect-row').remove();updateEditModalGeneralWasteSummary();" style="background:var(--danger);color:#fff;border:none;border-radius:4px;padding:2px 6px;cursor:pointer;font-size:0.7rem;">✕</button></div>
+                <input type="text" class="gc-unitprice" value="${utils.escapeHtml(item.unitprice || '')}" placeholder="単価" oninput="updateEditModalGeneralWasteSummary()">
+                <input type="text" list="wasteUnitsList" class="gc-unit" value="${utils.escapeHtml(item.unit||'円/月')}" placeholder="単位" onchange="updateEditModalGeneralWasteSummary()">
+                <input type="text" class="gc-notes" value="${utils.escapeHtml(item.notes || '')}" placeholder="備考">
+                <button type="button" onclick="this.closest('.collect-row').remove();updateEditModalGeneralWasteSummary();" style="background:var(--danger);color:#fff;border:none;border-radius:4px;padding:3px 6px;cursor:pointer;font-size:0.75rem;font-weight:700;" title="削除">✕</button>
             `;
             container.appendChild(row);
             updateEditModalGeneralWasteSummary();
@@ -1669,39 +1858,51 @@
                 ? (Number(b.household_count) * Number(b.unit_price_per_household))
                 : 0;
 
-            const genPrice = parseCleanAmount(b.unitprice_general || b.price_general);
-            if (genPrice > 0) {
-                subtotal += genPrice;
-            } else if (mansionTotal > 0) {
-                subtotal += mansionTotal;
+            // 燃えるゴミ（スポット指定時は除外）
+            if (!b.is_spot_general) {
+                const genPrice = parseCleanAmount(b.unitprice_general || b.price_general);
+                if (genPrice > 0) {
+                    subtotal += genPrice;
+                } else if (mansionTotal > 0) {
+                    subtotal += mansionTotal;
+                }
             }
 
-            // 缶ビンペット (単位が円/月、または未指定の場合)
-            const canUnit = b.unit_canbottle || '円/月';
-            if (canUnit === '円/月') {
-                subtotal += parseCleanAmount(b.unitprice_canbottle || b.price_canbottle || b.price_recycle);
+            // 缶ビンペット (スポット指定時は除外)
+            if (!b.is_spot_canbottle) {
+                const canUnit = b.unit_canbottle || '円/月';
+                if (canUnit === '円/月') {
+                    subtotal += parseCleanAmount(b.unitprice_canbottle || b.price_canbottle || b.price_recycle);
+                }
             }
 
-            // プラ包装容器
-            const plaUnit = b.unit_plastic || '円/月';
-            if (plaUnit === '円/月') {
-                subtotal += parseCleanAmount(b.unitprice_plastic || b.price_plastic);
+            // プラ包装容器 (スポット指定時は除外)
+            if (!b.is_spot_plastic) {
+                const plaUnit = b.unit_plastic || '円/月';
+                if (plaUnit === '円/月') {
+                    subtotal += parseCleanAmount(b.unitprice_plastic || b.price_plastic);
+                }
             }
 
-            // 段ボール
-            const cbUnit = b.unit_cardboard || '円/月';
-            if (cbUnit === '円/月') {
-                subtotal += parseCleanAmount(b.unitprice_cardboard || b.price_cardboard || b.price_paper);
+            // 段ボール (スポット指定時は除外)
+            if (!b.is_spot_cardboard) {
+                const cbUnit = b.unit_cardboard || '円/月';
+                if (cbUnit === '円/月') {
+                    subtotal += parseCleanAmount(b.unitprice_cardboard || b.price_cardboard || b.price_paper);
+                }
             }
 
-            // その他
-            const othUnit = b.unit_other || '円/月';
-            if (othUnit === '円/月') {
-                subtotal += parseCleanAmount(b.unitprice_other || b.price_other);
+            // その他 (スポット指定時は除外)
+            if (!b.is_spot_other) {
+                const othUnit = b.unit_other || '円/月';
+                if (othUnit === '円/月') {
+                    subtotal += parseCleanAmount(b.unitprice_other || b.price_other);
+                }
             }
 
-            // 一般カスタム品目
+            // 一般カスタム品目 (スポット指定時は除外)
             (b.general_custom_items || []).forEach(ci => {
+                if (ci.is_spot) return; // スポット案件（正月料金など）は除外！
                 const u = ci.unit || '円/月';
                 if (u === '円/月') {
                     subtotal += parseCleanAmount(ci.unitprice);
@@ -1769,6 +1970,7 @@
                     if (itemName) {
                         industrialItems.push({
                             item_name: itemName,
+                            is_spot: row.querySelector('.ind-is-spot')?.checked || false,
                             freq: row.querySelector('.ind-freq')?.value?.trim() || '',
                             vehicle: row.querySelector('.ind-vehicle')?.value?.trim() || '',
                             unitprice: row.querySelector('.ind-unitprice')?.value?.trim() || '',
@@ -1784,6 +1986,7 @@
                     if (itemName) {
                         generalCustomItems.push({
                             item_name: itemName,
+                            is_spot: row.querySelector('.gc-is-spot')?.checked || false,
                             freq: row.querySelector('.gc-freq')?.value?.trim() || '',
                             vehicle: row.querySelector('.gc-vehicle')?.value?.trim() || '',
                             unitprice: row.querySelector('.gc-unitprice')?.value?.trim() || '',
@@ -1804,6 +2007,11 @@
                     vehicle_plastic: v('.br-vehicle-plastic'),
                     vehicle_cardboard: v('.br-vehicle-cardboard'),
                     vehicle_other: v('.br-vehicle-other'),
+                    is_spot_general: card.querySelector('.br-spot-general')?.checked || false,
+                    is_spot_canbottle: card.querySelector('.br-spot-canbottle')?.checked || false,
+                    is_spot_plastic: card.querySelector('.br-spot-plastic')?.checked || false,
+                    is_spot_cardboard: card.querySelector('.br-spot-cardboard')?.checked || false,
+                    is_spot_other: card.querySelector('.br-spot-other')?.checked || false,
                     unitprice_general: v('.br-unitprice-general'),
                     unitprice_canbottle: v('.br-unitprice-canbottle'),
                     unitprice_plastic: v('.br-unitprice-plastic'),
@@ -1831,6 +2039,8 @@
                     unit_price_per_household: v('.br-unit-price-household') ? parseInt(v('.br-unit-price-household')) : null,
                     business_hours: v('.br-hours'),
                     regular_holiday: v('.br-holiday'),
+                    contract_renewal_date: card.querySelector('.br-renewal')?.value || '',
+                    price_revised_date: card.querySelector('.br-price-revised')?.value || '',
                     collection_start_date: card.querySelector('.br-start')?.value || '',
                     collection_end_date: card.querySelector('.br-end')?.value || '',
                     is_headquarters: card.dataset.isHeadquarters === '1',
@@ -1947,64 +2157,88 @@
         }
 
         let previewingId = null;
-        async function openPreview(id) {
+        let previewingCustomer = null;
+        let currentPreviewTab = 'main';
+
+        function switchPreviewTab(tab) {
+            currentPreviewTab = tab;
+            const tabMain = document.getElementById('previewTabContentMain');
+            const tabRev = document.getElementById('previewTabContentRevisions');
+            const btnMain = document.getElementById('previewTabBtnMain');
+            const btnRev = document.getElementById('previewTabBtnRevisions');
+
+            if (tab === 'main') {
+                if (tabMain) tabMain.style.display = 'block';
+                if (tabRev) tabRev.style.display = 'none';
+                if (btnMain) { btnMain.style.background = '#2563EB'; btnMain.style.color = '#fff'; }
+                if (btnRev) { btnRev.style.background = '#E2E8F0'; btnRev.style.color = '#475569'; }
+            } else {
+                if (tabMain) tabMain.style.display = 'none';
+                if (tabRev) tabRev.style.display = 'block';
+                if (btnMain) { btnMain.style.background = '#E2E8F0'; btnMain.style.color = '#475569'; }
+                if (btnRev) { btnRev.style.background = '#2563EB'; btnRev.style.color = '#fff'; }
+            }
+        }
+
+        async function addPriceRevision(custId) {
+            const date = document.getElementById('revDate')?.value;
+            const item = document.getElementById('revItem')?.value?.trim();
+            const before = document.getElementById('revBefore')?.value?.trim();
+            const after = document.getElementById('revAfter')?.value?.trim();
+            const note = document.getElementById('revNote')?.value?.trim();
+
+            if (!date || !item || !after) {
+                alert('改定日、改定品目、改定後単価を入力してください');
+                return;
+            }
+
+            const c = allCustomers.find(x => x.id === custId);
+            if (!c) return;
+
+            let fd = {};
+            try { fd = JSON.parse(c.form_data || '{}'); } catch(e){}
+            const revisions = Array.isArray(fd.price_revisions) ? fd.price_revisions : [];
+            revisions.unshift({
+                date,
+                item,
+                before: before || '-',
+                after,
+                note: note || '',
+                created_at: new Date().toISOString()
+            });
+            fd.price_revisions = revisions;
+
+            try {
+                await RyubeeAPI.updateCustomer(custId, { form_data: JSON.stringify(fd) });
+                c.form_data = JSON.stringify(fd);
+                c.parsed_form = fd;
+                showToast('✅ 料金改定を記録しました');
+                openPreview(custId);
+                switchPreviewTab('revisions');
+            } catch(e) {
+                alert('改定の記録に失敗しました: ' + e.message);
+            }
+        }
+
+        function openPreview(id) {
             const c = allCustomers.find(x => x.id === id);
             if (!c) return;
             previewingId = id;
+            previewingCustomer = c;
 
-            let fd = c.parsed_form || {};
-            let history = [];
-            try { history = await RyubeeAPI.fetchCustomerHistory(id); } catch (e) { }
+            // 🚀 0秒表示化：即座にモーダルを開く
+            document.getElementById('previewOverlay').classList.add('show');
+            lockBodyScroll();
 
-            let jobsInfo = [];
-            try { jobsInfo = await RyubeeAPI.fetchJobs({ customer_id: id }); } catch (e) { }
+            const fd = c.parsed_form || {};
+            const uc = getUserColorStyle(c.assigned_user_name);
+            const userTag = `<span style="font-size:11px; font-weight:700; color:${uc.text}; background:${uc.bg}; border:1px solid ${uc.border}; padding:2px 8px; border-radius:12px;">👥 担当: ${utils.escapeHtml(c.assigned_user_name || '未設定')}</span>`;
 
-            const jobBranches = [];
-            const seenProp = new Set();
-            jobsInfo.forEach(j => {
-                const jName = (j.job_name || '').trim();
-                const jAddr = (j.address || '').trim();
-                // Filter out if it's the exact same as the customer's HQ to avoid duplicate
-                if (jName === c.name.trim() && jAddr === (c.address||'').trim()) return;
-                if (!jName && !jAddr) return;
-                const key = jName + '|' + jAddr;
-                if (!seenProp.has(key)) {
-                    seenProp.add(key);
-                    let jFd = {};
-                    try { jFd = JSON.parse(j.form_data || '{}'); } catch(e){}
-                    const freq = jFd.collection_frequency ? jFd.collection_frequency + (jFd.collection_days ? ' ' + jFd.collection_days : '') : '';
-                    jobBranches.push({
-                        branch_name: jName,
-                        branch_address: jAddr,
-                        collection_general: freq,
-                        is_job_property: true
-                    });
-                }
-            });
-
-            let settings = {};
-            try { settings = await RyubeeAPI.fetchSettings(); } catch (e) { }
-
-            const customerContracts = allWasteContracts.filter(ct => (ct.contractor_name || '').trim() === c.name.trim());
-            const dynamicDisposers = Array.isArray(settings.contractors_master) && settings.contractors_master.length > 0
-                ? [...settings.contractors_master]
-                : ['ホームケルン', '光アスコン', '旭興産業', '木材開発', '厳本金属', '京都有機資源', 'HIRAYAMA', '大剛', '京都環境保全公社', '西山環境サービス', '家電リサイクル'];
-
+            // 契約処分先リストの作成（設定値のキャッシュを利用）
+            const dynamicDisposers = ['ホームケルン', '光アスコン', '旭興産業', '木材開発', '厳本金属', '京都有機資源', 'HIRAYAMA', '大剛', '京都環境保全公社', '西山環境サービス', '家電リサイクル'];
             const activeCbs = Array.isArray(fd.active_contractors) ? fd.active_contractors : [];
-            const existingDisposers = new Set(dynamicDisposers);
-            customerContracts.forEach(ct => {
-                if (ct.disposal_company && !existingDisposers.has(ct.disposal_company)) {
-                    dynamicDisposers.push(ct.disposal_company);
-                    existingDisposers.add(ct.disposal_company);
-                }
-            });
-            activeCbs.forEach(ct => {
-                if (ct && !existingDisposers.has(ct)) {
-                    dynamicDisposers.push(ct);
-                    existingDisposers.add(ct);
-                }
-            });
-
+            const customerContracts = allWasteContracts.filter(ct => (ct.contractor_name || '').trim() === c.name.trim());
+            
             const savedContractorItems = fd.contractor_items || {};
             const contractListHtml = dynamicDisposers.map(disp => {
                 const contract = customerContracts.find(ct => ct.disposal_company === disp);
@@ -2044,230 +2278,586 @@
                 }
             }).join('');
 
+            // 事業所データ
+            let branches = fd.branches && Array.isArray(fd.branches) && fd.branches.length > 0
+                ? [...fd.branches]
+                : (fd.branch_name || fd.branch_address) ? [{
+                    branch_name: fd.branch_name, branch_address: fd.branch_address,
+                    industry_type: fd.industry_type, average_volume: fd.average_volume,
+                    vehicle_number: fd.vehicle_number, subcontractor: fd.subcontractor,
+                    collection_general: fd.collection_general, collection_canbottle: fd.collection_canbottle || fd.collection_recycle,
+                    collection_plastic: fd.collection_plastic, collection_cardboard: fd.collection_cardboard || fd.collection_paper,
+                    collection_industrial: fd.collection_industrial,
+                    business_hours: fd.business_hours, regular_holiday: fd.regular_holiday,
+                    collection_start_date: fd.collection_start_date, collection_end_date: fd.collection_end_date,
+                    household_count: fd.household_count, unit_price_per_household: fd.unit_price_per_household,
+                }] : [];
+
+            const gwTotal = calculateCustomerGeneralWasteTotal(branches);
+            const summaryCardHtml = gwTotal.subtotal > 0 ? `
+                <div style="background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%); border: 1.5px solid #93C5FD; border-radius: 12px; padding: 14px 18px; margin-bottom: 16px; box-shadow: 0 2px 4px rgba(30, 64, 175, 0.06);">
+                    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
+                        <span style="font-size:0.92rem; font-weight:800; color:#1E40AF;">
+                            📊 一般廃棄物 サブスク月額合計 (${gwTotal.count}件の事業所合算)
+                        </span>
+                        <span style="font-size:0.75rem; background:#2563EB; color:#fff; font-weight:700; padding:2px 8px; border-radius:12px;">定期月額</span>
+                    </div>
+                    <div style="display:flex; gap:20px; align-items:baseline; flex-wrap:wrap;">
+                        <div>
+                            <span style="font-size:0.8rem; color:#4B5563; font-weight:600;">税抜合計:</span>
+                            <span style="font-size:1.4rem; font-weight:800; color:#1D4ED8; margin-left:4px;">¥${gwTotal.subtotal.toLocaleString()}</span>
+                        </div>
+                        <div>
+                            <span style="font-size:0.8rem; color:#4B5563; font-weight:600;">税込合計 (10%):</span>
+                            <span style="font-size:1.4rem; font-weight:800; color:#059669; margin-left:4px;">¥${gwTotal.total.toLocaleString()}</span>
+                        </div>
+                        <div style="font-size:0.8rem; color:#6B7280;">
+                            (消費税額: ¥${gwTotal.tax.toLocaleString()})
+                        </div>
+                    </div>
+                </div>
+            ` : '';
+
+            function fmtP(p) { if(!p) return '-'; const n=parseInt(String(p).replace(/[^0-9]/g,'')); return isNaN(n)?utils.escapeHtml(p):'¥'+n.toLocaleString(); }
+
+            const branchCardsHtml = branches.length === 0
+                ? '<div style="background:var(--bg-secondary);padding:12px;border-radius:12px;margin-bottom:16px;font-size:0.85rem;color:var(--text-tertiary);text-align:center;">物件・事業所未登録</div>'
+                : branches.map((b, i) => {
+                    const genV = b.vehicle_general || b.vehicle_number || '';
+                    
+                    // 一般廃棄物テーブル
+                    const generalRows = [];
+                    if (b.collection_general||genV||b.unitprice_general||b.price_general) {
+                        generalRows.push({icon:'🟢', name:'燃えるゴミ', is_spot: b.is_spot_general, freq:b.collection_general||'', vehicle:genV, price:b.unitprice_general||b.price_general, unit:b.unit_general||'円/月', notes:b.notes_general, bg:'#EFF6FF', color:'#1e40af'});
+                    }
+                    if (b.collection_canbottle||b.collection_recycle||b.vehicle_canbottle||b.unitprice_canbottle||b.price_canbottle) {
+                        generalRows.push({icon:'🔵', name:'缶ビンペット', is_spot: b.is_spot_canbottle, freq:b.collection_canbottle||b.collection_recycle||'', vehicle:b.vehicle_canbottle||b.vehicle_recycle||'', price:b.unitprice_canbottle||b.price_canbottle||b.price_recycle, unit:b.unit_canbottle||'円/月', notes:b.notes_canbottle, bg:'#F0FDF4', color:'#166534'});
+                    }
+                    if (b.collection_plastic||b.vehicle_plastic||b.unitprice_plastic||b.price_plastic) {
+                        generalRows.push({icon:'♻️', name:'プラ包装容器', is_spot: b.is_spot_plastic, freq:b.collection_plastic||'', vehicle:b.vehicle_plastic||'', price:b.unitprice_plastic||b.price_plastic, unit:b.unit_plastic||'円/月', notes:b.notes_plastic, bg:'#ECFDF5', color:'#065F46'});
+                    }
+                    if (b.collection_cardboard||b.collection_paper||b.vehicle_cardboard||b.unitprice_cardboard||b.price_cardboard) {
+                        generalRows.push({icon:'📦', name:'段ボール', is_spot: b.is_spot_cardboard, freq:b.collection_cardboard||b.collection_paper||'', vehicle:b.vehicle_cardboard||b.vehicle_paper||'', price:b.unitprice_cardboard||b.price_cardboard||b.price_paper, unit:b.unit_cardboard||'円/月', notes:b.notes_cardboard, bg:'#FFFBEB', color:'#92400e'});
+                    }
+                    if (b.collection_other||b.vehicle_other||b.unitprice_other||b.price_other) {
+                        generalRows.push({icon:'🔸', name:'その他', is_spot: b.is_spot_other, freq:b.collection_other||'', vehicle:b.vehicle_other||'', price:b.unitprice_other||b.price_other, unit:b.unit_other||'円/月', notes:b.notes_other, bg:'#FEF2F2', color:'#991B1B'});
+                    }
+                    (b.general_custom_items || []).forEach(ci => {
+                        if (ci.item_name) generalRows.push({icon:'📌', name:ci.item_name, is_spot: ci.is_spot, freq:ci.freq||'', vehicle:ci.vehicle||'', price:ci.unitprice, unit:ci.unit||'円/月', notes:ci.notes, bg:'#F8FAFC', color:'#334155'});
+                    });
+                    
+                    const generalTableHtml = generalRows.length > 0 ? `
+                        <div style="margin-top:6px;font-size:0.75rem;font-weight:700;color:#1e3a5f;">📋 一般廃棄物</div>
+                        <div style="overflow-x:auto;">
+                            <table class="collection-table" style="min-width:100%;">
+                                <thead><tr><th>種類</th><th>区分</th><th>頻度</th><th style="text-align:center;">号車</th><th>単価</th><th>単位</th><th>備考</th></tr></thead>
+                                <tbody>
+                                    ${generalRows.map(r => '<tr style="background:'+r.bg+';"><td style="font-weight:600;color:'+r.color+';">'+r.icon+' '+r.name+'</td><td>'+(r.is_spot ? '<span class="spot-badge">⚡️スポット</span>' : '<span style="font-size:0.68rem;color:#047857;">定期</span>')+'</td><td>'+utils.escapeHtml(r.freq)+'</td><td style="text-align:center;">'+(r.vehicle?'<strong>'+utils.escapeHtml(r.vehicle)+'</strong>':'-')+'</td><td class="price-cell">'+fmtP(r.price)+'</td><td style="text-align:center;font-size:0.78rem;">'+utils.escapeHtml(r.unit||'')+'</td><td style="font-size:0.78rem;color:var(--text-secondary);">'+utils.escapeHtml(r.notes||'')+'</td></tr>').join('')}
+                                </tbody>
+                            </table>
+                        </div>` : '';
+                    
+                    // 産業廃棄物テーブル（見切れ防止幅 & スクロール）
+                    const indItems = b.industrial_items || [];
+                    const industrialTableHtml = indItems.length > 0 ? `
+                        <div style="margin-top:8px;font-size:0.75rem;font-weight:700;color:#7e22ce;">♻️ 産業廃棄物</div>
+                        <div style="overflow-x:auto; -webkit-overflow-scrolling:touch; padding-bottom:2px;">
+                            <table class="collection-table" style="min-width:100%;">
+                                <thead><tr><th style="min-width:200px;">品目</th><th>区分</th><th>頻度</th><th style="text-align:center;">号車</th><th>単価</th><th>単位</th><th>備考</th></tr></thead>
+                                <tbody>
+                                    ${indItems.map(it => '<tr style="background:#FDF4FF;"><td style="font-weight:600;color:#7e22ce;font-size:0.82rem;word-break:break-word;white-space:normal;min-width:200px;">'+utils.escapeHtml(it.item_name)+'</td><td>'+(it.is_spot ? '<span class="spot-badge">⚡️スポット</span>' : '<span style="font-size:0.68rem;color:#047857;">定期</span>')+'</td><td>'+utils.escapeHtml(it.freq||'')+'</td><td style="text-align:center;">'+(it.vehicle?'<strong>'+utils.escapeHtml(it.vehicle)+'</strong>':'-')+'</td><td class="price-cell">'+fmtP(it.unitprice)+'</td><td style="text-align:center;font-size:0.78rem;">'+utils.escapeHtml(it.unit||'kg')+'</td><td style="font-size:0.78rem;color:var(--text-secondary);">'+utils.escapeHtml(it.notes||'')+'</td></tr>').join('')}
+                                </tbody>
+                            </table>
+                        </div>` : '';
+                    
+                    const mansionHtml = b.industry_type === 'マンション' && b.household_count ? `
+                        <div style="margin-top:6px;padding:6px 10px;background:#FFF7ED;border:1px solid #FDBA74;border-radius:6px;font-size:0.82rem;">
+                            🏢 入居者 <strong>${b.household_count}</strong>戸${b.unit_price_per_household ? ' × ¥'+Number(b.unit_price_per_household).toLocaleString()+' = <strong style="color:#9A3412;">¥'+(b.household_count * b.unit_price_per_household).toLocaleString()+'/月</strong>' : ''}
+                        </div>` : '';
+                    
+                    const branchGwSub = calculateBranchGeneralWasteSub(b);
+                    const branchGwBadge = branchGwSub > 0 ? `<span style="font-size:0.75rem;background:#EFF6FF;color:#1D4ED8;font-weight:700;padding:2px 8px;border-radius:6px;margin-left:8px;border:1px solid #BFDBFE;">月額小計: ¥${branchGwSub.toLocaleString()}</span>` : '';
+
+                    return `
+                    <div style="background:var(--bg-secondary); padding:14px; border-radius:12px; margin-bottom:10px; font-size:0.9rem; line-height:1.6; ${b.is_job_property ? 'border:1px dashed #93C5FD;' : ''}">
+                        📍 <strong style="margin-left:4px;">${utils.escapeHtml(b.branch_name || '物件・事業所 #'+(i+1))}</strong> ${branchGwBadge} ${b.is_job_property ? '<span style="font-size:0.7rem;background:#EFF6FF;color:#1D4ED8;padding:2px 6px;border-radius:4px;margin-left:8px;">案件から自動追加</span>' : ''} ${b.industry_type ? '<span style="font-size:0.7rem;background:#F3E8FF;color:#7C3AED;padding:2px 6px;border-radius:4px;margin-left:4px;">'+utils.escapeHtml(b.industry_type)+'</span>' : ''}
+                        ${b.branch_address ? '<br><span style="color:var(--text-tertiary);font-size:0.82rem;">住所:</span> '+utils.escapeHtml(b.branch_address)+' '+(b.branch_address ? '<a href="https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(b.branch_address)+'" target="_blank" style="font-size:0.75rem;text-decoration:none;background:#E2E8F0;padding:1px 6px;border-radius:4px;">🗺</a>' : '') : ''}
+                        ${b.branch_phone ? '<br><span style="color:var(--text-tertiary);font-size:0.82rem;">📞 TEL:</span> '+utils.escapeHtml(b.branch_phone) : ''}
+                        ${b.subcontractor ? '<br><span style="color:var(--text-tertiary);font-size:0.82rem;">👥 下請:</span> '+utils.escapeHtml(b.subcontractor) : ''}
+                        ${mansionHtml}
+                        ${generalTableHtml}
+                        ${industrialTableHtml}
+                        <div style="display:flex; gap:12px; font-size:0.8rem; margin-top:6px; color:var(--text-tertiary); flex-wrap:wrap;">
+                            ${b.contract_renewal_date ? `<span>🔄 契約更新日: <strong>${b.contract_renewal_date}</strong></span>` : ''}
+                            ${b.price_revised_date ? `<span>🕒 料金改定日: <strong>${b.price_revised_date}</strong></span>` : ''}
+                            ${b.collection_start_date ? `<span>回収開始: ${b.collection_start_date}</span>` : ''}
+                            ${b.collection_end_date ? `<span style="color:var(--danger);">解約: ${b.collection_end_date}</span>` : ''}
+                        </div>
+                    </div>`;
+                }).join('');
+
+            // 改定履歴リストの作成
+            const priceRevisions = Array.isArray(fd.price_revisions) ? fd.price_revisions : [];
+            const revisionsTableHtml = priceRevisions.length === 0
+                ? '<div style="background:var(--bg-secondary);padding:14px;border-radius:8px;text-align:center;color:var(--text-tertiary);font-size:0.85rem;">料金改定の履歴はまだ登録されていません</div>'
+                : `
+                <table class="collection-table" style="width:100%;">
+                    <thead>
+                        <tr style="background:#F1F5F9;">
+                            <th>改定日</th>
+                            <th>改定品目</th>
+                            <th style="text-align:right;">改定前</th>
+                            <th style="text-align:right;">改定後</th>
+                            <th>理由・備考</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${priceRevisions.map(rev => `
+                            <tr>
+                                <td style="font-weight:700; color:#1E40AF;">${utils.escapeHtml(rev.date || '-')}</td>
+                                <td style="font-weight:600;">${utils.escapeHtml(rev.item || '-')}</td>
+                                <td style="text-align:right; color:#6B7280;">${fmtP(rev.before)}</td>
+                                <td style="text-align:right; font-weight:700; color:#059669;">${fmtP(rev.after)}</td>
+                                <td style="font-size:0.8rem; color:#475569;">${utils.escapeHtml(rev.note || '-')}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            `;
+
             const pc = document.getElementById('previewContent');
             pc.innerHTML = `
-                <h3 style="font-size:1.4rem;font-weight:700;margin-bottom:8px;">${utils.escapeHtml(c.name)}</h3>
-                <div style="font-size:0.9rem; color:var(--text-secondary); margin-bottom:16px;">
-                    ${fd.yamabun_management_number ? `🎫 山文管理番号: <strong style="color:var(--primary);">${utils.escapeHtml(fd.yamabun_management_number)}</strong><br>` : ''}
-                    ${(() => {
-                        const cats = fd.waste_categories || (fd.waste_category ? fd.waste_category.split(',') : ['general']);
-                        return cats.map(wc => wc === 'industrial' ? '♻️ 産業廃棄物' : wc === 'large' ? '🛋 大型ゴミ等' : '🗑 一般ゴミ').join(' | ');
-                    })()} | 
-                    ${c.contract_type === 'subscription' ? '🔄 定期契約' : '📍 スポット契約'}
+                <!-- モーダルヘッダー: 顧客名 & 右上特大管理番号 (画像3対応) -->
+                <div style="display:flex; justify-content:space-between; align-items:flex-start; margin-bottom:12px; gap:10px; border-bottom:1px solid var(--border); padding-bottom:10px;">
+                    <div style="flex:1; min-width:0;">
+                        <h3 style="font-size:1.45rem; font-weight:800; margin:0 0 6px; word-break:break-word;">${utils.escapeHtml(c.name)}</h3>
+                        <div style="display:inline-flex; flex-wrap:wrap; gap:6px; align-items:center;">
+                            ${userTag}
+                            ${fd.industry ? `<span class="badge" style="background:#E2E8F0; color:#334155; font-weight:700;">🏷 ${utils.escapeHtml(fd.industry)}</span>` : ''}
+                            ${c.contract_type === 'subscription' ? '<span class="badge" style="background:#DBEAFE; color:#1D4ED8; font-weight:700;">🔄 定期契約</span>' : '<span class="badge" style="background:#FEF3C7; color:#B45309; font-weight:700;">📍 スポット</span>'}
+                        </div>
+                    </div>
+                    <div style="text-align:right; flex-shrink:0;">
+                        <div style="font-size:0.75rem; color:#6B7280; font-weight:700;">山文管理番号</div>
+                        <div style="font-size:1.35rem; font-weight:900; color:#1D4ED8; background:#EFF6FF; border:1.5px solid #93C5FD; padding:4px 14px; border-radius:8px; display:inline-block; letter-spacing:0.5px; box-shadow:0 1px 3px rgba(29,78,216,0.1);">
+                            ${utils.escapeHtml(fd.yamabun_management_number || 'No.未登録')}
+                        </div>
+                    </div>
                 </div>
-                
-                <div style="background:var(--bg-secondary); padding:16px; border-radius:12px; margin-bottom:16px; font-size:0.95rem; line-height:1.6;">
-                    📍 <strong style="margin-left:4px;">基本情報</strong><br>
-                    <span style="display:inline-block;width:60px;color:var(--text-tertiary);font-size:0.85rem;">住所:</span> ${(c.address || '-').replace(/\n/g, '<br>')} 
-                    ${c.address ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(c.address)}" target="_blank" style="font-size:0.8rem;text-decoration:none;margin-left:8px;background:#E2E8F0;padding:2px 8px;border-radius:4px;color:var(--text-primary);">🗺 マップ</a>` : ''}<br>
-                    <span style="display:inline-block;width:60px;color:var(--text-tertiary);font-size:0.85rem;">TEL:</span> ${utils.escapeHtml(c.phone || '-')} <span style="margin-left:8px;color:var(--text-tertiary);font-size:0.85rem;">FAX:</span> ${utils.escapeHtml(fd.fax || '-')} <span style="margin-left:8px;color:var(--text-tertiary);font-size:0.85rem;">携帯:</span> ${utils.escapeHtml(fd.mobile || '-')}<br>
-                    <span style="display:inline-block;width:60px;color:var(--text-tertiary);font-size:0.85rem;">担当:</span> ${utils.escapeHtml(c.contact_person || '-')}<br>
-                    <span style="display:inline-block;width:60px;color:var(--text-tertiary);font-size:0.85rem;">Email:</span> ${utils.escapeHtml(c.email || '-')}
-                </div>
-                
-                ${(() => {
-                    // 複数事業所表示（新形式 or 旧形式互換）
-                    let branches = fd.branches && Array.isArray(fd.branches) && fd.branches.length > 0
-                        ? [...fd.branches]
-                        : (fd.branch_name || fd.branch_address) ? [{
-                            branch_name: fd.branch_name, branch_address: fd.branch_address,
-                            industry_type: fd.industry_type, average_volume: fd.average_volume,
-                            vehicle_number: fd.vehicle_number, subcontractor: fd.subcontractor,
-                            collection_general: fd.collection_general, collection_canbottle: fd.collection_canbottle || fd.collection_recycle,
-                            collection_plastic: fd.collection_plastic, collection_cardboard: fd.collection_cardboard || fd.collection_paper,
-                            collection_industrial: fd.collection_industrial,
-                            business_hours: fd.business_hours, regular_holiday: fd.regular_holiday,
-                            collection_start_date: fd.collection_start_date, collection_end_date: fd.collection_end_date,
-                            household_count: fd.household_count, unit_price_per_household: fd.unit_price_per_household,
-                        }] : [];
-                        
-                    jobBranches.forEach(jb => {
-                        const exists = branches.some(b => (b.branch_name||'').trim() === jb.branch_name && (b.branch_address||'').trim() === jb.branch_address);
-                        if (!exists) branches.push(jb);
-                    });
 
-                    const gwTotal = calculateCustomerGeneralWasteTotal(branches);
-                    const summaryCardHtml = gwTotal.subtotal > 0 ? `
-                        <div style="background: linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 100%); border: 1.5px solid #93C5FD; border-radius: 12px; padding: 14px 18px; margin-bottom: 16px; box-shadow: 0 2px 4px rgba(30, 64, 175, 0.06);">
-                            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                                <span style="font-size:0.92rem; font-weight:800; color:#1E40AF;">
-                                    📊 一般廃棄物 サブスク月額合計 (${gwTotal.count}件の事業所合算)
-                                </span>
-                                <span style="font-size:0.75rem; background:#2563EB; color:#fff; font-weight:700; padding:2px 8px; border-radius:12px;">定期月額</span>
+                <!-- タブ切り替えバー -->
+                <div style="display:flex; gap:8px; border-bottom:2px solid #E2E8F0; margin-bottom:14px;">
+                    <button id="previewTabBtnMain" onclick="switchPreviewTab('main')" style="font-weight:700; border-radius:6px 6px 0 0; padding:8px 16px; border:none; background:#2563EB; color:#fff; cursor:pointer; font-size:0.85rem;">
+                        📋 回収品目・基本情報
+                    </button>
+                    <button id="previewTabBtnRevisions" onclick="switchPreviewTab('revisions')" style="font-weight:700; border-radius:6px 6px 0 0; padding:8px 16px; border:none; background:#E2E8F0; color:#475569; cursor:pointer; font-size:0.85rem;">
+                        🕒 料金改定・契約更新履歴
+                    </button>
+                </div>
+
+                <!-- タブ1: 回収品目・基本情報 -->
+                <div id="previewTabContentMain">
+                    <div style="background:var(--bg-secondary); padding:16px; border-radius:12px; margin-bottom:16px; font-size:0.92rem; line-height:1.6;">
+                        📍 <strong style="margin-left:4px;">基本情報</strong><br>
+                        <span style="display:inline-block;width:60px;color:var(--text-tertiary);font-size:0.85rem;">住所:</span> ${(c.address || '-').replace(/\n/g, '<br>')} 
+                        ${c.address ? `<a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(c.address)}" target="_blank" style="font-size:0.8rem;text-decoration:none;margin-left:8px;background:#E2E8F0;padding:2px 8px;border-radius:4px;color:var(--text-primary);">🗺 マップ</a>` : ''}<br>
+                        <span style="display:inline-block;width:60px;color:var(--text-tertiary);font-size:0.85rem;">TEL:</span> ${utils.escapeHtml(c.phone || '-')} <span style="margin-left:8px;color:var(--text-tertiary);font-size:0.85rem;">FAX:</span> ${utils.escapeHtml(fd.fax || '-')} <span style="margin-left:8px;color:var(--text-tertiary);font-size:0.85rem;">携帯:</span> ${utils.escapeHtml(fd.mobile || '-')}<br>
+                        <span style="display:inline-block;width:60px;color:var(--text-tertiary);font-size:0.85rem;">担当:</span> ${utils.escapeHtml(c.contact_person || '-')}<br>
+                        <span style="display:inline-block;width:60px;color:var(--text-tertiary);font-size:0.85rem;">Email:</span> ${utils.escapeHtml(c.email || '-')}
+                    </div>
+
+                    ${summaryCardHtml}
+                    ${branchCardsHtml}
+
+                    <div style="background:var(--bg-secondary); padding:12px; border-radius:12px; margin-bottom:16px; font-size:0.88rem; line-height:1.5;">
+                        ${fd.billing_name ? `📮 <strong>請求先:</strong> ${utils.escapeHtml(fd.billing_name)}${fd.billing_address ? ' / ' + utils.escapeHtml(fd.billing_address).replace(/\n/g, '<br>') : ''}<br>` : ''}
+                        ${fd.transfer_name ? `🏦 <strong>振込名義人:</strong> <span style="color:#1E40AF; font-weight:700;">${utils.escapeHtml(fd.transfer_name)}</span><br>` : ''}
+                        💰 <strong>支払情報:</strong> ${utils.escapeHtml(fd.payment_method || '振込')} / ${c.billing_closing_day === 31 ? '月末' : c.billing_closing_day + '日'}締め → ${c.payment_due_month_offset === 0 ? '当月' : c.payment_due_month_offset === 1 ? '翌月' : c.payment_due_month_offset + 'ヶ月後'}${c.payment_due_day === 31 ? '末日' : c.payment_due_day + '日'}払い
+                    </div>
+
+                    <!-- 契約リスト（コード表連携） -->
+                    <div style="background:var(--bg-secondary); padding:16px; border-radius:12px; margin-bottom:16px; font-size:0.95rem; line-height:1.6;">
+                        📋 <strong style="margin-left:4px;">契約リスト (産廃収集運搬・処分先)</strong><br>
+                        <p style="font-size:0.75rem; color:var(--text-tertiary); margin-bottom:8px; line-height:1.3;">※ 登録されている処分先には「⚫︎」が付きます。⚫︎をクリックすると契約書PDFなどを開きます。</p>
+                        <div style="display:grid; grid-template-columns: 1fr; gap:0px; background:#fff; padding:6px 16px; border-radius:8px; border:1px solid var(--border);">
+                            ${contractListHtml}
+                        </div>
+                    </div>
+
+                    <div style="margin-top:16px; display:grid; grid-template-columns:1fr 1fr; gap:8px;">
+                        <a href="manifests.html?customer_id=${c.id}" class="btn btn-sm btn-secondary" style="text-align:center;text-decoration:none;padding:12px;">♻️ マニフェスト発行</a>
+                        <a href="contract-form.html?id=${c.id}" class="btn btn-sm btn-secondary" style="text-align:center;text-decoration:none;padding:12px;">📄 新規 契約書作成</a>
+                    </div>
+
+                    <!-- 過去案件履歴コンテナ（非同期ロード） -->
+                    <div style="margin-top:24px; padding-top:16px; border-top:1px solid var(--border);">
+                        <h4 style="font-size:1rem;color:var(--text-primary);margin-bottom:12px;">🗂 これまでの案件・作業履歴</h4>
+                        <div id="previewJobsContainer" style="display:flex;flex-direction:column;gap:8px;">
+                            <div style="font-size:0.85rem;color:var(--text-tertiary);text-align:center;padding:10px;">⏳ 案件履歴を読み込み中...</div>
+                        </div>
+                    </div>
+
+                    <!-- 対応ログコンテナ（非同期ロード） -->
+                    <div style="margin-top:24px; padding-top:16px; border-top:1px solid var(--border);">
+                        <h4 style="font-size:1rem;color:var(--text-primary);margin-bottom:12px;">🕰 対応履歴・メモ</h4>
+                        <div style="display:flex;gap:8px;margin-bottom:16px;">
+                            <input type="text" id="newHistoryNote" placeholder="クレームや追加依頼などをメモ..." style="flex:1;font-size:0.9rem;padding:10px;border-radius:8px;border:1px solid var(--border);">
+                            <button class="btn btn-primary" style="padding:10px 16px;font-size:0.9rem;" onclick="addHistoryNote('${id}')">追記</button>
+                        </div>
+                        <div id="previewHistoryContainer" style="display:flex;flex-direction:column;gap:12px;">
+                            <div style="font-size:0.85rem;color:var(--text-tertiary);text-align:center;padding:10px;">⏳ 対応履歴を読み込み中...</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- タブ2: 料金改定・契約更新履歴 -->
+                <div id="previewTabContentRevisions" style="display:none;">
+                    <div style="background:#EFF6FF; border:1px solid #BFDBFE; border-radius:10px; padding:14px; margin-bottom:16px;">
+                        <h4 style="font-size:0.95rem; font-weight:800; color:#1E40AF; margin-bottom:8px;">🔄 契約更新・料金改定情報</h4>
+                        <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px; font-size:0.85rem;">
+                            <div>
+                                <span style="color:#6B7280;">契約期限:</span>
+                                <strong>${c.contract_expiry_date || '期限なし'}</strong>
                             </div>
-                            <div style="display:flex; gap:20px; align-items:baseline; flex-wrap:wrap;">
-                                <div>
-                                    <span style="font-size:0.8rem; color:#4B5563; font-weight:600;">税抜合計:</span>
-                                    <span style="font-size:1.4rem; font-weight:800; color:#1D4ED8; margin-left:4px;">¥${gwTotal.subtotal.toLocaleString()}</span>
-                                </div>
-                                <div>
-                                    <span style="font-size:0.8rem; color:#4B5563; font-weight:600;">税込合計 (10%):</span>
-                                    <span style="font-size:1.4rem; font-weight:800; color:#059669; margin-left:4px;">¥${gwTotal.total.toLocaleString()}</span>
-                                </div>
-                                <div style="font-size:0.8rem; color:#6B7280;">
-                                    (消費税額: ¥${gwTotal.tax.toLocaleString()})
-                                </div>
+                            <div>
+                                <span style="color:#6B7280;">次回改定予定日:</span>
+                                <strong>${branches[0]?.price_revised_date || '未定'}</strong>
                             </div>
                         </div>
-                    ` : '';
-
-                    if (branches.length === 0) return '<div style="background:var(--bg-secondary);padding:12px;border-radius:12px;margin-bottom:16px;font-size:0.85rem;color:var(--text-tertiary);text-align:center;">物件・事業所未登録</div>';
-
-                    const branchCardsHtml = branches.map((b, i) => {
-                        console.log('[Preview] Branch', i, b.branch_name, 'fields:', JSON.stringify({g:b.collection_general,cb:b.collection_canbottle,p:b.collection_plastic,cd:b.collection_cardboard,o:b.collection_other,ind:b.industrial_items?.length||0}));
-                        const genV = b.vehicle_general || b.vehicle_number || '';
-                        function fmtP(p) { if(!p) return '-'; const n=parseInt(String(p).replace(/[^0-9]/g,'')); return isNaN(n)?utils.escapeHtml(p):'¥'+n.toLocaleString(); }
-                        
-                        // 一般廃棄物テーブル
-                        const generalRows = [];
-                        if (b.collection_general||genV||b.unitprice_general||b.price_general) generalRows.push({icon:'🟢', name:'燃えるゴミ', freq:b.collection_general||'', vehicle:genV, price:b.unitprice_general||b.price_general, unit:b.unit_general||'円/月', notes:b.notes_general, bg:'#EFF6FF', color:'#1e40af'});
-                        if (b.collection_canbottle||b.collection_recycle||b.vehicle_canbottle||b.unitprice_canbottle||b.price_canbottle) generalRows.push({icon:'🔵', name:'缶ビンペット', freq:b.collection_canbottle||b.collection_recycle||'', vehicle:b.vehicle_canbottle||b.vehicle_recycle||'', price:b.unitprice_canbottle||b.price_canbottle||b.price_recycle, unit:b.unit_canbottle||'円/月', notes:b.notes_canbottle, bg:'#F0FDF4', color:'#166534'});
-                        if (b.collection_plastic||b.vehicle_plastic||b.unitprice_plastic||b.price_plastic) generalRows.push({icon:'♻️', name:'プラ包装容器', freq:b.collection_plastic||'', vehicle:b.vehicle_plastic||'', price:b.unitprice_plastic||b.price_plastic, unit:b.unit_plastic||'円/月', notes:b.notes_plastic, bg:'#ECFDF5', color:'#065F46'});
-                        if (b.collection_cardboard||b.collection_paper||b.vehicle_cardboard||b.unitprice_cardboard||b.price_cardboard) generalRows.push({icon:'📦', name:'段ボール', freq:b.collection_cardboard||b.collection_paper||'', vehicle:b.vehicle_cardboard||b.vehicle_paper||'', price:b.unitprice_cardboard||b.price_cardboard||b.price_paper, unit:b.unit_cardboard||'円/月', notes:b.notes_cardboard, bg:'#FFFBEB', color:'#92400e'});
-                        if (b.collection_other||b.vehicle_other||b.unitprice_other||b.price_other) generalRows.push({icon:'🔸', name:'その他', freq:b.collection_other||'', vehicle:b.vehicle_other||'', price:b.unitprice_other||b.price_other, unit:b.unit_other||'円/月', notes:b.notes_other, bg:'#FEF2F2', color:'#991B1B'});
-                        // 旧形式: collection_industrial → generalRowsにフォールバック
-                        if ((b.collection_industrial||b.vehicle_industrial||b.unitprice_industrial||b.price_industrial) && !(b.industrial_items?.length > 0)) generalRows.push({icon:'🟣', name:'産廃', freq:b.collection_industrial||'', vehicle:b.vehicle_industrial||'', price:b.unitprice_industrial||b.price_industrial, unit:b.unit_industrial||'円/月', notes:b.notes_industrial, bg:'#FDF4FF', color:'#7e22ce'});
-                        // カスタム一般廃棄物品目
-                        (b.general_custom_items || []).forEach(ci => {
-                            if (ci.item_name) generalRows.push({icon:'📌', name:ci.item_name, freq:ci.freq||'', vehicle:ci.vehicle||'', price:ci.unitprice, unit:ci.unit||'円/月', notes:ci.notes, bg:'#F8FAFC', color:'#334155'});
-                        });
-                        
-                        const generalTableHtml = generalRows.length > 0 ? `
-                            <div style="margin-top:6px;font-size:0.75rem;font-weight:700;color:#1e3a5f;">📋 一般廃棄物</div>
-                            <table class="collection-table">
-                                <thead><tr><th>種類</th><th>頻度</th><th style="text-align:center;">号車</th><th>単価</th><th>単位</th><th>備考</th></tr></thead>
-                                <tbody>
-                                    ${generalRows.map(r => '<tr style="background:'+r.bg+';"><td style="font-weight:600;color:'+r.color+';">'+r.icon+' '+r.name+'</td><td>'+utils.escapeHtml(r.freq)+'</td><td style="text-align:center;">'+(r.vehicle?'<strong>'+utils.escapeHtml(r.vehicle)+'</strong>':'-')+'</td><td class="price-cell">'+fmtP(r.price)+'</td><td style="text-align:center;font-size:0.78rem;">'+utils.escapeHtml(r.unit||'')+'</td><td style="font-size:0.78rem;color:var(--text-secondary);">'+utils.escapeHtml(r.notes||'')+'</td></tr>').join('')}
-                                </tbody>
-                            </table>` : '';
-                        
-                        // 産業廃棄物テーブル
-                        const indItems = b.industrial_items || [];
-                        const industrialTableHtml = indItems.length > 0 ? `
-                            <div style="margin-top:8px;font-size:0.75rem;font-weight:700;color:#7e22ce;">♻️ 産業廃棄物</div>
-                            <table class="collection-table">
-                                <thead><tr><th>品目</th><th>頻度</th><th style="text-align:center;">号車</th><th>単価</th><th>単位</th><th>備考</th></tr></thead>
-                                <tbody>
-                                    ${indItems.map(it => '<tr style="background:#FDF4FF;"><td style="font-weight:600;color:#7e22ce;font-size:0.78rem;">'+utils.escapeHtml(it.item_name)+'</td><td>'+utils.escapeHtml(it.freq||'')+'</td><td style="text-align:center;">'+(it.vehicle?'<strong>'+utils.escapeHtml(it.vehicle)+'</strong>':'-')+'</td><td class="price-cell">'+fmtP(it.unitprice)+'</td><td style="text-align:center;font-size:0.78rem;">'+utils.escapeHtml(it.unit||'kg')+'</td><td style="font-size:0.78rem;color:var(--text-secondary);">'+utils.escapeHtml(it.notes||'')+'</td></tr>').join('')}
-                                </tbody>
-                            </table>` : '';
-                        
-                        const mansionHtml = b.industry_type === 'マンション' && b.household_count ? `
-                            <div style="margin-top:6px;padding:6px 10px;background:#FFF7ED;border:1px solid #FDBA74;border-radius:6px;font-size:0.82rem;">
-                                🏢 入居者 <strong>${b.household_count}</strong>戸${b.unit_price_per_household ? ' × ¥'+Number(b.unit_price_per_household).toLocaleString()+' = <strong style="color:#9A3412;">¥'+(b.household_count * b.unit_price_per_household).toLocaleString()+'/月</strong>' : ''}
-                            </div>` : '';
-                        
-                        const branchGwSub = calculateBranchGeneralWasteSub(b);
-                        const branchGwBadge = branchGwSub > 0 ? `<span style="font-size:0.75rem;background:#EFF6FF;color:#1D4ED8;font-weight:700;padding:2px 8px;border-radius:6px;margin-left:8px;border:1px solid #BFDBFE;">月額小計: ¥${branchGwSub.toLocaleString()}</span>` : '';
-
-                        return `
-                        <div style="background:var(--bg-secondary); padding:14px; border-radius:12px; margin-bottom:10px; font-size:0.9rem; line-height:1.6; ${b.is_job_property ? 'border:1px dashed #93C5FD;' : ''}">
-                            📍 <strong style="margin-left:4px;">${utils.escapeHtml(b.branch_name || '物件・事業所 #'+(i+1))}</strong> ${branchGwBadge} ${b.is_job_property ? '<span style="font-size:0.7rem;background:#EFF6FF;color:#1D4ED8;padding:2px 6px;border-radius:4px;margin-left:8px;">案件から自動追加</span>' : ''} ${b.industry_type ? '<span style="font-size:0.7rem;background:#F3E8FF;color:#7C3AED;padding:2px 6px;border-radius:4px;margin-left:4px;">'+utils.escapeHtml(b.industry_type)+'</span>' : ''}
-                            ${b.branch_address ? '<br><span style="color:var(--text-tertiary);font-size:0.82rem;">住所:</span> '+utils.escapeHtml(b.branch_address)+' '+(b.branch_address ? '<a href="https://www.google.com/maps/search/?api=1&query='+encodeURIComponent(b.branch_address)+'" target="_blank" style="font-size:0.75rem;text-decoration:none;background:#E2E8F0;padding:1px 6px;border-radius:4px;">🗺</a>' : '') : ''}
-                            ${b.branch_phone ? '<br><span style="color:var(--text-tertiary);font-size:0.82rem;">📞 TEL:</span> '+utils.escapeHtml(b.branch_phone) : ''}
-                            ${b.subcontractor ? '<br><span style="color:var(--text-tertiary);font-size:0.82rem;">👥 下請:</span> '+utils.escapeHtml(b.subcontractor) : ''}
-                            ${mansionHtml}
-                            ${generalTableHtml}
-                            ${industrialTableHtml}
-                            ${b.collection_start_date ? '<br><span style="color:var(--text-tertiary);font-size:0.82rem;">開始:</span> '+b.collection_start_date : ''} ${b.collection_end_date ? '<span style="margin-left:8px;color:var(--danger);font-size:0.82rem;">解約: '+b.collection_end_date+'</span>' : ''}
-                        </div>`;
-                    }).join('');
-
-                    return summaryCardHtml + branchCardsHtml;
-                })()}
-
-                <div style="background:var(--bg-secondary); padding:12px; border-radius:12px; margin-bottom:16px; font-size:0.88rem; line-height:1.5;">
-                    ${fd.billing_name ? `📮 <strong>請求先:</strong> ${utils.escapeHtml(fd.billing_name)}${fd.billing_address ? ' / ' + utils.escapeHtml(fd.billing_address).replace(/\n/g, '<br>') : ''}<br>` : ''}
-                    💰 <strong>支払情報:</strong> ${utils.escapeHtml(fd.payment_method || '振込')} / ${c.billing_closing_day === 31 ? '月末' : c.billing_closing_day + '日'}締め → ${c.payment_due_month_offset === 0 ? '当月' : c.payment_due_month_offset === 1 ? '翌月' : c.payment_due_month_offset + 'ヶ月後'}${c.payment_due_day === 31 ? '末日' : c.payment_due_day + '日'}払い
-                </div>
-
-                <!-- 契約リスト（コード表連携） -->
-                <div style="background:var(--bg-secondary); padding:16px; border-radius:12px; margin-bottom:16px; font-size:0.95rem; line-height:1.6;">
-                    📋 <strong style="margin-left:4px;">契約リスト (産廃収集運搬・処分先)</strong><br>
-                    <p style="font-size:0.75rem; color:var(--text-tertiary); margin-bottom:8px; line-height:1.3;">※ 登録されている処分先には「⚫︎」が付きます。⚫︎をクリックすると契約書PDFなどを開きます。</p>
-                    <div style="display:grid; grid-template-columns: 1fr; gap:0px; background:#fff; padding:6px 16px; border-radius:8px; border:1px solid var(--border);">
-                        ${contractListHtml}
                     </div>
-                </div>
 
-                ${(() => {
-                    const pl = fd.pricing_list || [];
-                    if (pl.length === 0) return '';
-                    return `
-                    <div style="background:var(--bg-secondary); padding:16px; border-radius:12px; margin-bottom:16px; font-size:0.95rem; line-height:1.6;">
-                        💰 <strong style="margin-left:4px;">単価表</strong>
-                        <table class="collection-table" style="margin-top:8px;">
-                            <thead><tr><th>品目</th><th style="text-align:right;">単価</th><th style="text-align:center;">単位</th></tr></thead>
-                            <tbody>
-                                ${pl.map(p => `<tr>
-                                    <td style="font-weight:600;">${utils.escapeHtml(p.item || '')}</td>
-                                    <td class="price-cell">¥${Number(p.price || 0).toLocaleString()}</td>
-                                    <td style="text-align:center;">${utils.escapeHtml(p.unit || 'kg')}</td>
-                                </tr>`).join('')}
-                            </tbody>
-                        </table>
-                    </div>`;
-                })()}
-
-                <div style="margin-top:16px; display:grid; grid-template-columns:1fr 1fr; gap:8px;">
-                    <a href="manifests.html?customer_id=${c.id}" class="btn btn-sm btn-secondary" style="text-align:center;text-decoration:none;padding:12px;">♻️ マニフェスト発行</a>
-                    <a href="contract-form.html?id=${c.id}" class="btn btn-sm btn-secondary" style="text-align:center;text-decoration:none;padding:12px;">📄 新規 契約書作成</a>
-                </div>
-
-                <!-- 過去案件履歴 -->
-                <div style="margin-top:24px; padding-top:16px; border-top:1px solid var(--border);">
-                    <h4 style="font-size:1rem;color:var(--text-primary);margin-bottom:12px;">🗂 これまでの案件・作業履歴</h4>
-                    <div style="display:flex;flex-direction:column;gap:8px;">
-                        ${jobsInfo.length === 0 ? '<div style="font-size:0.85rem;color:var(--text-tertiary);text-align:center;padding:10px;">関連する案件はありません</div>' :
-                    jobsInfo.map(j => {
-                        const dateStr = j.work_date ? new Date(j.work_date).toLocaleDateString('ja-JP') : (j.created_at ? new Date(j.created_at).toLocaleDateString('ja-JP') : '日程未定');
-                        let badgeStr = '';
-                        if (j.status === 'completed' || j.pipeline_stage === 'completed') badgeStr = '<span class="badge" style="background:#DCFCE7; color:#166534; font-size: 0.70rem;">完了</span>';
-                        else if (j.pipeline_stage === 'scheduled') badgeStr = '<span class="badge" style="background:#DBEAFE; color:#1D4ED8; font-size: 0.70rem;">作業予定</span>';
-                        else if (j.pipeline_stage === 'waiting_manifest') badgeStr = '<span class="badge" style="background:#FEF3C7; color:#B45309; font-size: 0.70rem;">マニフェスト待</span>';
-                        else badgeStr = `<span class="badge" style="background:#F3F4F6; color:#4B5563; font-size: 0.70rem;">進行中</span>`;
-                        const priceText = j.final_price ? `¥${j.final_price.toLocaleString()}` : (j.estimated_price ? `¥${j.estimated_price.toLocaleString()}(見込)` : '');
-
-                        return `
-                              <div style="background:#fff; border:1px solid var(--border); padding:10px; border-radius:8px; display:flex; flex-direction:column; gap:4px; font-size:0.85rem;">
-                                  <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-                                      <a href="jobs.html?id=${j.job_id}&mode=preview" target="_blank" style="font-weight:600; color:var(--primary); text-decoration:none;">${utils.escapeHtml(j.job_name)} ${badgeStr}</a>
-                                      <span style="color:var(--text-tertiary); font-size:0.75rem;">${dateStr}</span>
-                                  </div>
-                                  <div style="display:flex; justify-content:space-between;">
-                                      <span style="color:var(--text-secondary);">${utils.escapeHtml(j.assigned_to_name || '担当未定')}</span>
-                                      <span style="font-weight:600;">${priceText}</span>
-                                  </div>
-                              </div>
-                            `;
-                    }).join('')
-                }
+                    <!-- 新規料金改定の記録フォーム -->
+                    <div style="background:#fff; border:1.5px solid #CBD5E1; border-radius:10px; padding:14px; margin-bottom:16px; box-shadow:0 1px 3px rgba(0,0,0,0.04);">
+                        <h4 style="font-size:0.9rem; font-weight:800; color:#334155; margin-bottom:10px;">＋ 料金改定の記録</h4>
+                        <div style="display:grid; grid-template-columns:130px 1fr 100px 100px; gap:8px; margin-bottom:8px;">
+                            <div>
+                                <label style="font-size:0.72rem; font-weight:700; color:#64748B;">改定日</label>
+                                <input type="date" id="revDate" value="${new Date().toISOString().slice(0,10)}" style="width:100%; font-size:0.82rem; padding:6px; border:1px solid var(--border); border-radius:6px;">
+                            </div>
+                            <div>
+                                <label style="font-size:0.72rem; font-weight:700; color:#64748B;">改定品目</label>
+                                <input type="text" id="revItem" placeholder="例: 一般ゴミ月額 または 廃プラ" style="width:100%; font-size:0.82rem; padding:6px; border:1px solid var(--border); border-radius:6px;">
+                            </div>
+                            <div>
+                                <label style="font-size:0.72rem; font-weight:700; color:#64748B;">改定前単価</label>
+                                <input type="text" id="revBefore" placeholder="30,000" style="width:100%; font-size:0.82rem; padding:6px; border:1px solid var(--border); border-radius:6px; text-align:right;">
+                            </div>
+                            <div>
+                                <label style="font-size:0.72rem; font-weight:700; color:#64748B;">改定後単価</label>
+                                <input type="text" id="revAfter" placeholder="33,000" style="width:100%; font-size:0.82rem; padding:6px; border:1px solid var(--border); border-radius:6px; text-align:right;">
+                            </div>
+                        </div>
+                        <div style="display:flex; gap:8px; align-items:flex-end;">
+                            <div style="flex:1;">
+                                <label style="font-size:0.72rem; font-weight:700; color:#64748B;">改定理由・備考</label>
+                                <input type="text" id="revNote" placeholder="例: 焼却炉処分費値上げに伴い改定、顧客合意済" style="width:100%; font-size:0.82rem; padding:6px; border:1px solid var(--border); border-radius:6px;">
+                            </div>
+                            <button class="btn btn-primary" onclick="addPriceRevision('${id}')" style="font-size:0.82rem; padding:7px 16px; border-radius:6px; font-weight:700; white-space:nowrap;">
+                                ✍️ 改定を記録
+                            </button>
+                        </div>
                     </div>
-                </div>
 
-                <!-- 履歴・対応ログ (CRM Timeline) -->
-                <div style="margin-top:24px; padding-top:16px; border-top:1px solid var(--border);">
-                    <h4 style="font-size:1rem;color:var(--text-primary);margin-bottom:12px;">🕰 対応履歴・メモ</h4>
-                    <div style="display:flex;gap:8px;margin-bottom:16px;">
-                        <input type="text" id="newHistoryNote" placeholder="クレームや追加依頼などをメモ..." style="flex:1;font-size:0.9rem;padding:10px;border-radius:8px;border:1px solid var(--border);">
-                        <button class="btn btn-primary" style="padding:10px 16px;font-size:0.9rem;" onclick="addHistoryNote('${id}')">追記</button>
-                    </div>
-                    <div style="display:flex;flex-direction:column;gap:12px;">
-                        ${history.length === 0 ? '<div style="font-size:0.85rem;color:var(--text-tertiary);text-align:center;padding:10px;">まだ履歴はありません</div>' :
-                    history.map(h => `
-                              <div style="background:var(--bg-secondary);padding:10px 12px;border-left:3px solid var(--blue);border-radius:0 8px 8px 0;font-size:0.85rem;">
-                                  <div style="font-size:0.75rem;color:var(--text-tertiary);margin-bottom:4px;">
-                                      📅 ${new Date(h.created_at).toLocaleDateString('ja-JP', { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
-                                  </div>
-                                  <div style="color:var(--text-primary);white-space:pre-wrap;word-break:break-all;">${utils.escapeHtml(h.description)}</div>
-                              </div>
-                          `).join('')
-                }
+                    <!-- 過去の改定履歴一覧 -->
+                    <h4 style="font-size:0.95rem; font-weight:800; color:#1E293B; margin-bottom:8px;">📜 過去の料金改定履歴</h4>
+                    <div style="overflow-x:auto;">
+                        ${revisionsTableHtml}
                     </div>
                 </div>
             `;
-            document.getElementById('previewOverlay').classList.add('show');
-            lockBodyScroll();
+
+            // 🚀 バックグラウンドで案件と対応履歴を非同期取得して流し込み（画面を止めない）
+            Promise.allSettled([
+                RyubeeAPI.fetchCustomerHistory(id),
+                RyubeeAPI.fetchJobs({ customer_id: id })
+            ]).then(([histRes, jobsRes]) => {
+                if (previewingId !== id) return; // 既に別のプレビューが開かれていたら無視
+
+                // 案件履歴の更新
+                const jobsContainer = document.getElementById('previewJobsContainer');
+                if (jobsContainer) {
+                    const jobs = (jobsRes.status === 'fulfilled' && Array.isArray(jobsRes.value)) ? jobsRes.value : [];
+                    if (jobs.length === 0) {
+                        jobsContainer.innerHTML = '<div style="font-size:0.85rem;color:var(--text-tertiary);text-align:center;padding:10px;">関連する案件はありません</div>';
+                    } else {
+                        jobsContainer.innerHTML = jobs.map(j => {
+                            const dateStr = j.work_date ? new Date(j.work_date).toLocaleDateString('ja-JP') : (j.created_at ? new Date(j.created_at).toLocaleDateString('ja-JP') : '日程未定');
+                            let badgeStr = '';
+                            if (j.status === 'completed' || j.pipeline_stage === 'completed') badgeStr = '<span class="badge" style="background:#DCFCE7; color:#166534; font-size: 0.70rem;">完了</span>';
+                            else if (j.pipeline_stage === 'scheduled') badgeStr = '<span class="badge" style="background:#DBEAFE; color:#1D4ED8; font-size: 0.70rem;">作業予定</span>';
+                            else if (j.pipeline_stage === 'waiting_manifest') badgeStr = '<span class="badge" style="background:#FEF3C7; color:#B45309; font-size: 0.70rem;">マニフェスト待</span>';
+                            else badgeStr = `<span class="badge" style="background:#F3F4F6; color:#4B5563; font-size: 0.70rem;">進行中</span>`;
+                            const priceText = j.final_price ? `¥${j.final_price.toLocaleString()}` : (j.estimated_price ? `¥${j.estimated_price.toLocaleString()}(見込)` : '');
+
+                            return `
+                                <div style="background:#fff; border:1px solid var(--border); padding:10px; border-radius:8px; display:flex; flex-direction:column; gap:4px; font-size:0.85rem;">
+                                    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                                        <a href="jobs.html?id=${j.job_id}&mode=preview" target="_blank" style="font-weight:600; color:var(--primary); text-decoration:none;">${utils.escapeHtml(j.job_name)} ${badgeStr}</a>
+                                        <span style="color:var(--text-tertiary); font-size:0.75rem;">${dateStr}</span>
+                                    </div>
+                                    <div style="display:flex; justify-content:space-between;">
+                                        <span style="color:var(--text-secondary);">${utils.escapeHtml(j.assigned_to_name || '担当未定')}</span>
+                                        <span style="font-weight:600;">${priceText}</span>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('');
+                    }
+                }
+
+                // 対応履歴の更新
+                const histContainer = document.getElementById('previewHistoryContainer');
+                if (histContainer) {
+                    const history = (histRes.status === 'fulfilled' && Array.isArray(histRes.value)) ? histRes.value : [];
+                    if (history.length === 0) {
+                        histContainer.innerHTML = '<div style="font-size:0.85rem;color:var(--text-tertiary);text-align:center;padding:10px;">まだ履歴はありません</div>';
+                    } else {
+                        histContainer.innerHTML = history.map(h => `
+                            <div style="background:var(--bg-secondary);padding:10px 12px;border-left:3px solid var(--blue);border-radius:0 8px 8px 0;font-size:0.85rem;">
+                                <div style="font-size:0.75rem;color:var(--text-tertiary);margin-bottom:4px;">
+                                    📅 ${new Date(h.created_at).toLocaleDateString('ja-JP', { year: 'numeric', month: 'numeric', day: 'numeric', hour: '2-digit', minute: '2-digit' })}
+                                </div>
+                                <div style="color:var(--text-primary);white-space:pre-wrap;word-break:break-all;">${utils.escapeHtml(h.description)}</div>
+                            </div>
+                        `).join('');
+                    }
+                }
+            });
+        }
+
+        // ── 顧客マスタ CSV出力 ──
+        function exportCustomerMasterCSV() {
+            if (!allCustomers || allCustomers.length === 0) {
+                alert('出力する顧客データがありません');
+                return;
+            }
+            const headers = [
+                '顧客ID', '山文管理番号', '会社名・屋号', '敬称', '業種', '契約区分', '営業担当者',
+                'ご担当者様名', '電話番号', 'FAX番号', '携帯番号', 'メールアドレス', '住所', '振込者名(カナ)',
+                '支払方法', '締日', '支払期日(月)', '支払期日(日)', '事業所名', '事業所住所', '事業所電話',
+                '契約更新日', '料金改定日', '品目種別', '品目名', '区分', '頻度', '号車', '単価', '単位', '備考'
+            ];
+
+            const rows = [headers];
+
+            allCustomers.forEach(c => {
+                const fd = c.parsed_form || {};
+                const branches = fd.branches && fd.branches.length > 0 ? fd.branches : [{
+                    branch_name: c.name,
+                    branch_address: c.address,
+                    branch_phone: c.phone
+                }];
+
+                const baseCust = [
+                    c.id,
+                    fd.yamabun_management_number || '',
+                    c.name || '',
+                    fd.honorific || '御中',
+                    fd.industry || '',
+                    c.contract_type === 'subscription' ? '定期' : 'スポット',
+                    c.assigned_user_name || '',
+                    c.contact_person || '',
+                    c.phone || '',
+                    fd.fax || '',
+                    fd.mobile || '',
+                    c.email || '',
+                    c.address || '',
+                    fd.transfer_name || '',
+                    fd.payment_method || '振込',
+                    c.billing_closing_day === 31 ? '月末' : (c.billing_closing_day ? c.billing_closing_day + '日' : ''),
+                    c.payment_due_month_offset === 0 ? '当月' : (c.payment_due_month_offset === 1 ? '翌月' : c.payment_due_month_offset + 'ヶ月後'),
+                    c.payment_due_day === 31 ? '末日' : (c.payment_due_day ? c.payment_due_day + '日' : '')
+                ];
+
+                branches.forEach(b => {
+                    const baseBranch = [
+                        ...baseCust,
+                        b.branch_name || '',
+                        b.branch_address || '',
+                        b.branch_phone || '',
+                        b.contract_renewal_date || '',
+                        b.price_revised_date || ''
+                    ];
+
+                    let itemAdded = false;
+
+                    const genItems = [
+                        { type: '一般(燃えるゴミ)', name: '燃えるゴミ', spot: b.is_spot_general ? 'スポット' : '定期', freq: b.collection_general, v: b.vehicle_general, p: b.unitprice_general || b.price_general, u: b.unit_general || '円/月', n: b.notes_general },
+                        { type: '一般(缶ビンペット)', name: '缶ビンペット', spot: b.is_spot_canbottle ? 'スポット' : '定期', freq: b.collection_canbottle, v: b.vehicle_canbottle, p: b.unitprice_canbottle || b.price_canbottle, u: b.unit_canbottle || '円/月', n: b.notes_canbottle },
+                        { type: '一般(プラ包装容器)', name: 'プラ包装容器', spot: b.is_spot_plastic ? 'スポット' : '定期', freq: b.collection_plastic, v: b.vehicle_plastic, p: b.unitprice_plastic || b.price_plastic, u: b.unit_plastic || '円/月', n: b.notes_plastic },
+                        { type: '一般(段ボール)', name: '段ボール', spot: b.is_spot_cardboard ? 'スポット' : '定期', freq: b.collection_cardboard, v: b.vehicle_cardboard, p: b.unitprice_cardboard || b.price_cardboard, u: b.unit_cardboard || '円/月', n: b.notes_cardboard },
+                        { type: '一般(その他)', name: 'その他', spot: b.is_spot_other ? 'スポット' : '定期', freq: b.collection_other, v: b.vehicle_other, p: b.unitprice_other || b.price_other, u: b.unit_other || '円/月', n: b.notes_other }
+                    ];
+
+                    genItems.forEach(gi => {
+                        if (gi.freq || gi.v || gi.p) {
+                            rows.push([...baseBranch, gi.type, gi.name, gi.spot, gi.freq || '', gi.v || '', gi.p || '', gi.u || '', gi.n || '']);
+                            itemAdded = true;
+                        }
+                    });
+
+                    (b.general_custom_items || []).forEach(ci => {
+                        if (ci.item_name) {
+                            rows.push([...baseBranch, '一般(カスタム)', ci.item_name, ci.is_spot ? 'スポット' : '定期', ci.freq || '', ci.vehicle || '', ci.unitprice || '', ci.unit || '円/月', ci.notes || '']);
+                            itemAdded = true;
+                        }
+                    });
+
+                    (b.industrial_items || []).forEach(ii => {
+                        if (ii.item_name) {
+                            rows.push([...baseBranch, '産廃', ii.item_name, ii.is_spot ? 'スポット' : '定期', ii.freq || '', ii.vehicle || '', ii.unitprice || '', ii.unit || 'kg', ii.notes || '']);
+                            itemAdded = true;
+                        }
+                    });
+
+                    if (!itemAdded) {
+                        rows.push([...baseBranch, '', '', '', '', '', '', '', '']);
+                    }
+                });
+            });
+
+            const csvContent = '\uFEFF' + rows.map(r => r.map(cell => {
+                const s = String(cell ?? '').replace(/"/g, '""');
+                return /[",\r\n]/.test(s) ? `"${s}"` : s;
+            }).join(',')).join('\r\n');
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            const now = new Date();
+            const dateStr = `${now.getFullYear()}${String(now.getMonth()+1).padStart(2,'0')}${String(now.getDate()).padStart(2,'0')}`;
+            a.download = `顧客マスタ_${dateStr}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showToast('📥 顧客マスタCSVを出力しました');
+        }
+
+        // ── 顧客マスタ CSV一括取込 (吸い上げ) ──
+        async function handleCustomerMasterCSVImport(event) {
+            const file = event.target.files?.[0];
+            if (!file) return;
+            event.target.value = '';
+
+            const reader = new FileReader();
+            reader.onload = async (e) => {
+                const text = e.target.result;
+                try {
+                    const lines = text.split(/\r\n|\n|\r/).filter(line => line.trim().length > 0);
+                    if (lines.length < 2) {
+                        alert('CSVファイルにデータ行がありません');
+                        return;
+                    }
+                    if (!confirm(`CSVファイルから ${lines.length - 1} 行のデータを読み込みました。顧客マスタを吸い上げて一括更新しますか？`)) {
+                        return;
+                    }
+
+                    showToast('⏳ CSVを解析中...');
+
+                    function parseCSVLine(line) {
+                        const res = [];
+                        let cur = '';
+                        let inQuotes = false;
+                        for (let i = 0; i < line.length; i++) {
+                            const c = line[i];
+                            if (c === '"') {
+                                if (inQuotes && line[i+1] === '"') {
+                                    cur += '"';
+                                    i++;
+                                } else {
+                                    inQuotes = !inQuotes;
+                                }
+                            } else if (c === ',' && !inQuotes) {
+                                res.push(cur.trim());
+                                cur = '';
+                            } else {
+                                cur += c;
+                            }
+                        }
+                        res.push(cur.trim());
+                        return res;
+                    }
+
+                    const headers = parseCSVLine(lines[0]);
+                    const nameIdx = headers.indexOf('会社名・屋号');
+                    const numIdx = headers.indexOf('山文管理番号');
+                    const indIdx = headers.indexOf('業種');
+                    const trNameIdx = headers.indexOf('振込者名(カナ)');
+                    const phoneIdx = headers.indexOf('電話番号');
+                    const addrIdx = headers.indexOf('住所');
+                    const contactIdx = headers.indexOf('ご担当者様名');
+                    const emailIdx = headers.indexOf('メールアドレス');
+
+                    if (nameIdx === -1) {
+                        alert('CSVに「会社名・屋号」列が見つかりません');
+                        return;
+                    }
+
+                    let updateCount = 0;
+                    let createCount = 0;
+
+                    for (let i = 1; i < lines.length; i++) {
+                        const cols = parseCSVLine(lines[i]);
+                        const name = cols[nameIdx];
+                        if (!name) continue;
+
+                        const num = numIdx !== -1 ? cols[numIdx] : '';
+                        const industry = indIdx !== -1 ? cols[indIdx] : '';
+                        const trName = trNameIdx !== -1 ? cols[trNameIdx] : '';
+                        const phone = phoneIdx !== -1 ? cols[phoneIdx] : '';
+                        const addr = addrIdx !== -1 ? cols[addrIdx] : '';
+                        const contact = contactIdx !== -1 ? cols[contactIdx] : '';
+                        const email = emailIdx !== -1 ? cols[emailIdx] : '';
+
+                        const existing = allCustomers.find(c => {
+                            const fd = c.parsed_form || {};
+                            if (num && fd.yamabun_management_number && fd.yamabun_management_number === num) return true;
+                            return c.name.trim() === name.trim();
+                        });
+
+                        if (existing) {
+                            let fd = existing.parsed_form || {};
+                            if (num) fd.yamabun_management_number = num;
+                            if (industry) fd.industry = industry;
+                            if (trName) fd.transfer_name = trName;
+
+                            const body = {
+                                name: name,
+                                contact_person: contact || existing.contact_person || '',
+                                address: addr || existing.address || '',
+                                phone: phone || existing.phone || '',
+                                email: email || existing.email || '',
+                                form_data: JSON.stringify(fd)
+                            };
+                            await RyubeeAPI.updateCustomer(existing.id, body);
+                            updateCount++;
+                        } else {
+                            const fd = {
+                                yamabun_management_number: num,
+                                industry: industry,
+                                transfer_name: trName
+                            };
+                            const body = {
+                                name: name,
+                                contact_person: contact,
+                                address: addr,
+                                phone: phone,
+                                email: email,
+                                form_data: JSON.stringify(fd)
+                            };
+                            await RyubeeAPI.createCustomer(body);
+                            createCount++;
+                        }
+                    }
+
+                    showToast(`✅ CSV取込完了: 更新 ${updateCount} 件 / 新規 ${createCount} 件`);
+                    loadCustomers();
+                } catch (err) {
+                    console.error('CSV import error:', err);
+                    alert('CSV取込中にエラーが発生しました: ' + err.message);
+                }
+            };
+            reader.readAsText(file, 'utf-8');
         }
 
         async function addHistoryNote(custId) {
@@ -2315,6 +2905,7 @@
             const formData = {
                 honorific: document.getElementById('custHonorific').value,
                 yamabun_management_number: document.getElementById('custYamabunNumber').value.trim(),
+                industry: document.getElementById('custIndustry').value,
                 waste_categories: Array.from(document.querySelectorAll('.waste-cat-cb:checked')).map(cb => cb.value),
                 waste_category: Array.from(document.querySelectorAll('.waste-cat-cb:checked')).map(cb => cb.value).join(','),  // 後方互換
                 mobile: document.getElementById('custMobile').value.trim(),
@@ -2325,6 +2916,7 @@
                 branches: collectBranches(),
                 // 請求・支払
                 payment_method: document.getElementById('custPaymentMethod').value,
+                transfer_name: document.getElementById('custTransferName').value.trim(),
                 billing_name: document.getElementById('custBillingName').value.trim(),
                 billing_address: document.getElementById('custBillingAddress').value.trim(),
                 billing_email: document.getElementById('custBillingEmail').value.trim(),
